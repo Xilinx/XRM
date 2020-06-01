@@ -1,0 +1,8 @@
+#!/bin/sh
+echo "Running prerm..."
+FILE=/etc/systemd/system/xrm.service
+if [ -f "$FILE" ]; then
+    echo "$FILE exist...Stopping xrmd service"
+    systemctl stop xrmd
+fi
+rm -f /dev/shm/xrm.data

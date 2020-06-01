@@ -1,0 +1,13 @@
+[Unit]
+Description=Xilinx Resource Management Daemon
+After=network.target
+
+[Service]
+Type=simple
+Environment="LD_LIBRARY_PATH=/opt/xilinx/xrt/lib"
+Restart=always
+RestartSec=1
+ExecStart=@CMAKE_INSTALL_PREFIX@/xrm/bin/xrmd
+
+[Install]
+WantedBy=multi-user.target

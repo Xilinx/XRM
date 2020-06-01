@@ -1,0 +1,12 @@
+{
+    "request": {
+        "name": "loadXrmPlugins",
+        "requestId": 1,
+        "parameters": [
+            {
+            "xrmPluginFileName": "/opt/xilinx/xrm/plugin/libxrmpluginexample.so",
+            "xrmPluginName": "xrmPluginExample"
+            }
+        ]
+    }
+}
