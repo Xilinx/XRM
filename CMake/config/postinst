@@ -1,0 +1,4 @@
+#!/bin/sh
+
+rm -f /dev/shm/xrm.data
+echo "Starting xrmd service ...."

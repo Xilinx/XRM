@@ -1,0 +1,11 @@
+{
+    "request": {
+        "name": "unloadXrmPlugins",
+        "requestId": 1,
+        "parameters": [
+            {
+            "xrmPluginName": "xrmPluginExample"
+            }
+        ]
+    }
+}

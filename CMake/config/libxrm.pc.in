@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@/xrm
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: libxrm
+Description: Xilinx Resource Management
+Version: @XRM_VERSION_STRING@
+Requires: xrt >= 2.1.0
+Libs: -L${libdir} -lxrm -lboost_system -lboost_filesystem -lboost_thread -lboost_serialization -luuid -ldl
+Cflags: -I${includedir}
