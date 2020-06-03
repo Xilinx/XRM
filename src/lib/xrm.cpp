@@ -46,11 +46,11 @@ static void binToHexstr(unsigned char* in, int32_t insz, std::string& outStr);
 static void xrmLog(xrmLogLevelType contextLogLevel, xrmLogLevelType logLevel, const char* format, ...);
 
 /**
- * xrmCreateContext() - establishes a connection with the XRM daemon
+ * \brief Establishes a connection with the XRM daemon
  *
- * @xrmApiVersion: the XRM API version number
- * @return: xrmContext, pointer to created context or NULL on fail
- **/
+ * @param xrmApiVersion the XRM API version number
+ * @return xrmContext, pointer to created context or NULL on fail
+ */
 xrmContext xrmCreateContext(uint32_t xrmApiVersion) {
     if (xrmApiVersion != XRM_API_VERSION_1) {
         xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): wrong XRM API version: %d", __func__, xrmApiVersion);
@@ -113,11 +113,11 @@ xrmContext xrmCreateContext(uint32_t xrmApiVersion) {
 }
 
 /**
- * xrmDestroyContext() - disconnects an existing connection with the XRM daemon
+ * \brief Disconnects an existing connection with the XRM daemon
  *
- * @context: the context created through xrmCreateContext()
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmDestroyContext(xrmContext context) {
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
 
@@ -177,13 +177,13 @@ int32_t xrmDestroyContext(xrmContext context) {
 /**
  * Internal function.
  *
- * xrmLog() - log system message for XRM
+ * \brief logs system message for XRM
  *
- * @contextLogLevel: the log level set through XRM context
- * @logLevel: requested log level
- * @format, ...: message to be logged
- * @return: void
- **/
+ * @param contextLogLevel the log level set through XRM context
+ * @param logLevel requested log level
+ * @param format, ...: message to be logged
+ * @return void
+ */
 static void xrmLog(xrmLogLevelType contextLogLevel, xrmLogLevelType logLevel, const char* format, ...) {
     if (logLevel <= contextLogLevel) {
         va_list tmpArgs;
@@ -205,14 +205,14 @@ static void xrmLog(xrmLogLevelType contextLogLevel, xrmLogLevelType logLevel, co
 /**
  * Internal function.
  *
- * xrmJsonRequest() - sends a JSON request message to the XRM
+ * \brief sends a JSON request message to the XRM
  * daemon and copies a JSON response message to a caller
  * provided buffer.
  *
- * @context: the context created through xrmCreateContext()
- * @jsonReq: request JSON message
- * @jsonRsp: JSON response message
- * @return: int32_t, 0 on success or appropriate error number
+ * @param context the context created through xrmCreateContext()
+ * @param jsonReq request JSON message
+ * @param jsonRsp JSON response message
+ * @return int32_t, 0 on success or appropriate error number
  **/
 static int32_t xrmJsonRequest(xrmContext context, const char* jsonReq, char* jsonRsp) {
     int32_t rc = XRM_SUCCESS;
@@ -255,11 +255,11 @@ static int32_t xrmJsonRequest(xrmContext context, const char* jsonReq, char* jso
 }
 
 /**
- * xrmIsDaemonRunning() - check whether the daemon is running
+ * \brief To check whether the daemon is running
  *
- * @context: the context created through xrmCreateContext()
- * @return value: bool, true on running or false on NOT running
- **/
+ * @param context the context created through xrmCreateContext()
+ * @return bool, true on running or false on NOT running
+ */
 bool xrmIsDaemonRunning(xrmContext context) {
     bool ret = false;
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
@@ -299,13 +299,13 @@ bool xrmIsDaemonRunning(xrmContext context) {
 }
 
 /**
- * xrmLoadOneDevice() - loads xclbin to one device
+ * \brief Loads xclbin to one device
  *
- * @context: the context created through xrmCreateContext()
- * @deviceId: the device id to load the xclbin file, -1 means to any available device
- * @xclbinFileName: xclbin file (full path and name)
- * @return: int32_t, device id (>= 0) loaded with xclbin or appropriate error number (< 0) on fail
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param deviceId the device id to load the xclbin file, -1 means to any available device
+ * @param xclbinFileName xclbin file (full path and name)
+ * @return int32_t, device id (>= 0) loaded with xclbin or appropriate error number (< 0) on fail
+ */
 int32_t xrmLoadOneDevice(xrmContext context, int32_t deviceId, char* xclbinFileName) {
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
 
@@ -350,12 +350,12 @@ int32_t xrmLoadOneDevice(xrmContext context, int32_t deviceId, char* xclbinFileN
 }
 
 /**
- * xrmUnloadOneDevice() - unloads xclbin from one device
+ * \brief Unloads xclbin from one device
  *
- * @context: the context created through xrmCreateContext()
- * @deviceId: the device id to unload the xclbin file
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param deviceId the device id to unload the xclbin file
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmUnloadOneDevice(xrmContext context, int32_t deviceId) {
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
 
@@ -396,11 +396,13 @@ int32_t xrmUnloadOneDevice(xrmContext context, int32_t deviceId) {
 }
 
 /**
- * hexstrToBin() - conver hex string like "0123456789abcdef" to bin 0123456789abcdef
- * @inStr: input hex string
- * @inze: size of input
- * @out: output binary array
- * @return: void
+ * Internal function.
+ *
+ * \brief Convers hex string like "0123456789abcdef" to bin 0123456789abcdef
+ * @param inStr input hex string
+ * @param inze size of input
+ * @param out output binary array
+ * @return void
  **/
 static void hexstrToBin(std::string& inStr, int32_t insz, unsigned char* out) {
     char in[insz];
@@ -421,12 +423,12 @@ static void hexstrToBin(std::string& inStr, int32_t insz, unsigned char* out) {
 }
 
 /**
- * binToHexstr() - convert bin array to hex string.
+ * \brief Converts bin array to hex string.
  *
- * @in: input binary arrar
- * @inze: size of input
- * @outStr: output hex string
- * @return: void
+ * @param in input binary arrar
+ * @param inze size of input
+ * @param outStr output hex string
+ * @return void
  **/
 static void binToHexstr(unsigned char* in, int32_t insz, std::string& outStr) {
     unsigned char* pin = in;
@@ -438,34 +440,34 @@ static void binToHexstr(unsigned char* in, int32_t insz, std::string& outStr) {
 }
 
 /**
- * xrmCuAlloc() - allocates compute unit with a device, cu, and channel given a
+ * \brief Allocates compute unit with a device, cu, and channel given a
  * kernel name or alias or both and request load (1 - 100). This function also
  * provides the xclbin and kernel plugin loaded on the device.
  *
- * @context: the context created through xrmCreateContext()
- * @cuProp:
- *      kernelName: the kernel name requested
- *      kernelAlias: the alias of kernel name requested
- *      devExcl: request exclusive device usage for this client
- *      requestLoad: request load (1 - 100)
- *      poolId: request to allocate cu from specified resource pool
- * @cuRes:
- *      xclbinFileName: xclbin (path and name) attached to this device
- *      kernelPluginFileName: kernel plugin (only name) attached to this device
- *      kernelName: the kernel name of allocated cu
- *      kernelAlias: the name alias of allocated cu
- *      instanceName: the instance name of allocated cu
- *      cuName: the name of allocated cu (kernelName:instanceName)
- *      uuid: uuid of the loaded xclbin file
- *      deviceId: device id of this cu
- *      cuId: cu id of this cu
- *      channelId: channel id of this cu
- *      cuType: type of cu, hardware kernel or soft kernel
- *      allocServiceId: service id for this cu allocation
- *      channelLoad: allocated load of this cu (1 - 100)
- *      poolId: id of the cu pool this cu comes from, the default pool id is 0
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuProp the property of requested cu.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ *             devExcl: request exclusive device usage for this client.
+ *             requestLoad: request load (1 - 100).
+ *             poolId: request to allocate cu from specified resource pool
+ * @param cuRes the cu resource.
+ *             xclbinFileName: xclbin (path and name) attached to this device.
+ *             kernelPluginFileName: kernel plugin (only name) attached to this device.
+ *             kernelName: the kernel name of allocated cu.
+ *             kernelAlias: the name alias of allocated cu.
+ *             instanceName: the instance name of allocated cu.
+ *             cuName: the name of allocated cu (kernelName:instanceName).
+ *             uuid: uuid of the loaded xclbin file.
+ *             deviceId: device id of this cu.
+ *             cuId: cu id of this cu.
+ *             channelId: channel id of this cu.
+ *             cuType: type of cu, hardware kernel or soft kernel.
+ *             allocServiceId: service id for this cu allocation.
+ *             channelLoad: allocated load of this cu (1 - 100).
+ *             poolId: id of the cu pool this cu comes from, the system default pool id is 0.
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmCuAlloc(xrmContext context, xrmCuProperty* cuProp, xrmCuResource* cuRes) {
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
 
@@ -548,19 +550,19 @@ int32_t xrmCuAlloc(xrmContext context, xrmCuProperty* cuProp, xrmCuResource* cuR
 }
 
 /**
- * xrmCuListAlloc() - allocates a list of compute unit resource given a list of
+ * \brief Allocates a list of compute unit resource given a list of
  * kernels's property with kernel name or alias or both and request load (1 - 100).
  *
- * @context: the context created through xrmCreateContext()
- * @cuListProp:
- *      cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole.
- *      cuNum: request number of cu in this list
- *      sameDevice: request this list of cu from same device
- * @cuListRes:
- *      cuResources: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
- *      cuNum: allocated cu number in this list
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuListProp the property of cu list.
+ *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole.
+ *             cuNum: request number of cu in this list.
+ *             sameDevice: request this list of cu from same device.
+ * @param cuListRes the cu list resource.
+ *             cuResources: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
+ *             cuNum: allocated cu number in this list.
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmCuListAlloc(xrmContext context, xrmCuListProperty* cuListProp, xrmCuListResource* cuListRes) {
     int32_t ret = XRM_ERROR;
     int32_t i;
@@ -668,16 +670,16 @@ int32_t xrmCuListAlloc(xrmContext context, xrmCuListProperty* cuListProp, xrmCuL
 }
 
 /**
- * xrmUdfCuGroupDeclare() - declare user defined cu group type given the specified
+ * \brief Declares user defined cu group type given the specified
  * kernels's property with cu name (kernelName:instanceName) and request load (1 - 100).
  *
- * @context: the context created through xrmCreateContext()
- * @udfCuGroupProp:
- *      optionUdfCuListProps[]: option user defined cu list property array starting from optionCuListProps[0], no hole.
- *      optionUdfCuListNum: number of option user defined cu list
- * @udfCuGroupName: unique user defined cu group name for the new group type declaration
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param udfCuGroupProp the property of user defined cu group.
+ *             optionUdfCuListProps[]: option cu list property array starting from optionCuListProps[0], no hole.
+ *             optionUdfCuListNum: number of option user defined cu list.
+ * @param udfCuGroupName unique user defined cu group name for the new group type declaration
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmUdfCuGroupDeclare(xrmContext context, xrmUdfCuGroupProperty* udfCuGroupProp, char* udfCuGroupName) {
     int32_t ret = XRM_ERROR;
     int32_t cuListIdx;
@@ -755,13 +757,13 @@ int32_t xrmUdfCuGroupDeclare(xrmContext context, xrmUdfCuGroupProperty* udfCuGro
 }
 
 /**
- * xrmUdfCuGroupUndeclare() - undeclare user defined cu group type given the specified
+ * \brief Undeclares user defined cu group type given the specified
  * group name.
  *
- * @context: the context created through xrmCreateContext()
- * @udfCuGroupName: user defined cu group name for the group type undeclaration
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param udfCuGroupName user defined cu group name for the group type undeclaration
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmUdfCuGroupUndeclare(xrmContext context, char* udfCuGroupName) {
     int32_t ret = XRM_ERROR;
     int32_t cuListIdx;
@@ -803,18 +805,18 @@ int32_t xrmUdfCuGroupUndeclare(xrmContext context, char* udfCuGroupName) {
 }
 
 /**
- * xrmCuGroupAlloc() - allocates a group of compute unit resource given a user defined group of
+ * \brief Allocates a group of compute unit resource given a user defined group of
  * kernels's property with cu name (kernelName:instanceName) and request load (1 - 100).
  *
- * @context: the context created through xrmCreateContext()
- * @cuGroupProp:
- *      udfCuGroupName: user defined cu group type name
- *      poolId: id of the cu pool this group CUs come from, the system default pool id is 0
- * @cuGroupRes:
- *      cuResources: cu resource group to fill the allocated cus infor, starting from cuResources[0], no hole.
- *      cuNum: allocated cu number in this list
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuGroupProp the property of cu group.
+ *             udfCuGroupName: user defined cu group type name.
+ *             poolId: id of the cu pool this group CUs come from, the system default pool id is 0.
+ * @param cuGroupRes the cu group resource.
+ *             cuResources: cu resource group to fill the allocated cus infor, starting from cuResources[0], no hole.
+ *             cuNum: allocated cu number in this group.
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmCuGroupAlloc(xrmContext context, xrmCuGroupProperty* cuGroupProp, xrmCuGroupResource* cuGroupRes) {
     int32_t ret = XRM_ERROR;
     int32_t i;
@@ -897,15 +899,15 @@ int32_t xrmCuGroupAlloc(xrmContext context, xrmCuGroupProperty* cuGroupProp, xrm
 }
 
 /**
- * xrmCuGetMaxCapacity() retrieves the maximum capacity associated with a resource
+ * \brief Retrieves the maximum capacity associated with a resource
  *
- * @context: the context created through xrmCreateContext()
- * @cuProp:
- *      kernelName: the kernel name requested
- *      kernelAlias: the alias of kernel name requested
- * @return: uint64_t, the max capacity of the cu (> 0) or 0 if cu is not existing in system or max capacity
+ * @param context the context created through xrmCreateContext()
+ * @param cuProp the property of cu.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ * @return uint64_t, the max capacity of the cu (> 0) or 0 if cu is not existing in system or max capacity
  *          is not described.
- **/
+ */
 uint64_t xrmCuGetMaxCapacity(xrmContext context, xrmCuProperty* cuProp) {
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
 
@@ -944,20 +946,20 @@ uint64_t xrmCuGetMaxCapacity(xrmContext context, xrmCuProperty* cuProp) {
 }
 
 /**
- * xrmCuCheckStatus() - returns whether or not a specified cu resource is busy
+ * \brief To check the status of specified cu resource
  *
- * @context: the context created through xrmCreateContext()
- * @cuRes:
- *      deviceId: device id of this cu
- *      cuId: cu id of this cu
- *      channelId: channel id of this cu
- *      cuType: type of cu, hardware kernel or soft kernel
- *      allocServiceId: service id for this cu allocation
- * @cuStat:
- *      isBusy: the cu is busy or not
- *      usedLoad: allocated load on this cu
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuRes the cu resource.
+ *             deviceId: device id of this cu.
+ *             cuId: cu id of this cu.
+ *             channelId: channel id of this cu.
+ *             cuType: type of cu, hardware kernel or soft kernel.
+ *             allocServiceId: service id for this cu allocation.
+ * @param cuStat the status of cu.
+ *             isBusy: the cu is busy or not.
+ *             usedLoad: allocated load on this cu.
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmCuCheckStatus(xrmContext context, xrmCuResource* cuRes, xrmCuStat* cuStat) {
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
 
@@ -1008,26 +1010,26 @@ int32_t xrmCuCheckStatus(xrmContext context, xrmCuResource* cuRes, xrmCuStat* cu
 }
 
 /**
- * xrmCuRelease() - releases a previously allocated resource
+ * \brief Releases a previously allocated resource
  *
- * @context: the context created through xrmCreateContext()
- * @cuRes:
- *      xclbinFileName: xclbin (path and name) attached to this device
- *      kernelPluginFileName: kernel plugin (only name) attached to this device
- *      kernelName: the kernel name of allocated cu
- *      kernelAlias: the name alias of allocated cu
- *      instanceName: the instance name of allocated cu
- *      cuName: the name of allocated cu (kernelName:instanceName)
- *      uuid: uuid of the loaded xclbin file
- *      deviceId: device id of this cu
- *      cuId: cu id of this cu
- *      channelId: channel id of this cu
- *      cuType: type of cu, hardware kernel or soft kernel
- *      allocServiceId: service id for this cu allocation
- *      channelLoad: allocated load of this cu (1 - 100)
- *      poolId: id of the cu pool this cu comes from, the system default pool id is 0
- * @return: bool, true on success or false on fail
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuRes the cu resource.
+ *             xclbinFileName: xclbin (path and name) attached to this device.
+ *             kernelPluginFileName: kernel plugin (only name) attached to this device.
+ *             kernelName: the kernel name of allocated cu.
+ *             kernelAlias: the name alias of allocated cu.
+ *             instanceName: the instance name of allocated cu.
+ *             cuName: the name of allocated cu (kernelName:instanceName).
+ *             uuid: uuid of the loaded xclbin file.
+ *             deviceId: device id of this cu.
+ *             cuId: cu id of this cu.
+ *             channelId: channel id of this cu.
+ *             cuType: type of cu, hardware kernel or soft kernel.
+ *             allocServiceId: service id for this cu allocation.
+ *             channelLoad: allocated load of this cu (1 - 100).
+ *             poolId: id of the cu pool this cu comes from, the system default pool id is 0.
+ * @return bool, true on success or false on fail
+ */
 bool xrmCuRelease(xrmContext context, xrmCuResource* cuRes) {
     bool ret = false;
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
@@ -1073,14 +1075,14 @@ bool xrmCuRelease(xrmContext context, xrmCuResource* cuRes) {
 }
 
 /**
- * xrmCuListRelease() - releases a previously allocated list of resources
+ * \brief Releases a previously allocated list of resources
  *
- * @context: the context created through xrmCreateContext()
- * @cuListRes:
- *      cuResources: cu resource list to be released, starting from cuResources[0], no hole.
- *      cuNum: number of cu in this list
- * @return: bool, true on success or false on fail
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuListRes the cu list resource.
+ *             cuResources: cu resource list to be released, starting from cuResources[0], no hole.
+ *             cuNum: number of cu in this list.
+ * @return bool, true on success or false on fail
+ */
 bool xrmCuListRelease(xrmContext context, xrmCuListResource* cuListRes) {
     bool ret = false;
     int32_t i;
@@ -1142,14 +1144,14 @@ bool xrmCuListRelease(xrmContext context, xrmCuListResource* cuListRes) {
 }
 
 /**
- * xrmCuGroupRelease() - releases a previously allocated group of resources
+ * \brief Releases a previously allocated group of resources
  *
- * @context: the context created through xrmCreateContext()
- * @cuGroupRes:
- *      cuResources: cu resource group to be released, starting from cuResources[0], no hole.
- *      cuNum: number of cu in this group
- * @return: bool, true on success or false on fail
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuGroupRes cu group resource.
+ *             cuResources: cu resource group to be released, starting from cuResources[0], no hole.
+ *             cuNum: number of cu in this group.
+ * @return bool, true on success or false on fail
+ */
 bool xrmCuGroupRelease(xrmContext context, xrmCuGroupResource* cuGroupRes) {
     bool ret = false;
     int32_t i;
@@ -1211,18 +1213,18 @@ bool xrmCuGroupRelease(xrmContext context, xrmCuGroupResource* cuGroupRes) {
 }
 
 /**
- * xrmAllocationQuery() - query the compute unit resource given the allocation service id.
+ * \brief Querys the compute unit resource given the allocation service id.
  *
- * @context: the context created through xrmCreateContext()
- * @allocQuery:
- *      allocServiceId: the service id returned from allocation
- *      kernelName: the kernel name requested
- *      kernelAlias: the alias of kernel name requested
- * @cuListRes:
- *      cuListRes: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
- *      cuNum: cu number in this list
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param allocQuery the allocate query information.
+ *             allocServiceId: the service id returned from allocation.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ * @param cuListRes cu list resource.
+ *             cuListRes: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
+ *             cuNum: cu number in this list.
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmAllocationQuery(xrmContext context, xrmAllocationQueryInfo* allocQuery, xrmCuListResource* cuListRes) {
     int32_t ret = XRM_ERROR;
     int32_t i;
@@ -1301,20 +1303,20 @@ int32_t xrmAllocationQuery(xrmContext context, xrmAllocationQueryInfo* allocQuer
 }
 
 /**
- * xrmCheckCuAvailableNum() - check the available cu num on the system given
+ * \brief To check the available cu num on the system given
  * the kernels's property with kernel name or alias or both and request
  * load (1 - 100).
  *
- * @context: the context created through xrmCreateContext()
- * @cuProp:
- *      kernelName: the kernel name requested
- *      kernelAlias: the alias of kernel name requested
- *      devExcl: request exclusive device usage for this client
- *      requestLoad: request load (1 - 100)
- *      poolId: request to allocate cu from specified resource pool
- * @return: int32_t, available cu num (>= 0) on success or appropriate error number (< 0), if available
+ * @param context the context created through xrmCreateContext()
+ * @param cuProp the property of cu.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ *             devExcl: request exclusive device usage for this client.
+ *             requestLoad: request load (1 - 100).
+ *             poolId: request to allocate cu from specified resource pool.
+ * @return int32_t, available cu num (>= 0) on success or appropriate error number (< 0), if available
  *          cu number is >= XRM_MAX_AVAILABLE_CU_NUM, will only return XRM_MAX_AVAILABLE_CU_NUM.
- **/
+ */
 int32_t xrmCheckCuAvailableNum(xrmContext context, xrmCuProperty* cuProp) {
     int32_t ret = XRM_ERROR;
     int32_t i;
@@ -1371,18 +1373,18 @@ int32_t xrmCheckCuAvailableNum(xrmContext context, xrmCuProperty* cuProp) {
 }
 
 /**
- * xrmCheckCuListAvailableNum() - check the available cu list num on the system given
+ * \brief To check the available cu list num on the system given
  * a list of kernels's property with kernel name or alias or both and request
  * load (1 - 100).
  *
- * @context: the context created through xrmCreateContext()
- * @cuListProp:
- *      cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole
- *      cuNum: request number of cu in this list
- *      sameDevice: request this list of cu from same device
- * @return: int32_t, available cu list num (>= 0) on success or appropriate error number (< 0), if available
+ * @param context the context created through xrmCreateContext()
+ * @param cuListProp the property of cu list.
+ *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole
+ *             cuNum: request number of cu in this list.
+ *             sameDevice: request this list of cu from same device.
+ * @return int32_t, available cu list num (>= 0) on success or appropriate error number (< 0), if available
  *          cu list number is >= XRM_MAX_AVAILABLE_LIST_NUM, will only return XRM_MAX_AVAILABLE_LIST_NUM.
- **/
+ */
 int32_t xrmCheckCuListAvailableNum(xrmContext context, xrmCuListProperty* cuListProp) {
     int32_t ret = XRM_ERROR;
     int32_t i;
@@ -1455,15 +1457,15 @@ int32_t xrmCheckCuListAvailableNum(xrmContext context, xrmCuListProperty* cuList
 }
 
 /**
- * xrmCheckCuGroupAvailableNum() - check the available group number of compute unit resource given a user
+ * \brief To check the available group number of compute unit resource given a user
  * defined group of kernels's property with cu name (kernelName:instanceName) and request load (1 - 100).
  *
- * @context: the context created through xrmCreateContext()
- * @cuGroupProp:
- *      udfCuGroupName: user defined cu group type name
- *      poolId: id of the cu pool this group CUs come from, the system default pool id is 0
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuGroupProp the property of cu group.
+ *             udfCuGroupName: user defined cu group type name.
+ *             poolId: id of the cu pool this group CUs come from, the system default pool id is 0.
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmCheckCuGroupAvailableNum(xrmContext context, xrmCuGroupProperty* cuGroupProp) {
     int32_t ret = XRM_ERROR;
     int32_t i;
@@ -1510,19 +1512,19 @@ int32_t xrmCheckCuGroupAvailableNum(xrmContext context, xrmCuGroupProperty* cuGr
 }
 
 /**
- * xrmCheckCuPoolAvailableNum() - check the available cu pool num on the system given
+ * \brief To check the available cu pool num on the system given
  * a pool of kernels's property with kernel name or alias or both and request
  * load (1 - 100).
  *
- * @context: the context created through xrmCreateContext()
- * @cuPoolProp:
- *      cuListProp: cu list property
- *      cuListNum: number of cu list in this pool
- *      xclbinUuid: uuid of xclbin
- *      xclbinNum: number of xclbin in this pool
- * @return: int32_t, available cu pool num (>= 0) on success or appropriate error number (< 0), if available
+ * @param context the context created through xrmCreateContext()
+ * @param cuPoolProp the property of cu pool.
+ *             cuListProp: cu list property.
+ *             cuListNum: number of cu list in this pool.
+ *             xclbinUuid: uuid of xclbin.
+ *             xclbinNum: number of xclbin in this pool.
+ * @return int32_t, available cu pool num (>= 0) on success or appropriate error number (< 0), if available
  *          cu pool number is >= XRM_MAX_AVAILABLE_POOL_NUM, will only return XRM_MAX_AVAILABLE_POOL_NUM.
- **/
+ */
 int32_t xrmCheckCuPoolAvailableNum(xrmContext context, xrmCuPoolProperty* cuPoolProp) {
     int32_t ret = XRM_ERROR;
     int32_t i;
@@ -1610,17 +1612,17 @@ int32_t xrmCheckCuPoolAvailableNum(xrmContext context, xrmCuPoolProperty* cuPool
 }
 
 /**
- * xrmCuPoolReserve() - reserves a pool of compute unit resource given a pool of
+ * \brief Reserves a pool of compute unit resource given a pool of
  * kernels's property with kernel name or alias or both and request load (1 - 100).
  *
- * @context: the context created through xrmCreateContext()
- * @cuPoolProp:
- *      cuListProp: cu prop list to fill kernelName, devExcl and requestLoad etc. information
- *      cuListNum: request number of such cu list for this pool
- *      xclbinUuid: request all resource in the xclbin
- *      xclbinNum: request number of such xclbin for this pool
- * @return: uint64_t, reserve pool id (> 0) or 0 on fail
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuPoolProp the property of cu pool.
+ *             cuListProp: cu prop list to fill kernelName, devExcl and requestLoad etc. information.
+ *             cuListNum: request number of such cu list for this pool.
+ *             xclbinUuid: request all resource in the xclbin.
+ *             xclbinNum: request number of such xclbin for this pool.
+ * @return uint64_t, reserve pool id (> 0) or 0 on fail
+ */
 uint64_t xrmCuPoolReserve(xrmContext context, xrmCuPoolProperty* cuPoolProp) {
     uint64_t reserve_poolId = 0;
     int32_t ret = XRM_ERROR;
@@ -1711,12 +1713,12 @@ uint64_t xrmCuPoolReserve(xrmContext context, xrmCuPoolProperty* cuPoolProp) {
 }
 
 /**
- * xrmCuPoolRelinquish() - relinquish a previously reserved pool of resources
+ * \brief Relinquishes a previously reserved pool of resources
  *
- * @context: the context created through xrmCreateContext()
- * @poolId: the reserve pool id
- * @return: bool, true on success or false on fail
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param poolId the reserve pool id
+ * @return bool, true on success or false on fail
+ */
 bool xrmCuPoolRelinquish(xrmContext context, uint64_t poolId) {
     bool ret = false;
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
@@ -1760,17 +1762,16 @@ bool xrmCuPoolRelinquish(xrmContext context, uint64_t poolId) {
 }
 
 /**
- * xrmReservationQuery() - query the compute unit resource given the reservation id.
- *
- * @context: the context created through xrmCreateContext()
- * @poolId: the reserve pool id
- * @cuPoolRes:
- *      cuPoolRes: cu resource pool to fill the allocated cus infor
- *                 starting from cuPoolRes[0], no hole
- *      cuNum: cu number in this pool
+ * \brief Querys the compute unit resource given the reservation id.
  * NOTE: The allocServiceId, channelId and channelLoad are NOT valid in the cuPoolRes
- * @return value: int32_t, 0 on success or appropriate error number
- **/
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param poolId the reserve pool id
+ * @param cuPoolRes the cu pool resource.
+ *             cuPoolRes: cu resource pool to fill the allocated cus infor, starting from cuPoolRes[0], no hole.
+ *             cuNum: cu number in this pool.
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmReservationQuery(xrmContext context, uint64_t poolId, xrmCuPoolResource* cuPoolRes) {
     int32_t ret = XRM_ERROR;
     int32_t i;
@@ -1844,14 +1845,14 @@ int32_t xrmReservationQuery(xrmContext context, uint64_t poolId, xrmCuPoolResour
 }
 
 /**
- * xrmExecPluginFunc() - execuate the function of one specified xrm plugin.
+ * \brief Execuates the function of one specified xrm plugin.
  *
- * @context: the context created through xrmCreateContext()
- * @xrmPluginName: name of the xrm plugin
- * @funcId: the function id within xrm plugin
- * @param: the parameter struct for xrm plugin function
- * @return value: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param xrmPluginName name of the xrm plugin
+ * @param funcId the function id within xrm plugin
+ * @param param the parameter struct for xrm plugin function
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmExecPluginFunc(xrmContext context, char* xrmPluginName, uint32_t funcId, xrmPluginFuncParam* param) {
     int32_t ret;
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
@@ -1898,37 +1899,37 @@ int32_t xrmExecPluginFunc(xrmContext context, char* xrmPluginName, uint32_t func
 }
 
 /**
- * xrmCuAllocWithLoad() - allocates compute unit with a device, cu, and channel given a
+ * \brief Allocates compute unit with a device, cu, and channel given a
  * kernel name or alias or both and request load (1 - 100). This function also
  * provides the xclbin and kernel plugin loaded on the device. If required CU is not
  * available, this function will try to load the xclbin to one device and do the
  * allocation again.
  *
- * @context: the context created through xrmCreateContext()
- * @cuProp:
- *      kernelName: the kernel name requested
- *      kernelAlias: the alias of kernel name requested
- *      devExcl: request exclusive device usage for this client
- *      requestLoad: request load (1 - 100)
- *      poolId: poolId will be ignored, this request will only allocate cu from default pool
- * @xclbinFileName: xclbin file (full path and name)
- * @cuRes:
- *      xclbinFileName: xclbin (path and name) attached to this device
- *      kernelPluginFileName: kernel plugin (only name) attached to this device
- *      kernelName: the kernel name of allocated cu
- *      kernelAlias: the name alias of allocated cu
- *      instanceName: the instance name of allocated cu
- *      cuName: the name of allocated cu (kernelName:instanceName)
- *      uuid: uuid of the loaded xclbin file
- *      deviceId: device id of this cu
- *      cuId: cu id of this cu
- *      channelId: channel id of this cu
- *      cuType: type of cu, hardware kernel or soft kernel
- *      allocServiceId: service id for this cu allocation
- *      channelLoad: allocated load of this cu (1 - 100)
- *      poolId: id of the cu pool this cu comes from, this resource should only come from default pool (id is 0)
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuProp the property of cu.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ *             devExcl: request exclusive device usage for this client.
+ *             requestLoad: request load (1 - 100).
+ *             poolId: request to allocate cu from specified resource pool.
+ * @param xclbinFileName xclbin file (full path and name)
+ * @param cuRes cu resource.
+ *             xclbinFileName: xclbin (path and name) attached to this device.
+ *             kernelPluginFileName: kernel plugin (only name) attached to this device.
+ *             kernelName: the kernel name of allocated cu.
+ *             kernelAlias: the name alias of allocated cu.
+ *             instanceName: the instance name of allocated cu.
+ *             cuName: the name of allocated cu (kernelName:instanceName).
+ *             uuid: uuid of the loaded xclbin file.
+ *             deviceId: device id of this cu.
+ *             cuId: cu id of this cu.
+ *             channelId: channel id of this cu.
+ *             cuType: type of cu, hardware kernel or soft kernel.
+ *             allocServiceId: service id for this cu allocation.
+ *             channelLoad: allocated load of this cu (1 - 100).
+ *             poolId: id of the cu pool this cu comes from, the default pool id is 0.
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmCuAllocWithLoad(xrmContext context, xrmCuProperty* cuProp, char* xclbinFileName, xrmCuResource* cuRes) {
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
 
@@ -2018,15 +2019,15 @@ int32_t xrmCuAllocWithLoad(xrmContext context, xrmCuProperty* cuProp, char* xclb
 }
 
 /**
- * xrmLoadAndAllCuAlloc() - load xclbin to one device, then allocate all CUs from this device.
+ * \brief Loads xclbin to one device, then allocates all CUs from this device.
  *
- * @context: the context created through xrmCreateContext()
- * @xclbinFileName: xclbin file (full path and name)
- * @cuListRes:
- *      cuResources: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
- *      cuNum: allocated cu number in this list
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param xclbinFileName xclbin file (full path and name)
+ * @param cuListRes cu list resource.
+ *             cuResources: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
+ *             cuNum: allocated cu number in this list.
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmLoadAndAllCuAlloc(xrmContext context, char* xclbinFileName, xrmCuListResource* cuListRes) {
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
 
@@ -2105,34 +2106,34 @@ int32_t xrmLoadAndAllCuAlloc(xrmContext context, char* xclbinFileName, xrmCuList
 }
 
 /**
- * xrmCuBlockingAlloc() - blocking function of xrmCuAlloc(), this function will try to do cu allocation
- * until sucess.
+ * \brief Blocking function of xrmCuAlloc(), this function will try to do cu allocation
+ * until success.
  *
- * @context: the context created through xrmCreateContext()
- * @cuProp:
- *      kernelName: the kernel name requested
- *      kernelAlias: the alias of kernel name requested
- *      devExcl: request exclusive device usage for this client
- *      requestLoad: request load (1 - 100)
- *      poolId: request to allocate cu from specified resource pool
- * @interval: the interval time (useconds) before re-trying, To set it as 0 to use XRM default interval
- * @cuRes:
- *      xclbinFileName: xclbin (path and name) attached to this device
- *      kernelPluginFileName: kernel plugin (only name) attached to this device
- *      kernelName: the kernel name of allocated cu
- *      kernelAlias: the name alias of allocated cu
- *      instanceName: the instance name of allocated cu
- *      cuName: the name of allocated cu (kernelName:instanceName)
- *      uuid: uuid of the loaded xclbin file
- *      deviceId: device id of this cu
- *      cuId: cu id of this cu
- *      channelId: channel id of this cu
- *      cuType: type of cu, hardware kernel or soft kernel
- *      allocServiceId: service id for this cu allocation
- *      channelLoad: allocated load of this cu (1 - 100)
- *      poolId: id of the cu pool this cu comes from, the default pool id is 0
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuProp the property of cu.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ *             devExcl: request exclusive device usage for this client.
+ *             requestLoad: request load (1 - 100).
+ *             poolId: request to allocate cu from specified resource pool.
+ * @param interval the interval time (useconds) before re-trying, To set it as 0 to use XRM default interval
+ * @param cuRes cu resource.
+ *             xclbinFileName: xclbin (path and name) attached to this device.
+ *             kernelPluginFileName: kernel plugin (only name) attached to this device.
+ *             kernelName: the kernel name of allocated cu.
+ *             kernelAlias: the name alias of allocated cu.
+ *             instanceName: the instance name of allocated cu.
+ *             cuName: the name of allocated cu (kernelName:instanceName).
+ *             uuid: uuid of the loaded xclbin file.
+ *             deviceId: device id of this cu.
+ *             cuId: cu id of this cu.
+ *             channelId: channel id of this cu.
+ *             cuType: type of cu, hardware kernel or soft kernel.
+ *             allocServiceId: service id for this cu allocation.
+ *             channelLoad: allocated load of this cu (1 - 100).
+ *             poolId: id of the cu pool this cu comes from, the default pool id is 0.
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmCuBlockingAlloc(xrmContext context, xrmCuProperty* cuProp, uint64_t interval, xrmCuResource* cuRes) {
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
 
@@ -2162,20 +2163,20 @@ int32_t xrmCuBlockingAlloc(xrmContext context, xrmCuProperty* cuProp, uint64_t i
 }
 
 /**
- * xrmCuListBlockingAlloc() - blocking function of xrmCuListAlloc(), this function will try to do cu list allocation
- * until sucess.
+ * \brief Blocking function of xrmCuListAlloc(), this function will try to do cu list allocation
+ * until success.
  *
- * @context: the context created through xrmCreateContext()
- * @cuListProp:
- *      cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole.
- *      cuNum: request number of cu in this list
- *      sameDevice: request this list of cu from same device
- * @interval: the interval time (useconds) before re-trying, To set it as 0 to use XRM default interval
- * @cuListRes:
- *      cuResources: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
- *      cuNum: allocated cu number in this list
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuListProp the property of cu list.
+ *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole.
+ *             cuNum: request number of cu in this list.
+ *             sameDevice request this list of cu from same device.
+ * @param interval the interval time (useconds) before re-trying, To set it as 0 to use XRM default interval
+ * @param cuListRes cu list resource.
+ *             cuResources: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
+ *             cuNum: allocated cu number in this list.
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmCuListBlockingAlloc(xrmContext context,
                                xrmCuListProperty* cuListProp,
                                uint64_t interval,
@@ -2206,19 +2207,19 @@ int32_t xrmCuListBlockingAlloc(xrmContext context,
 }
 
 /**
- * xrmCuGroupBlockingAlloc() - blocking function of xrmCuGroupAlloc(), this function will try to do cu group
- * allocation until sucess.
+ * \brief Blocking function of xrmCuGroupAlloc(), this function will try to do cu group
+ * allocation until success.
  *
- * @context: the context created through xrmCreateContext()
- * @cuGroupProp:
- *      udfCuGroupName: user defined cu group type name
- *      poolId: id of the cu pool this group CUs come from, the system default pool id is 0
- * @interval: the interval time (useconds) before re-trying, To set it as 0 to use XRM default interval
- * @cuGroupRes:
- *      cuResources: cu resource group to fill the allocated cus infor, starting from cuResources[0], no hole.
- *      cuNum: allocated cu number in this list
- * @return: int32_t, 0 on success or appropriate error number
- **/
+ * @param context the context created through xrmCreateContext()
+ * @param cuGroupProp the property of cu group.
+ *            udfCuGroupName: user defined cu group type name.
+ *            poolId: id of the cu pool this group CUs come from, the system default pool id is 0.
+ * @param interval the interval time (useconds) before re-trying, To set it as 0 to use XRM default interval
+ * @param cuGroupRes cu group resource.
+ *            cuResources cu resource group to fill the allocated cus infor, starting from cuResources[0], no hole.
+ *            cuNum allocated cu number in this list.
+ * @return int32_t, 0 on success or appropriate error number
+ */
 int32_t xrmCuGroupBlockingAlloc(xrmContext context,
                                 xrmCuGroupProperty* cuGroupProp,
                                 uint64_t interval,
