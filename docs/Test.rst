@@ -15,7 +15,9 @@ Step 1: To set the running environment
 ......................................
 xrt (related files will be installed under ``/opt/xilinx/xrt/``) and xrm running
 environment need to be set before test.
-::
+
+.. code-block:: bash
+
     source /opt/xilinx/xrt/setup.sh
     source /opt/xilinx/xrm/setup.sh
 
@@ -24,19 +26,27 @@ Step 2: To start the xrmd
 Daemon xrmd need to be started for test.
 
 To stop xrmd if it's started before test:
-::
+
+.. code-block:: bash
+
     sudo /opt/xilinx/xrm/tools/stop_xrmd.sh
 
 To start xrmd:
-::
+
+.. code-block:: bash
+
     sudo /opt/xilinx/xrm/tools/start_xrmd.sh
 
 Or to restart xrmd which will stop then start xrmd:
-::
+
+.. code-block:: bash
+
     sudo /opt/xilinx/xrm/tools/restart_xrmd.sh
 
 To check status of xrmd:
-::
+
+.. code-block:: bash
+
     sudo systemctl status xrmd
 
 Step 3: To load/unload xclbin
@@ -44,7 +54,9 @@ Step 3: To load/unload xclbin
 The input is from json file. Please refer to example json file under ``/opt/xilinx/xrm/test/``
 on how to specify the xclbin file and device for load/unload operation. The right xclbin file
 need to be prepared before loading operation.
-::
+
+.. code-block:: bash
+
     cd /opt/xilinx/xrm/test/
     xrmadm list_cmd.json (To check the system result)
     xrmadm load_devices_cmd.json (To load xclbin files to devices)
@@ -59,7 +71,9 @@ Step 4: To run XRM host application example
 There are some examples under ``/opt/xilinx/xrm/test/`` for user reference. The example_1 is
 to show how to use the XRM APIs. The detailed definition of the APIs can be found in
 ``/opt/xilinx/xrm/include/xrm.h``
-::
+
+.. code-block:: bash
+
     cd /opt/xilinx/xrm/test/example_1
     source /opt/xilinx/xrm/setup.sh
     make (To build the binary)

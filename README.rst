@@ -4,7 +4,7 @@ Xilinx FPGA Resource Management (XRM)
 
 -------------------------------------------------------------------------------
 
-.. image:: docs/XRM-Arch.png
+.. image:: docs/images/XRM-Arch.png
    :align: center
 
 XRM - Xilinx FPGA Resource management is the software to manage all the FPGA hardware
