@@ -701,7 +701,6 @@ int32_t xrm::system::xclbinGetLayout(int32_t devId, std::string& errmsg) {
          * is in range from 0 - current (xclbinInfo->numCu - 1).
          */
 
-#ifdef SOFT_KERNEL
         /* Handle the Soft Kernel */
         for (const axlf_section_header* softKernelHdr = xclbin::get_axlf_section(xclbin, SOFT_KERNEL);
              softKernelHdr != NULL; softKernelHdr = xclbin::get_axlf_section_next(xclbin, softKernelHdr, SOFT_KERNEL)) {
@@ -732,7 +731,6 @@ int32_t xrm::system::xclbinGetLayout(int32_t devId, std::string& errmsg) {
                 cu->numReserve = 0;
             }
         } // end of soft kernel handling
-#endif // soft kernel is supported by XRT
     }
 
     /* the xclbin should contain at least one hardware kernel */
