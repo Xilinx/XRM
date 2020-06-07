@@ -14,17 +14,17 @@
    limitations under the License.
 
 .. meta::
-   :keywords: Compute Unit, Kernel, Resource Management, FPGA Resource Management
-   :description: Xilinx FPGA Resource Management (XRM) is the software to manage all the FPGA hardware on the system.
+   :keywords: Compute Unit, Kernel, Resource Manager, FPGA Resource Manager
+   :description: Xilinx FPGA Resource Manager (XRM) is the software to manage all the FPGA hardware on the system.
    :xlnxdocumentclass: Document
    :xlnxdocumenttype: Tutorials
 
 
-*************************************
-Xilinx FPGA Resource Management (XRM)
-*************************************
+**********************************
+Xilinx FPGA Resource Manager (XRM)
+**********************************
 
-XRM - Xilinx FPGA Resource management is the software to manage all the FPGA hardware
+XRM - Xilinx FPGA Resource manager is the software to manage all the FPGA hardware
 on the system. All the Kernels (IP Kernel or Soft Kernel) on FPGA board are abstracted
 as one CU resource in XRM. XRM providers interface to allocate and release CU. The
 smallest allocation unit is channel, which is percentage of one CU. XRM providers
