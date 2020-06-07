@@ -14,8 +14,8 @@
    limitations under the License.
 
 .. meta::
-   :keywords: Compute Unit, Kernel, Resource Management, FPGA Resource Management
-   :description: Xilinx FPGA Resource Management (XRM) Licensing, and Trademark notice.
+   :keywords: Compute Unit, Kernel, Resource Manager, FPGA Resource Manager
+   :description: Xilinx FPGA Resource Manager (XRM) Licensing, and Trademark notice.
    :xlnxdocumentclass: Document
    :xlnxdocumenttype: Tutorials
 
