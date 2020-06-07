@@ -38,14 +38,14 @@ sys.path.insert(1, os.path.join(tools_dir, 'share/doxyrest_b/sphinx'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Xilinx FPGA Resource Management (XRM)'
+project = 'Xilinx FPGA Resource Manager (XRM)'
 copyright = 'Copyright (C) 2019-2020, Xilinx Inc - All rights reserved'
 author = 'Xilinx'
 
 # The short X.Y version
-version = '2020.2'
+version = '2020.1'
 # The full version, including alpha/beta/rc tags
-release = '202002'
+release = '202001'
 
 
 # -- General configuration ---------------------------------------------------
@@ -182,7 +182,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'XRM.tex', 'Xilinx FPGA Resource Management',
+    (master_doc, 'XRM.tex', 'Xilinx FPGA Resource Manager',
      'Xilinx', 'manual'),
 ]
 
@@ -192,7 +192,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'XRM', 'Xilinx FPGA Resource Management',
+    (master_doc, 'XRM', 'Xilinx FPGA Resource Manager',
      [author], 1)
 ]
 
@@ -203,7 +203,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'XRM', 'Xilinx FPGA Resource Management',
+    (master_doc, 'XRM', 'Xilinx FPGA Resource Manager',
      author, 'Xilinx', 'One line description of project.',
      'Miscellaneous'),
 ]
