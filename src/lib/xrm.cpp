@@ -33,6 +33,7 @@ struct xrmPrivateContext {
     uint32_t xrmApiVersion;
     xrmLogLevelType xrmLogLevel;
     uint64_t xrmClientId;
+    pthread_mutex_t lock;
     tcp::socket* socket;
     boost::asio::io_service* ioService;
     tcp::resolver* resolver;
@@ -63,6 +64,7 @@ xrmContext xrmCreateContext(uint32_t xrmApiVersion) {
         return (NULL);
     }
     ctx->xrmApiVersion = XRM_API_VERSION_1;
+    pthread_mutex_init(&ctx->lock, NULL);
 
     try {
         ctx->ioService = new boost::asio::io_service;
@@ -166,6 +168,7 @@ int32_t xrmDestroyContext(xrmContext context) {
         ctx->socket = NULL;
         ctx->ioService = NULL;
         ctx->resolver = NULL;
+        pthread_mutex_destroy(&ctx->lock);
         delete ctx;
         return (XRM_SUCCESS);
     } else {
@@ -228,11 +231,12 @@ static int32_t xrmJsonRequest(xrmContext context, const char* jsonReq, char* jso
     try {
         // Send request
         size_t reqLen = std::strlen(jsonReq);
-        xrmLog(ctx->xrmLogLevel, XRM_LOG_DEBUG, "Sending %s\n", jsonReq);
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "Sending %s\n", jsonReq);
+        pthread_mutex_lock(&ctx->lock);
         boost::asio::write(*ctx->socket, boost::asio::buffer(jsonReq, reqLen), ec);
 
         // Get response
-        xrmLog(ctx->xrmLogLevel, XRM_LOG_DEBUG, "Getting response");
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "Getting response");
 
         size_t replyLength = 0;
         while (ec != boost::asio::error::eof) {
@@ -243,8 +247,9 @@ static int32_t xrmJsonRequest(xrmContext context, const char* jsonReq, char* jso
              */
             if (jsonRsp[replyLength] == 0) break;
         }
+        pthread_mutex_unlock(&ctx->lock);
 
-        xrmLog(ctx->xrmLogLevel, XRM_LOG_DEBUG, "%s\n", jsonRsp);
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "%s\n", jsonRsp);
 
     } catch (std::exception& e) {
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s Exception: %s\n", __func__, e.what());
@@ -388,9 +393,9 @@ int32_t xrmUnloadOneDevice(xrmContext context, int32_t deviceId) {
 
     auto ret = rspTree.get<int32_t>("response.status.value");
     if (ret == XRM_SUCCESS) {
-        xrmLog(ctx->xrmLogLevel, XRM_LOG_DEBUG, "%s(): fail to unload from device %d", __func__, deviceId);
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "%s(): fail to unload from device %d", __func__, deviceId);
     } else {
-        xrmLog(ctx->xrmLogLevel, XRM_LOG_DEBUG, "%s(): success to unload xclbin", __func__);
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "%s(): success to unload xclbin", __func__);
     }
     return (ret);
 }
@@ -2160,6 +2165,7 @@ int32_t xrmCuBlockingAlloc(xrmContext context, xrmCuProperty* cuProp, uint64_t i
     else
         useconds = interval;
     while (xrmCuAlloc(ctx, cuProp, cuRes) != XRM_SUCCESS) usleep(useconds);
+    return (XRM_SUCCESS);
 }
 
 /**
@@ -2204,6 +2210,7 @@ int32_t xrmCuListBlockingAlloc(xrmContext context,
     else
         useconds = interval;
     while (xrmCuListAlloc(ctx, cuListProp, cuListRes) != XRM_SUCCESS) usleep(useconds);
+    return (XRM_SUCCESS);
 }
 
 /**
@@ -2250,4 +2257,5 @@ int32_t xrmCuGroupBlockingAlloc(xrmContext context,
     else
         useconds = interval;
     while (xrmCuGroupAlloc(ctx, cuGroupProp, cuGroupRes) != XRM_SUCCESS) usleep(useconds);
+    return (XRM_SUCCESS);
 }
