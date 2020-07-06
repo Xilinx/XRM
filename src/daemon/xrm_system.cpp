@@ -82,11 +82,11 @@ int32_t xrm::system::getLogLevel() {
 void xrm::system::initConfig() {
     m_logLevel = xrm::config::getVerbosity();
     if (m_logLevel > XRM_MAX_LOG_LEVEL) m_logLevel = XRM_DEFAULT_LOG_LEVEL;
-    logMsg(XRM_LOG_DEBUG, "%s : logLevel = %d", __func__, m_logLevel);
+    logMsg(XRM_LOG_NOTICE, "%s : logLevel = %d", __func__, m_logLevel);
     m_xrtVersionFileFullPathName = xrm::config::getXrtVersionFileFullPathName();
-    logMsg(XRM_LOG_DEBUG, "%s : xrtVersionFileFullPathName = %s", __func__, m_xrtVersionFileFullPathName.c_str());
+    logMsg(XRM_LOG_NOTICE, "%s : xrtVersionFileFullPathName = %s", __func__, m_xrtVersionFileFullPathName.c_str());
     m_libXrtCoreFileFullPathName = xrm::config::getLibXrtCoreFileFullPathName();
-    logMsg(XRM_LOG_DEBUG, "%s : libXrtCoreFileFullPathName = %s", __func__, m_libXrtCoreFileFullPathName.c_str());
+    logMsg(XRM_LOG_NOTICE, "%s : libXrtCoreFileFullPathName = %s", __func__, m_libXrtCoreFileFullPathName.c_str());
 }
 
 /*
@@ -114,7 +114,7 @@ void xrm::system::initLibVersionDepFunctions() {
     libVersionDepFuncXclLockDeviceType libVersionDepFuncXclLockDevice =
         (libVersionDepFuncXclLockDeviceType)dlsym(libXrtcoreHandle, "xclLockDevice");
     if ((errorMsg = dlerror()) != NULL) {
-        logMsg(XRM_LOG_DEBUG, "%s: Function xclLockDevice not implemented\n Debug msg: %s\n", __func__, errorMsg);
+        logMsg(XRM_LOG_NOTICE, "%s: Function xclLockDevice not implemented\n Debug msg: %s\n", __func__, errorMsg);
         m_libVersionDepFuncs.libVersionDepFuncXclLockDevice = NULL;
     } else {
         m_libVersionDepFuncs.libVersionDepFuncXclLockDevice = libVersionDepFuncXclLockDevice;
@@ -123,7 +123,7 @@ void xrm::system::initLibVersionDepFunctions() {
     libVersionDepFuncXclUnlockDeviceType libVersionDepFuncXclUnlockDevice =
         (libVersionDepFuncXclUnlockDeviceType)dlsym(libXrtcoreHandle, "xclUnlockDevice");
     if ((errorMsg = dlerror()) != NULL) {
-        logMsg(XRM_LOG_DEBUG, "%s: Function xclUnlockDevice not implemented\n Debug msg: %s\n", __func__, errorMsg);
+        logMsg(XRM_LOG_NOTICE, "%s: Function xclUnlockDevice not implemented\n Debug msg: %s\n", __func__, errorMsg);
         m_libVersionDepFuncs.libVersionDepFuncXclUnlockDevice = NULL;
     } else {
         m_libVersionDepFuncs.libVersionDepFuncXclUnlockDevice = libVersionDepFuncXclUnlockDevice;
@@ -132,7 +132,7 @@ void xrm::system::initLibVersionDepFunctions() {
     libVersionDepFuncXclCuName2IndexType libFuncXclCuName2Index =
         (libVersionDepFuncXclCuName2IndexType)dlsym(libXrtcoreHandle, "xclCuName2Index");
     if ((errorMsg = dlerror()) != NULL) {
-        logMsg(XRM_LOG_DEBUG, "%s: Function xclCuName2Index not implemented\n Debug msg: %s\n", __func__, errorMsg);
+        logMsg(XRM_LOG_NOTICE, "%s: Function xclCuName2Index not implemented\n Debug msg: %s\n", __func__, errorMsg);
         m_libVersionDepFuncs.libVersionDepFuncXclCuName2Index = NULL;
     } else {
         m_libVersionDepFuncs.libVersionDepFuncXclCuName2Index = libFuncXclCuName2Index;
@@ -151,13 +151,13 @@ void xrm::system::initLibVersionDepFunctions() {
         logMsg(XRM_LOG_ERROR, "%s: BUILD_VERSION is not set in %s\n", __func__, m_xrtVersionFileFullPathName.c_str());
         return;
     }
-    logMsg(XRM_LOG_DEBUG, "%s: XRT BUILD_VERSION: %s\n", __func__, xrtBuildVersion.c_str());
+    logMsg(XRM_LOG_NOTICE, "%s: XRT BUILD_VERSION: %s\n", __func__, xrtBuildVersion.c_str());
     if (Version(xrtBuildVersion.c_str()) < Version("2.6.0")) {
         // for XRT 2.5.xxx
         libVersionDepFuncXclIPName2IndexType25 libFuncXclIPName2Index25 =
             (libVersionDepFuncXclIPName2IndexType25)dlsym(libXrtcoreHandle, "xclIPName2Index");
         if ((errorMsg = dlerror()) != NULL) {
-            logMsg(XRM_LOG_DEBUG, "%s: Function xclIPName2Index not implemented\n Debug msg: %s\n", __func__, errorMsg);
+            logMsg(XRM_LOG_NOTICE, "%s: Function xclIPName2Index not implemented\n Debug msg: %s\n", __func__, errorMsg);
             m_libVersionDepFuncs.libVersionDepFuncXclIPName2Index25 = NULL;
         } else {
             m_libVersionDepFuncs.libVersionDepFuncXclIPName2Index25 = libFuncXclIPName2Index25;
@@ -167,7 +167,7 @@ void xrm::system::initLibVersionDepFunctions() {
         libVersionDepFuncXclIPName2IndexType26 libFuncXclIPName2Index26 =
             (libVersionDepFuncXclIPName2IndexType26)dlsym(libXrtcoreHandle, "xclIPName2Index");
         if ((errorMsg = dlerror()) != NULL) {
-            logMsg(XRM_LOG_DEBUG, "%s: Function xclIPName2Index not implemented\n Debug msg: %s\n", __func__, errorMsg);
+            logMsg(XRM_LOG_NOTICE, "%s: Function xclIPName2Index not implemented\n Debug msg: %s\n", __func__, errorMsg);
             m_libVersionDepFuncs.libVersionDepFuncXclIPName2Index26 = NULL;
         } else {
             m_libVersionDepFuncs.libVersionDepFuncXclIPName2Index26 = libFuncXclIPName2Index26;
@@ -375,7 +375,7 @@ int32_t xrm::system::loadOneDevice(pt::ptree& loadTree, std::string& errmsg) {
     enterLock();
     auto xclbin = loadTree.get<std::string>("xclbinFileName");
     auto devId = loadTree.get<int32_t>("deviceId");
-    logMsg(XRM_LOG_DEBUG, "%s(): devId is %d, xclbin file is %s\n", __func__, devId, xclbin.c_str());
+    logMsg(XRM_LOG_NOTICE, "%s(): devId is %d, xclbin file is %s\n", __func__, devId, xclbin.c_str());
 
     if (xclbin.c_str()[0] == '\0') {
         errmsg += "request parameters xclbin is not provided";
@@ -418,7 +418,7 @@ int32_t xrm::system::deviceLoadXclbin(int32_t devId, std::string& xclbin, std::s
         errmsg = "device " + std::to_string(devId) + " is already loaded xclbin";
         return (XRM_ERROR);
     }
-    logMsg(XRM_LOG_DEBUG, "%s load xclbin file %s to device %d", __func__, xclbin.c_str(), devId);
+    logMsg(XRM_LOG_NOTICE, "%s load xclbin file %s to device %d", __func__, xclbin.c_str(), devId);
     /* Read xclbin file */
     if (xclbinReadFile(devId, xclbin, errmsg) != XRM_SUCCESS) {
         deviceClearInfo(devId);
@@ -657,7 +657,7 @@ int32_t xrm::system::xclbinGetLayout(int32_t devId, std::string& errmsg) {
             }
             /* For hardware kernel, here should use the XRT interface to retrive cuId. */
             cuName = std::string((char*)ipl->m_ip_data[i].m_name);
-            logMsg(XRM_LOG_DEBUG, "%s : cuName is %s\n", __func__, cuName.c_str());
+            logMsg(XRM_LOG_NOTICE, "%s : cuName is %s\n", __func__, cuName.c_str());
 
             int32_t cuId = wrapIPName2Index(dev->deviceHandle, cuName.c_str());
             cuData* cu;
@@ -674,7 +674,7 @@ int32_t xrm::system::xclbinGetLayout(int32_t devId, std::string& errmsg) {
             } else {
                 // the function in XRT lib is implemented, return result is good
                 cu = &xclbinInfo->cuList[cuId];
-                logMsg(XRM_LOG_DEBUG, "%s : cu id of %s is %d\n", __func__, cuName.c_str(), cuId);
+                logMsg(XRM_LOG_NOTICE, "%s : cu id of %s is %d\n", __func__, cuName.c_str(), cuId);
                 cu->cuId = cuId;
             }
 
@@ -723,7 +723,7 @@ int32_t xrm::system::xclbinGetLayout(int32_t devId, std::string& errmsg) {
                  */
                 cu->kernelName = std::string((char*)&buffer[softKernelHdr->m_sectionOffset + sk->mpo_name]);
                 cu->cuName = cu->kernelName;
-                logMsg(XRM_LOG_DEBUG, "%s soft kernel name: %s\n", __func__, cu->kernelName.c_str());
+                logMsg(XRM_LOG_NOTICE, "%s soft kernel name: %s\n", __func__, cu->kernelName.c_str());
                 cuInitChannels(cu);
                 cu->numClient = 0;
                 cu->usedLoad = 0;
@@ -842,7 +842,7 @@ int32_t xrm::system::xclbinGetKeyvalues(int32_t devId, std::string& errmsg) {
         auto size = kvHdr->m_sectionSize;
         char* data = &buffer[kvHdr->m_sectionOffset];
         if (size == 0 || data == NULL) {
-            logMsg(XRM_LOG_DEBUG, "%s : There is no Keyvalues metadata in xclbin file\n", __func__);
+            logMsg(XRM_LOG_NOTICE, "%s : There is no Keyvalues metadata in xclbin file\n", __func__);
             return (XRM_SUCCESS);
         }
         std::string kvData(data, size);
@@ -870,30 +870,30 @@ int32_t xrm::system::xclbinGetKeyvalues(int32_t devId, std::string& errmsg) {
         for (const auto& kviter : keyValues) {
             std::string kernelName = kviter.second.get<std::string>("key", "");
             if (kernelName.c_str()[0] == '\0') continue;
-            logMsg(XRM_LOG_DEBUG, "%s : kernel name in metadata is %s\n", __func__, kernelName.c_str());
+            logMsg(XRM_LOG_NOTICE, "%s : kernel name in metadata is %s\n", __func__, kernelName.c_str());
             auto value = kviter.second.get_child("value");
             std::string alias = value.get("alias", "");
-            logMsg(XRM_LOG_DEBUG, "%s : alias in metadata is %s\n", __func__, alias.c_str());
+            logMsg(XRM_LOG_NOTICE, "%s : alias in metadata is %s\n", __func__, alias.c_str());
             std::string kernelPluginFileName = value.get("plugin", "");
-            logMsg(XRM_LOG_DEBUG, "%s : kernelPluginFileName in metadata is %s\n", __func__,
+            logMsg(XRM_LOG_NOTICE, "%s : kernelPluginFileName in metadata is %s\n", __func__,
                    kernelPluginFileName.c_str());
             std::string maxCapacity = value.get("maxCapacity", "");
-            logMsg(XRM_LOG_DEBUG, "%s : maxCapacity in metadata is %s\n", __func__, maxCapacity.c_str());
+            logMsg(XRM_LOG_NOTICE, "%s : maxCapacity in metadata is %s\n", __func__, maxCapacity.c_str());
             for (int32_t i = 0; i < dev->xclbinInfo.numCu; i++) {
                 cuData* cu = &dev->xclbinInfo.cuList[i];
-                logMsg(XRM_LOG_DEBUG, "%s : kernel name in IP Layout is %s\n", __func__, cu->kernelName.c_str());
+                logMsg(XRM_LOG_NOTICE, "%s : kernel name in IP Layout is %s\n", __func__, cu->kernelName.c_str());
                 if (kernelName.compare(cu->kernelName) == 0) {
-                    logMsg(XRM_LOG_DEBUG, "%s : matching the kernel name\n", __func__);
+                    logMsg(XRM_LOG_NOTICE, "%s : matching the kernel name\n", __func__);
                     if (alias.c_str()[0] != '\0') cu->kernelAlias = alias;
                     if (kernelPluginFileName.c_str()[0] != '\0') cu->kernelPluginFileName = kernelPluginFileName;
                     if (maxCapacity.c_str()[0] != '\0') cu->maxCapacity = std::strtoull(maxCapacity.c_str(), NULL, 0);
                 }
             }
         }
-        logMsg(XRM_LOG_DEBUG, "%s : successed handling key value\n", __func__);
+        logMsg(XRM_LOG_NOTICE, "%s : successed handling key value\n", __func__);
         return (XRM_SUCCESS);
     } else {
-        logMsg(XRM_LOG_DEBUG, "%s : There is no metadata session in the xclbin file.\n", __func__);
+        logMsg(XRM_LOG_NOTICE, "%s : There is no metadata session in the xclbin file.\n", __func__);
         return (XRM_SUCCESS);
     }
 }
@@ -913,7 +913,7 @@ int32_t xrm::system::xclbinGetMemTopology(int32_t devId, std::string& errmsg) {
         char* data = &buffer[ipHdr->m_sectionOffset];
         const mem_topology* memTopo = reinterpret_cast<mem_topology*>(data);
         dev->xclbinInfo.numMemBank = memTopo->m_count;
-        logMsg(XRM_LOG_DEBUG, "MEM TOPOLOGY - %d banks\n", dev->xclbinInfo.numMemBank);
+        logMsg(XRM_LOG_NOTICE, "MEM TOPOLOGY - %d banks\n", dev->xclbinInfo.numMemBank);
         for (int i = 0; i < memTopo->m_count; i++) {
             memTopologyData* topology = &dev->xclbinInfo.memTopologyList[i];
             topology->memType = memTopo->m_mem_data[i].m_type;
@@ -921,11 +921,11 @@ int32_t xrm::system::xclbinGetMemTopology(int32_t devId, std::string& errmsg) {
             topology->memSize = memTopo->m_mem_data[i].m_size;
             topology->memBaseAddress = memTopo->m_mem_data[i].m_base_address;
             memcpy(topology->memTag, memTopo->m_mem_data[i].m_tag, XRM_MAX_DDR_MAP * sizeof(unsigned char));
-            logMsg(XRM_LOG_DEBUG, "index=%d, tag=%s, type = %d, used = %d, size = %lx, base = %lx\n", i,
+            logMsg(XRM_LOG_NOTICE, "index=%d, tag=%s, type = %d, used = %d, size = %lx, base = %lx\n", i,
                    topology->memTag, topology->memType, topology->memUsed, topology->memSize, topology->memBaseAddress);
         }
     } else {
-        logMsg(XRM_LOG_DEBUG, "Could not find MEM_TOPOLOGY in xclbin");
+        logMsg(XRM_LOG_NOTICE, "Could not find MEM_TOPOLOGY in xclbin");
     }
 
     return (XRM_SUCCESS);
@@ -946,17 +946,17 @@ int32_t xrm::system::xclbinGetConnectivity(int32_t devId, std::string& errmsg) {
         char* data = &buffer[ipHdr->m_sectionOffset];
         const connectivity* axlfConn = reinterpret_cast<connectivity*>(data);
         dev->xclbinInfo.numConnect = axlfConn->m_count;
-        logMsg(XRM_LOG_DEBUG, "CONNECTIVITY - %d connections\n", dev->xclbinInfo.numConnect);
+        logMsg(XRM_LOG_NOTICE, "CONNECTIVITY - %d connections\n", dev->xclbinInfo.numConnect);
         for (int i = 0; i < axlfConn->m_count; i++) {
             connectData* conn = &dev->xclbinInfo.connectList[i];
             conn->argIndex = axlfConn->m_connection[i].arg_index;
             conn->ipLayoutIndex = axlfConn->m_connection[i].m_ip_layout_index;
             conn->memDataIndex = axlfConn->m_connection[i].mem_data_index;
-            logMsg(XRM_LOG_DEBUG, "index = %d, arg_idx = %d, ip_idx = %d, mem_idx = %d\n", i, conn->argIndex,
+            logMsg(XRM_LOG_NOTICE, "index = %d, arg_idx = %d, ip_idx = %d, mem_idx = %d\n", i, conn->argIndex,
                    conn->ipLayoutIndex, conn->memDataIndex);
         }
     } else {
-        logMsg(XRM_LOG_DEBUG, "Could not find CONNECTIVITY in xclbin");
+        logMsg(XRM_LOG_NOTICE, "Could not find CONNECTIVITY in xclbin");
     }
 
     return (XRM_SUCCESS);
@@ -968,7 +968,7 @@ int32_t xrm::system::xclbinLoadToDevice(int32_t devId, std::string& errmsg) {
         return (XRM_ERROR_INVALID);
     }
 
-    logMsg(XRM_LOG_DEBUG, "%s load xclbin to device %d", __func__, devId);
+    logMsg(XRM_LOG_NOTICE, "%s load xclbin to device %d", __func__, devId);
 
     int32_t rc;
     deviceData* dev = &m_devList[devId];
@@ -1034,55 +1034,55 @@ void xrm::system::deviceDumpResource(int32_t devId) {
     deviceData* dev = &m_devList[devId];
     xclbinInformation* xclbinInfo = &m_devList[devId].xclbinInfo;
 
-    logMsg(XRM_LOG_DEBUG, "%s(): deviceId : %d", __func__, devId);
-    logMsg(XRM_LOG_DEBUG, "%s(): isLoaded : %d", __func__, dev->isLoaded);
+    logMsg(XRM_LOG_NOTICE, "%s(): deviceId : %d", __func__, devId);
+    logMsg(XRM_LOG_NOTICE, "%s(): isLoaded : %d", __func__, dev->isLoaded);
     if (!dev->isLoaded) return;
-    logMsg(XRM_LOG_DEBUG, "%s(): uuid : %s", __func__, xclbinInfo->uuidStr.c_str());
+    logMsg(XRM_LOG_NOTICE, "%s(): uuid : %s", __func__, xclbinInfo->uuidStr.c_str());
 #if 0
     for (i = 0; i < XRM_MAX_DEV_CLIENTS; i++)
     {
-        logMsg(XRM_LOG_DEBUG, "%s() dev[%d] clientProcs[%d] : clientId: %lu, ref: %d",
+        logMsg(XRM_LOG_NOTICE, "%s() dev[%d] clientProcs[%d] : clientId: %lu, ref: %d",
                __func__, devId, i, dev->clientProcs[i].clientId,
                dev->clientProcs[i].ref);
     }
 #endif
-    logMsg(XRM_LOG_DEBUG, "%s(): numCu : %d", __func__, xclbinInfo->numCu);
-    logMsg(XRM_LOG_DEBUG, "%s(): numHardwareCu : %d", __func__, xclbinInfo->numHardwareCu);
-    logMsg(XRM_LOG_DEBUG, "%s(): numSoftwareCu : %d", __func__, xclbinInfo->numSoftwareCu);
+    logMsg(XRM_LOG_NOTICE, "%s(): numCu : %d", __func__, xclbinInfo->numCu);
+    logMsg(XRM_LOG_NOTICE, "%s(): numHardwareCu : %d", __func__, xclbinInfo->numHardwareCu);
+    logMsg(XRM_LOG_NOTICE, "%s(): numSoftwareCu : %d", __func__, xclbinInfo->numSoftwareCu);
     for (i = 0; i < xclbinInfo->numCu; i++) {
         cuData* cu = &xclbinInfo->cuList[i];
-        logMsg(XRM_LOG_DEBUG, "%s() cu : cuId :%d", __func__, cu->cuId);
-        logMsg(XRM_LOG_DEBUG, "%s() cu : cuType :%d", __func__, cu->cuType);
-        logMsg(XRM_LOG_DEBUG, "%s() cu : kernelName :%s", __func__, cu->kernelName.c_str());
-        logMsg(XRM_LOG_DEBUG, "%s() cu : kernelAlias :%s", __func__, cu->kernelAlias.c_str());
-        logMsg(XRM_LOG_DEBUG, "%s() cu : cuName :%s", __func__, cu->cuName.c_str());
-        logMsg(XRM_LOG_DEBUG, "%s() cu : instanceName :%s", __func__, cu->instanceName.c_str());
-        logMsg(XRM_LOG_DEBUG, "%s() cu : baseAddr :%lu", __func__, cu->baseAddr);
-        logMsg(XRM_LOG_DEBUG, "%s() cu : membankId :%d", __func__, cu->membankId);
-        logMsg(XRM_LOG_DEBUG, "%s() cu : membankType :%d", __func__, cu->membankId);
-        logMsg(XRM_LOG_DEBUG, "%s() cu : membankSize :%lu", __func__, cu->membankSize);
-        logMsg(XRM_LOG_DEBUG, "%s() cu : membankBaseAddr :%lu", __func__, cu->membankBaseAddr);
-        logMsg(XRM_LOG_DEBUG, "%s() cu : kernelPluginFileName :%s", __func__, cu->kernelPluginFileName.c_str());
-        logMsg(XRM_LOG_DEBUG, "%s() cu : maxCapacity :%lu", __func__, cu->maxCapacity);
-        logMsg(XRM_LOG_DEBUG, "%s() cu : numChanInuse :%d", __func__, cu->numChanInuse);
-        logMsg(XRM_LOG_DEBUG, "%s() cu : numReserve :%d", __func__, cu->numReserve);
-        logMsg(XRM_LOG_DEBUG, "%s() cu : usedLoad :%d", __func__, cu->usedLoad);
+        logMsg(XRM_LOG_NOTICE, "%s() cu : cuId :%d", __func__, cu->cuId);
+        logMsg(XRM_LOG_NOTICE, "%s() cu : cuType :%d", __func__, cu->cuType);
+        logMsg(XRM_LOG_NOTICE, "%s() cu : kernelName :%s", __func__, cu->kernelName.c_str());
+        logMsg(XRM_LOG_NOTICE, "%s() cu : kernelAlias :%s", __func__, cu->kernelAlias.c_str());
+        logMsg(XRM_LOG_NOTICE, "%s() cu : cuName :%s", __func__, cu->cuName.c_str());
+        logMsg(XRM_LOG_NOTICE, "%s() cu : instanceName :%s", __func__, cu->instanceName.c_str());
+        logMsg(XRM_LOG_NOTICE, "%s() cu : baseAddr :%lu", __func__, cu->baseAddr);
+        logMsg(XRM_LOG_NOTICE, "%s() cu : membankId :%d", __func__, cu->membankId);
+        logMsg(XRM_LOG_NOTICE, "%s() cu : membankType :%d", __func__, cu->membankId);
+        logMsg(XRM_LOG_NOTICE, "%s() cu : membankSize :%lu", __func__, cu->membankSize);
+        logMsg(XRM_LOG_NOTICE, "%s() cu : membankBaseAddr :%lu", __func__, cu->membankBaseAddr);
+        logMsg(XRM_LOG_NOTICE, "%s() cu : kernelPluginFileName :%s", __func__, cu->kernelPluginFileName.c_str());
+        logMsg(XRM_LOG_NOTICE, "%s() cu : maxCapacity :%lu", __func__, cu->maxCapacity);
+        logMsg(XRM_LOG_NOTICE, "%s() cu : numChanInuse :%d", __func__, cu->numChanInuse);
+        logMsg(XRM_LOG_NOTICE, "%s() cu : numReserve :%d", __func__, cu->numReserve);
+        logMsg(XRM_LOG_NOTICE, "%s() cu : usedLoad :%d", __func__, cu->usedLoad);
         for (j = 0; j < XRM_MAX_KERNEL_CHANNELS; j++) {
             channelData* chan = &cu->channels[j];
-            logMsg(XRM_LOG_DEBUG, "%s() cu : clients[%d] : %d", __func__, j, cu->clients[j]);
-            logMsg(XRM_LOG_DEBUG, "%s() cu : channels[%d] channelId: %d", __func__, j, chan->channelId);
-            logMsg(XRM_LOG_DEBUG, "%s() cu : channels[%d] allocServiceId: %lu", __func__, j, chan->allocServiceId);
-            logMsg(XRM_LOG_DEBUG, "%s() cu : channels[%d] poolId: %lu", __func__, j, chan->poolId);
-            logMsg(XRM_LOG_DEBUG, "%s() cu : channels[%d] clientId: %lu", __func__, j, chan->clientId);
-            logMsg(XRM_LOG_DEBUG, "%s() cu : channels[%d] channelLoad: %d", __func__, j, chan->channelLoad);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : clients[%d] : %d", __func__, j, cu->clients[j]);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : channels[%d] channelId: %d", __func__, j, chan->channelId);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : channels[%d] allocServiceId: %lu", __func__, j, chan->allocServiceId);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : channels[%d] poolId: %lu", __func__, j, chan->poolId);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : channels[%d] clientId: %lu", __func__, j, chan->clientId);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : channels[%d] channelLoad: %d", __func__, j, chan->channelLoad);
         }
         for (j = 0; j < XRM_MAX_KERNEL_RESERVES; j++) {
             reserveData* reserve = &cu->reserves[j];
-            logMsg(XRM_LOG_DEBUG, "%s() cu : reserves[%d] reservePoolId: %lu", __func__, j, reserve->reservePoolId);
-            logMsg(XRM_LOG_DEBUG, "%s() cu : reserves[%d] reserveLoad: %d", __func__, j, reserve->reserveLoad);
-            logMsg(XRM_LOG_DEBUG, "%s() cu : reserves[%d] reserveUsedLoad: %d", __func__, j, reserve->reserveUsedLoad);
-            logMsg(XRM_LOG_DEBUG, "%s() cu : reserves[%d] clientIsActive: %d", __func__, j, reserve->clientIsActive);
-            logMsg(XRM_LOG_DEBUG, "%s() cu : reserves[%d] clientId: %lu", __func__, j, reserve->clientId);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : reserves[%d] reservePoolId: %lu", __func__, j, reserve->reservePoolId);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : reserves[%d] reserveLoad: %d", __func__, j, reserve->reserveLoad);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : reserves[%d] reserveUsedLoad: %d", __func__, j, reserve->reserveUsedLoad);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : reserves[%d] clientIsActive: %d", __func__, j, reserve->clientIsActive);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : reserves[%d] clientId: %lu", __func__, j, reserve->clientId);
         }
     }
 }
@@ -1129,9 +1129,9 @@ uint64_t xrm::system::getCuMaxCapacity(cuProperty* cuProp) {
             if (found) break;
         }
         if (found) {
-            logMsg(XRM_LOG_DEBUG, "%s : maxCapacity with name is %lu", __func__, maxCapacity);
+            logMsg(XRM_LOG_NOTICE, "%s : maxCapacity with name is %lu", __func__, maxCapacity);
         } else {
-            logMsg(XRM_LOG_DEBUG, "%s : cu name%s not found", __func__, name.c_str());
+            logMsg(XRM_LOG_NOTICE, "%s : cu name%s not found", __func__, name.c_str());
         }
 
         /* kernel alias is also presented */
@@ -1152,13 +1152,13 @@ uint64_t xrm::system::getCuMaxCapacity(cuProperty* cuProp) {
                 if (found) break;
             }
             if (found) {
-                logMsg(XRM_LOG_DEBUG, "%s : maxCapacity with alias is %lu", __func__, maxCapacityWithAlias);
+                logMsg(XRM_LOG_NOTICE, "%s : maxCapacity with alias is %lu", __func__, maxCapacityWithAlias);
             } else {
-                logMsg(XRM_LOG_DEBUG, "%s : cu alias%s not found", __func__, alias.c_str());
+                logMsg(XRM_LOG_NOTICE, "%s : cu alias%s not found", __func__, alias.c_str());
             }
 
             if (maxCapacity != maxCapacityWithAlias) {
-                logMsg(XRM_LOG_DEBUG, "%s : kernel name and alias mismatch", __func__);
+                logMsg(XRM_LOG_NOTICE, "%s : kernel name and alias mismatch", __func__);
                 maxCapacity = 0;
             }
         }
@@ -1181,9 +1181,9 @@ uint64_t xrm::system::getCuMaxCapacity(cuProperty* cuProp) {
             if (found) break;
         }
         if (found) {
-            logMsg(XRM_LOG_DEBUG, "%s : maxCapacity with alias is %lu", __func__, maxCapacityWithAlias);
+            logMsg(XRM_LOG_NOTICE, "%s : maxCapacity with alias is %lu", __func__, maxCapacityWithAlias);
         } else {
-            logMsg(XRM_LOG_DEBUG, "%s : cu alias%s not found", __func__, alias.c_str());
+            logMsg(XRM_LOG_NOTICE, "%s : cu alias%s not found", __func__, alias.c_str());
         }
         maxCapacity = maxCapacityWithAlias;
     }
@@ -1231,7 +1231,7 @@ bool xrm::system::restore() {
     /* create and open the archive for input */
     std::ifstream ifs(fname.c_str());
     if (ifs.is_open()) {
-        logMsg(XRM_LOG_DEBUG, "Database found, reloading daemon");
+        logMsg(XRM_LOG_NOTICE, "Database found, reloading daemon");
         /* read class from archive */
         boost::archive::text_iarchive ar(ifs);
         ar&* this;
@@ -1242,7 +1242,7 @@ bool xrm::system::restore() {
         }
         rc = true;
     } else
-        logMsg(XRM_LOG_DEBUG, "No database found, starting from fresh state");
+        logMsg(XRM_LOG_NOTICE, "No database found, starting from fresh state");
 
     return (rc);
 }
@@ -1541,7 +1541,7 @@ cu_acquire_loop:
     std::string loadErrmsg;
     ret = loadAnyDevice(&devId, xclbin, loadErrmsg);
     if (ret != XRM_SUCCESS) {
-        logMsg(XRM_LOG_DEBUG, "%s fail to load xclbin to any device\n", __func__);
+        logMsg(XRM_LOG_NOTICE, "%s fail to load xclbin to any device\n", __func__);
         goto cu_acquire_exit;
     }
 

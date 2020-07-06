@@ -67,6 +67,7 @@ void xrm::session::handleCmd(std::size_t length) {
     } catch (const boost::property_tree::json_parser_error& e) {
         outrsp.put("response.status", "failed");
         outrsp.put("response.data.failed", "Input Json file format error: " + e.message());
+        outrsp.put("response.data.indata", instr.str());
         goto end_of_cmd;
     }
 
