@@ -4,7 +4,7 @@ libdir=${prefix}/lib
 includedir=${prefix}/include
 
 Name: libxrm
-Description: Xilinx Resource Management
+Description: Xilinx Resource Manager
 Version: @XRM_VERSION_STRING@
 Requires: xrt >= 2.1.0
 Libs: -L${libdir} -lxrm -lboost_system -lboost_filesystem -lboost_thread -lboost_serialization -luuid -ldl

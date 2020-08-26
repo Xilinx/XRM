@@ -1,6 +1,8 @@
 [Unit]
-Description=Xilinx Resource Management Daemon
-After=network.target
+Description=Xilinx Resource Manager Daemon
+Wants=network-online.target
+After=network-online.target
+ConditionDirectoryNotEmpty=/dev/xfpga
 
 [Service]
 Type=simple

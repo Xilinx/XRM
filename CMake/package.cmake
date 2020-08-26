@@ -63,15 +63,18 @@ set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}_${XRM_VERSION_RELEASE}.${CPAC
 message("-- ${CMAKE_BUILD_TYPE} ${PACKAGE_KIND} package")
 set(CPACK_PACKAGE_CONTACT "XRM Development Team<xrm_dev@xilinx.com>")
 set(CPACK_PACKAGE_VENDOR "Xilinx")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Xilinx FPGA Resource Management (XRM)")
-set(CPACK_PACKAGE_DESCRIPTION "The XRM is used to provide Xilinx FPGA Resource Management")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Xilinx FPGA Resource Manager (XRM)")
+set(CPACK_PACKAGE_DESCRIPTION "The XRM is used to provide Xilinx FPGA Resource Manager")
 
-set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_SOURCE_DIR}/CMake/config/prerm; ${CMAKE_SOURCE_DIR}/CMake/config/postinst ")
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_SOURCE_DIR}/CMake/config/prerm;${CMAKE_SOURCE_DIR}/CMake/config/postinst")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "xrt (>= 2.1.0),
                                   libboost-serialization-dev (>= 1.58.0),
                                   libboost-system-dev (>= 1.58.0),
                                   libboost-filesystem-dev (>= 1.58.0),
-                                  libboost-thread-dev (>= 1.58.0) ")
+                                  libboost-thread-dev (>= 1.58.0)")
+
+SET(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/CMake/config/postinst")
+SET(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/CMake/config/prerm")
 set(CPACK_RPM_PACKAGE_DEPENDS "xrt >= 2.1.0,
                                boost-serialization >= 1.58.0,
                                boost-system >= 1.58.0,

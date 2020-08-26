@@ -65,6 +65,8 @@ int runKernel(int32_t deviceId, std::string kernelName, const char* pXclbin) {
     cl::Program::Binaries bins = xcl::import_binary_file(pXclbin);
     devices.resize(1);
 
+    //program the specified device.
+    devices[0] = device;
     cl::Program program(context, devices, bins);
     cl::Kernel kernel(program, kernelName.c_str());
 

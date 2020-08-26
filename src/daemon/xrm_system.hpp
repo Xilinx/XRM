@@ -570,6 +570,7 @@ class system {
     uint64_t m_allocServiceId;
     uint64_t m_reservePoolId;
     pthread_mutex_t m_lock;
+    bool m_devicesInited;
 
     friend class boost::serialization::access;
 

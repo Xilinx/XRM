@@ -34,8 +34,18 @@ void xrm::system::initSystem() {
     initConfig();
     /* init the version depended lib functions */
     initLibVersionDepFunctions();
+
+    m_devicesInited = false;
+#if 0
+    /*
+     * Considering the FPGA devices may not ready before XRM daemon started,
+     * so to do the device init later.
+     */
     /* init the devices */
-    initDevices();
+    if (!m_devicesInited)
+        initDevices();
+#endif
+
     /* init the xrm plugins */
     initXrmPlugins();
     /* init the user defined cu groups */
@@ -180,7 +190,11 @@ void xrm::system::initLibVersionDepFunctions() {
  */
 void xrm::system::initDevices() {
     /* init the devices */
+    if (m_devicesInited)
+        return;
+
     int32_t numDevice = xclProbe();
+    m_devicesInited = true;
 
     if (numDevice <= 0 || numDevice > XRM_MAX_XILINX_DEVICES) {
         logMsg(XRM_LOG_ERROR, "%s : Probed %d devices, out of range.", __func__, numDevice);
@@ -242,6 +256,13 @@ void* xrm::system::listDevice(int32_t devId) {
 }
 
 int32_t xrm::system::getDeviceNumber() {
+    /*
+     * XRM daemon may start before FPGA device ready during boot,
+     * so try to init devices at the first time using devices.
+     */
+    if (!m_devicesInited)
+        initDevices();
+
     return (m_numDevice);
 }
 
@@ -281,6 +302,13 @@ int32_t xrm::system::loadDevices(pt::ptree& loadTree, std::string& errmsg) {
     std::string loadErrmsg;
 
     enterLock();
+    /*
+     * XRM daemon may start before FPGA device ready during boot,
+     * so try to init devices at the first time using devices.
+     */
+    if (!m_devicesInited)
+        initDevices();
+
     for (auto it : loadTree) {
         auto kv = it.second;
         strDevId = kv.get<std::string>("device", "");
@@ -373,6 +401,13 @@ int32_t xrm::system::loadOneDevice(pt::ptree& loadTree, std::string& errmsg) {
     std::string loadErrmsg;
 
     enterLock();
+    /*
+     * XRM daemon may start before FPGA device ready during boot,
+     * so try to init devices at the first time using devices.
+     */
+    if (!m_devicesInited)
+        initDevices();
+
     auto xclbin = loadTree.get<std::string>("xclbinFileName");
     auto devId = loadTree.get<int32_t>("deviceId");
     logMsg(XRM_LOG_NOTICE, "%s(): devId is %d, xclbin file is %s\n", __func__, devId, xclbin.c_str());
