@@ -74,7 +74,29 @@ xrmContext xrmCreateContext(uint32_t xrmApiVersion) {
         boost::asio::connect(*ctx->socket, ctx->resolver->resolve({"127.0.0.1", "9763"}));
     } catch (std::exception& e) {
         xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s Exception: %s\n", __func__, e.what());
-        xrmDestroyContext(ctx);
+        if (ctx->socket) {
+            /* disconnect first, then release resource */
+            boost::system::error_code ec;
+            ctx->socket->shutdown(tcp::socket::shutdown_both, ec);
+            if (ec) {
+                xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s: socket shutdown error %s = %d", __func__,
+                       ec.category().name(), ec.value());
+            }
+            delete ctx->socket;
+        }
+        if (ctx->resolver) {
+            ctx->resolver->cancel();
+            delete ctx->resolver;
+        }
+        if (ctx->ioService) {
+            ctx->ioService->stop();
+            delete ctx->ioService;
+        }
+        ctx->socket = NULL;
+        ctx->ioService = NULL;
+        ctx->resolver = NULL;
+        pthread_mutex_destroy(&ctx->lock);
+        delete ctx;
         return (NULL);
     }
 
