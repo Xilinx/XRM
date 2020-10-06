@@ -53,6 +53,19 @@ if [ -f "$FILE" ]; then
     systemctl disable xrmd > /dev/null 2>&1
     systemctl daemon-reload
 fi
+
 rm -f /dev/shm/xrm.data
+
+lsb_release -si | grep -Eq "^RedHat|^CentOS"
+if [ $? -eq 0 ]; then
+    rm -f /usr/lib64/libxrm.so.1
+    rm -f /usr/lib64/libxrm.so
+fi
+
+lsb_release -si | grep -Eq "^Ubuntu|^Debian"
+if [ $? -eq 0 ]; then
+    rm -f /usr/lib/libxrm.so.1
+    rm -f /usr/lib/libxrm.so
+fi
 
 exit 0

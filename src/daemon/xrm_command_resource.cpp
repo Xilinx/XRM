@@ -430,6 +430,75 @@ void xrm::allocationQueryCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp
     }
 }
 
+void xrm::isCuExistingCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
+    cuProperty cuProp;
+    bool isCuExisting = false;
+
+    auto kernelName = incmd.get<std::string>("request.parameters.kernelName");
+    auto kernelAlias = incmd.get<std::string>("request.parameters.kernelAlias");
+    strncpy(cuProp.kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
+    strncpy(cuProp.kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
+    strcpy(cuProp.cuName, "");
+
+    isCuExisting = m_system->resIsCuExisting(&cuProp);
+    if (isCuExisting) {
+        outrsp.put("response.status.value", XRM_SUCCESS);
+        outrsp.put("response.data.isCuExisting", 1);
+    } else {
+        outrsp.put("response.status.value", XRM_SUCCESS);
+        outrsp.put("response.data.isCuExisting", 0);
+    }
+}
+
+void xrm::isCuListExistingCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
+    cuListProperty cuListProp;
+    std::string errmsg;
+    int32_t i;
+    bool isCuListExisting = false;
+
+    memset(&cuListProp, 0, sizeof(cuListProperty));
+    auto cuNum = incmd.get<int32_t>("request.parameters.cuNum");
+    cuListProp.cuNum = cuNum;
+    auto sameDevice = incmd.get<int32_t>("request.parameters.sameDevice");
+    if (sameDevice == 0)
+        cuListProp.sameDevice = false;
+    else
+        cuListProp.sameDevice = true;
+    for (i = 0; i < cuListProp.cuNum; i++) {
+        auto kernelName = incmd.get<std::string>("request.parameters.kernelName" + std::to_string(i));
+        auto kernelAlias = incmd.get<std::string>("request.parameters.kernelAlias" + std::to_string(i));
+        strncpy(cuListProp.cuProps[i].kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
+        strncpy(cuListProp.cuProps[i].kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
+        strcpy(cuListProp.cuProps[i].cuName, "");
+    }
+
+    isCuListExisting = m_system->resIsCuListExisting(&cuListProp);
+    if (isCuListExisting) {
+        outrsp.put("response.status.value", XRM_SUCCESS);
+        outrsp.put("response.data.isCuListExisting", 1);
+    } else {
+        outrsp.put("response.status.value", XRM_SUCCESS);
+        outrsp.put("response.data.isCuListExisting", 0);
+    }
+}
+
+void xrm::isCuGroupExistingCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
+    cuGroupProperty cuGroupProp;
+    bool isCuGroupExisting = false;
+
+    auto udfCuGroupName = incmd.get<std::string>("request.parameters.udfCuGroupName");
+    cuGroupProp.udfCuGroupName = udfCuGroupName;
+
+    isCuGroupExisting = m_system->resIsCuGroupExisting(&cuGroupProp);
+    if (isCuGroupExisting) {
+        outrsp.put("response.status.value", XRM_SUCCESS);
+        outrsp.put("response.data.isCuGroupExisting", 1);
+    } else {
+        outrsp.put("response.status.value", XRM_SUCCESS);
+        outrsp.put("response.data.isCuGroupExisting", 0);
+    }
+}
+
 void xrm::checkCuAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuProperty cuProp;
     cuResource* cuRes[XRM_MAX_AVAILABLE_CU_NUM];

@@ -26,7 +26,25 @@
 # Stopping existing daemon
 xrmd_active=`systemctl is-active xrmd`
 echo "Running postinst ..."
+
 rm -f /dev/shm/xrm.data
+
+lsb_release -si | grep -Eq "^RedHat|^CentOS"
+if [ $? -eq 0 ]; then
+    rm -f /usr/lib64/libxrm.so
+    rm -f /usr/lib64/libxrm.so.1
+    ln -s /opt/xilinx/xrm/lib/libxrm.so.1 /usr/lib64/libxrm.so.1
+    ln -s /usr/lib64/libxrm.so.1 /usr/lib64/libxrm.so
+fi
+
+lsb_release -si | grep -Eq "^Ubuntu|^Debian"
+if [ $? -eq 0 ]; then
+    rm -f /usr/lib/libxrm.so
+    rm -f /usr/lib/libxrm.so.1
+    ln -s /opt/xilinx/xrm/lib/libxrm.so.1 /usr/lib/libxrm.so.1
+    ln -s /usr/lib/libxrm.so.1 /usr/lib/libxrm.so
+fi
+
 if [ "$xrmd_active" = "active" ]; then
     echo "Stopping existing XRM daemon"
     systemctl stop xrmd > /dev/null 2>&1

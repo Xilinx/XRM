@@ -1364,6 +1364,200 @@ bool xrm::system::unloadOneDevice(const int32_t& devId, std::string& errmsg) {
 }
 
 /*
+ * Check whether the cu (compute unit) existing on specified device
+ *
+ * true: cu is existing on device
+ * false: cu is NOT existing on device
+ *
+ * Lock: should enter lock before calling the function
+ */
+bool xrm::system::resIsCuExistingOnDev(int32_t devId, cuProperty* cuProp) {
+    deviceData* dev;
+    cuData* cu;
+    bool kernelNameEqual, kernelAliasEqual, cuNameEqual;
+    int32_t cuId;
+    bool cuFound = false;
+
+    if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0') && (cuProp->cuName[0] == '\0')) {
+        logMsg(XRM_LOG_ERROR, "None of kernel name, kernel alias and cu name are presented\n");
+        return (cuFound);
+    }
+
+    dev = &m_devList[devId];
+    /*
+     * Now check whether matching cu is on allocated device
+     * if not, free device, increment dev count, re-loop
+     */
+    for (cuId = 0; cuId < XRM_MAX_XILINX_KERNELS && cuId < dev->xclbinInfo.numCu && !cuFound; cuId++) {
+        cu = &dev->xclbinInfo.cuList[cuId];
+
+        /*
+         * compare, 0: equal
+         *
+         * kernel name is presented, compare it; otherwise no need to compare
+         */
+        kernelNameEqual = true;
+        if (cuProp->kernelName[0] != '\0') {
+            if (cu->kernelName.compare(cuProp->kernelName)) kernelNameEqual = false;
+        }
+        /* kernel alias is presented, compare it; otherwise no need to compare */
+        kernelAliasEqual = true;
+        if (cuProp->kernelAlias[0] != '\0') {
+            if (cu->kernelAlias.compare(cuProp->kernelAlias)) kernelAliasEqual = false;
+        }
+        /* cu name is presented, compare it; otherwise no need to compare */
+        cuNameEqual = true;
+        if (cuProp->cuName[0] != '\0') {
+            if (cu->cuName.compare(cuProp->cuName)) cuNameEqual = false;
+        }
+        if (!(kernelNameEqual && kernelAliasEqual && cuNameEqual)) continue;
+        cuFound = true;
+    }
+    return (cuFound);
+}
+
+/*
+ * Check whether the cu (compute unit) existing in system
+ *
+ * true: cu is existing in system
+ * false: cu is NOT existing in system
+ *
+ * Lock: should enter lock during the checking so that the result is accurate.
+ */
+bool xrm::system::resIsCuExisting(cuProperty* cuProp) {
+    deviceData* dev;
+    int32_t devId;
+    bool cuFound = false;
+
+    if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0') && (cuProp->cuName[0] == '\0')) {
+        logMsg(XRM_LOG_ERROR, "None of kernel name, kernel alias and cu name are presented\n");
+        return (cuFound);
+    }
+
+    enterLock();
+    for (devId = 0; !cuFound && (devId < m_numDevice); devId++) {
+        dev = &m_devList[devId];
+        if (!dev->isLoaded) continue;
+        cuFound = resIsCuExistingOnDev(devId, cuProp);
+    }
+    exitLock();
+    return (cuFound);
+}
+
+/*
+ * Check whether the cu list existing in system
+ *
+ * true: cu list is existing in system
+ * false: cu list is NOT existing in system
+ *
+ * Lock: should enter lock during the checking so that the result is accurate.
+ */
+bool xrm::system::resIsCuListExisting(cuListProperty* cuListProp) {
+    deviceData* dev;
+    int32_t i, devId;
+    cuProperty* cuProp = NULL;
+    bool cuListFound = false;
+    bool allCuFound = false;
+    bool cuFound = false;
+
+    if (cuListProp->cuNum <= 0 || cuListProp->cuNum > XRM_MAX_LIST_CU_NUM) {
+        return (cuListFound);
+    }
+
+    if (cuListProp->sameDevice) {
+        /*
+         * To find the cu list from same device
+         */
+        enterLock();
+        for (devId = 0; (devId < m_numDevice) && !cuListFound; devId++) {
+            dev = &m_devList[devId];
+            if (!dev->isLoaded) continue;
+            /* find the cu list from this device */
+            allCuFound = true;
+            for (i = 0; i < cuListProp->cuNum; i++) {
+                cuProp = &cuListProp->cuProps[i];
+                if (!resIsCuExistingOnDev(devId, cuProp)) {
+                    allCuFound = false;
+                    break;
+                }
+            }
+            cuListFound = allCuFound;
+        }
+        exitLock();
+    } else {
+        /*
+         * To find the cu list from any device
+         */
+        enterLock();
+        for (i = 0; i < cuListProp->cuNum; i++) {
+            cuProp = &cuListProp->cuProps[i];
+            /* find the cu from all device */
+            for (devId = 0; (devId < m_numDevice) && !cuFound; devId++) {
+                dev = &m_devList[devId];
+                if (!dev->isLoaded) continue;
+                /* find the cu from this device */
+                if (resIsCuExistingOnDev(devId, cuProp)) {
+                    cuFound = true;
+                    break;
+                }
+            }
+            if (!cuFound)
+                break;
+            if (i == (cuListProp->cuNum -1))
+                cuListFound = true;
+        }
+        exitLock();
+    }
+    return (cuListFound);
+}
+
+/*
+ * Check whether the cu group existing in system
+ *
+ * true: cu group is existing in system
+ * false: cu group is NOT existing in system
+ *
+ * Lock: will not use lock since it will call resIsCuListExisting() to check the resource.
+ */
+bool xrm::system::resIsCuGroupExisting(cuGroupProperty* cuGroupProp) {
+    cuListProperty cuListProp;
+    cuListProperty* udfCuListProp;
+    cuProperty* cuProp;
+    cuProperty* udfCuProp;
+    bool cuGroupFound = false;
+    int32_t udfCuGroupIdx = -1;
+
+    if (cuGroupProp == NULL) {
+        return (cuGroupFound);
+    }
+    for (uint32_t cuGroupIdx = 0; cuGroupIdx < m_numUdfCuGroup; cuGroupIdx++) {
+        /* compare, 0: equal */
+        if (!m_udfCuGroups[cuGroupIdx].udfCuGroupName.compare(cuGroupProp->udfCuGroupName.c_str())) {
+            udfCuGroupIdx = cuGroupIdx;
+            break;
+        }
+    }
+    if (udfCuGroupIdx == -1) {
+        logMsg(XRM_LOG_ERROR, "%s : user defined cu group is not declared\n", __func__);
+        return (cuGroupFound);
+    }
+    for (int32_t cuListIdx = 0; cuListIdx < m_udfCuGroups[udfCuGroupIdx].optionUdfCuListNum; cuListIdx++) {
+        memset(&cuListProp, 0, sizeof(cuListProperty));
+        udfCuListProp = &m_udfCuGroups[udfCuGroupIdx].optionUdfCuListProps[cuListIdx];
+        cuListProp.cuNum = udfCuListProp->cuNum;
+        cuListProp.sameDevice = udfCuListProp->sameDevice;
+        for (int32_t i = 0; i < cuListProp.cuNum; i++) {
+            cuProp = &cuListProp.cuProps[i];
+            udfCuProp = &udfCuListProp->cuProps[i];
+            strncpy(cuProp->cuName, udfCuProp->cuName, XRM_MAX_NAME_LEN - 1);
+        }
+        cuGroupFound = resIsCuListExisting(&cuListProp);
+        if (cuGroupFound) break;
+    }
+    return (cuGroupFound);
+}
+
+/*
  * Alloc one cu (compute unit) based on the request property.
  *
  * XRM_SUCCESS: allocated resouce is recorded by cuRes

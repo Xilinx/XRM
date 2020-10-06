@@ -133,6 +133,27 @@ class checkCuAvailableNumCommand : public command {
     void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
 };
 
+class isCuExistingCommand : public command {
+   public:
+    isCuExistingCommand(xrm::system& sys) : command("isCuExisting", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class isCuListExistingCommand : public command {
+   public:
+    isCuListExistingCommand(xrm::system& sys) : command("isCuListExisting", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class isCuGroupExistingCommand : public command {
+   public:
+    isCuGroupExistingCommand(xrm::system& sys) : command("isCuGroupExisting", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
 class checkCuListAvailableNumCommand : public command {
    public:
     checkCuListAvailableNumCommand(xrm::system& sys) : command("checkCuListAvailableNum", sys) {}

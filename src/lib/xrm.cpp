@@ -45,6 +45,9 @@ static int32_t xrmJsonRequest(xrmContext context, const char* jsonReq, char* jso
 static void hexstrToBin(std::string& inStr, int32_t insz, unsigned char* out);
 static void binToHexstr(unsigned char* in, int32_t insz, std::string& outStr);
 static void xrmLog(xrmLogLevelType contextLogLevel, xrmLogLevelType logLevel, const char* format, ...);
+static bool xrmIsCuExisting(xrmContext context, xrmCuProperty* cuProp);
+static bool xrmIsCuListExisting(xrmContext context, xrmCuListProperty* cuListProp);
+static bool xrmIsCuGroupExisting(xrmContext context, xrmCuGroupProperty* cuGroupProp);
 
 /**
  * \brief Establishes a connection with the XRM daemon
@@ -1330,6 +1333,190 @@ int32_t xrmAllocationQuery(xrmContext context, xrmAllocationQueryInfo* allocQuer
 }
 
 /**
+ * \brief To check whether the cu exists on the system given
+ * the kernels's property with kernel name or alias or both.
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param cuProp the property of cu.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ * @return bool, true on existing or false on NOT existing.
+ */
+bool xrmIsCuExisting(xrmContext context, xrmCuProperty* cuProp) {
+    bool ret = false;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+
+    if (ctx == NULL || cuProp == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or cu property pointer is NULL\n", __func__);
+        return (ret);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (ret);
+    }
+    if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0')) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s neither kernel name nor alias are provided", __func__);
+        return (ret);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree isCuExistingTree;
+    isCuExistingTree.put("request.name", "isCuExisting");
+    isCuExistingTree.put("request.requestId", 1);
+    /* use either kernel name or alias or both to identity the kernel */
+    isCuExistingTree.put("request.parameters.kernelName", cuProp->kernelName);
+    isCuExistingTree.put("request.parameters.kernelAlias", cuProp->kernelAlias);
+    isCuExistingTree.put("request.parameters.echoClientId", "echo");
+    isCuExistingTree.put("request.parameters.clientId", ctx->xrmClientId);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, isCuExistingTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    auto value = rspTree.get<int32_t>("response.status.value");
+    if (value == XRM_SUCCESS) {
+        auto isCuExisting = rspTree.get<int32_t>("response.data.isCuExisting");
+        if (isCuExisting == 1)
+            ret = true;
+    }
+    return (ret);
+}
+
+/**
+ * \brief To check whether the cu list exists on the system given
+ * a list of kernels's property with kernel name or alias or both.
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param cuListProp the property of cu list.
+ *             cuProps: cu prop list to fill kernelName and kernelAlias, starting from cuProps[0], no hole
+ *             cuNum: request number of cu in this list.
+ *             sameDevice: request this list of cu from same device.
+ * @return bool, true on existing or false on NOT existing.
+ */
+bool xrmIsCuListExisting(xrmContext context, xrmCuListProperty* cuListProp) {
+    bool ret = false;
+    int32_t i;
+    xrmCuProperty* cuProp;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+
+    if (ctx == NULL || cuListProp == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or cu list properties pointer is NULL\n", __func__);
+        return (ret);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (ret);
+    }
+    if (cuListProp->cuNum <= 0 || cuListProp->cuNum > XRM_MAX_LIST_CU_NUM) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): request list prop cuNum is %d, out of range from 1 to %d.\n",
+               __func__, cuListProp->cuNum, XRM_MAX_LIST_CU_NUM);
+        return (ret);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree isCuListExistingTree;
+    isCuListExistingTree.put("request.name", "isCuListExisting");
+    isCuListExistingTree.put("request.requestId", 1);
+    isCuListExistingTree.put("request.parameters.cuNum", cuListProp->cuNum);
+    isCuListExistingTree.put("request.parameters.echoClientId", "echo");
+    isCuListExistingTree.put("request.parameters.clientId", ctx->xrmClientId);
+    if (cuListProp->sameDevice == false)
+        isCuListExistingTree.put("request.parameters.sameDevice", 0);
+    else
+        isCuListExistingTree.put("request.parameters.sameDevice", 1);
+    for (i = 0; i < cuListProp->cuNum; i++) {
+        cuProp = &cuListProp->cuProps[i];
+        if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0')) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s cuProp[%d] neither kernel name nor alias are provided",
+                   __func__, i);
+            return (ret);
+        }
+
+        isCuListExistingTree.put("request.parameters.kernelName" + std::to_string(i), cuProp->kernelName);
+        isCuListExistingTree.put("request.parameters.kernelAlias" + std::to_string(i), cuProp->kernelAlias);
+    }
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, isCuListExistingTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    auto value = rspTree.get<int32_t>("response.status.value");
+    if (value == XRM_SUCCESS) {
+        auto isCuListExisting = rspTree.get<int32_t>("response.data.isCuListExisting");
+        if (isCuListExisting == 1)
+            ret = true;
+    }
+    return (ret);
+}
+
+/**
+ * \brief To check whether the cu group exists on the system given a user
+ * defined group of kernels's property with cu name (kernelName:instanceName).
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param cuGroupProp the property of cu group.
+ *             udfCuGroupName: user defined cu group type name.
+ * @return bool, true on existing or false on NOT existing.
+ */
+bool xrmIsCuGroupExisting(xrmContext context, xrmCuGroupProperty* cuGroupProp) {
+    bool ret = false;
+    int32_t i;
+    xrmCuProperty* cuProp;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+
+    if (ctx == NULL || cuGroupProp == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or cu pool properties pointer is NULL\n", __func__);
+        return (ret);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (ret);
+    }
+    if (cuGroupProp->udfCuGroupName[0] == '\0') {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): invalid input: udfCuGroupName is not provided.\n", __func__);
+        return (ret);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree checkCuGroupTree;
+    checkCuGroupTree.put("request.name", "isCuGroupExisting");
+    checkCuGroupTree.put("request.requestId", 1);
+    checkCuGroupTree.put("request.parameters.udfCuGroupName", cuGroupProp->udfCuGroupName);
+    checkCuGroupTree.put("request.parameters.echoClientId", "echo");
+    checkCuGroupTree.put("request.parameters.clientId", ctx->xrmClientId);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, checkCuGroupTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    auto value = rspTree.get<int32_t>("response.status.value");
+    if (value == XRM_SUCCESS) {
+        auto isCuGroupExisting = rspTree.get<int32_t>("response.data.isCuGroupExisting");
+        if (isCuGroupExisting == 1)
+            ret = true;
+    }
+    return (ret);
+}
+
+/**
  * \brief To check the available cu num on the system given
  * the kernels's property with kernel name or alias or both and request
  * load (1 - 100).
@@ -1346,7 +1533,6 @@ int32_t xrmAllocationQuery(xrmContext context, xrmAllocationQueryInfo* allocQuer
  */
 int32_t xrmCheckCuAvailableNum(xrmContext context, xrmCuProperty* cuProp) {
     int32_t ret = XRM_ERROR;
-    int32_t i;
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
 
     if (ctx == NULL || cuProp == NULL) {
@@ -2186,6 +2372,8 @@ int32_t xrmCuBlockingAlloc(xrmContext context, xrmCuProperty* cuProp, uint64_t i
         useconds = XRM_DEFAULT_INTERVAL_US;
     else
         useconds = interval;
+    if (!xrmIsCuExisting(ctx, cuProp))
+        return (XRM_ERROR_NO_KERNEL);
     while (xrmCuAlloc(ctx, cuProp, cuRes) != XRM_SUCCESS) usleep(useconds);
     return (XRM_SUCCESS);
 }
@@ -2231,6 +2419,8 @@ int32_t xrmCuListBlockingAlloc(xrmContext context,
         useconds = XRM_DEFAULT_INTERVAL_US;
     else
         useconds = interval;
+    if (!xrmIsCuListExisting(ctx, cuListProp))
+        return (XRM_ERROR_NO_KERNEL);
     while (xrmCuListAlloc(ctx, cuListProp, cuListRes) != XRM_SUCCESS) usleep(useconds);
     return (XRM_SUCCESS);
 }
@@ -2278,6 +2468,8 @@ int32_t xrmCuGroupBlockingAlloc(xrmContext context,
         useconds = XRM_DEFAULT_INTERVAL_US;
     else
         useconds = interval;
+    if (!xrmIsCuGroupExisting(ctx, cuGroupProp))
+        return (XRM_ERROR_NO_KERNEL);
     while (xrmCuGroupAlloc(ctx, cuGroupProp, cuGroupRes) != XRM_SUCCESS) usleep(useconds);
     return (XRM_SUCCESS);
 }

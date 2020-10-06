@@ -61,6 +61,15 @@ void xrm::commandRegistry::registerAll(system& sys) {
     auto isDaemonRunning = new xrm::isDaemonRunningCommand(sys);
     registerCmd(*isDaemonRunning);
 
+    auto isCuExisting = new xrm::isCuExistingCommand(sys);
+    registerCmd(*isCuExisting);
+
+    auto isCuListExisting = new xrm::isCuListExistingCommand(sys);
+    registerCmd(*isCuListExisting);
+
+    auto isCuGroupExisting = new xrm::isCuGroupExistingCommand(sys);
+    registerCmd(*isCuGroupExisting);
+
     auto cuAlloc = new xrm::cuAllocCommand(sys);
     registerCmd(*cuAlloc);
 

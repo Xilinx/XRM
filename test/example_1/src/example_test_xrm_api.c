@@ -1463,7 +1463,7 @@ void xrmCuBlockingAllocReleaseTest(xrmContext* ctx) {
     printf("      You can safely stop the test with Ctrl+c\n");
     ret = xrmCuBlockingAlloc(ctx, &scalerCuProp, interval, &scalerCuRes);
     if (ret != 0) {
-        printf("xrmCuBlockingAlloc: fail to alloc scaler cu\n");
+        printf("xrmCuBlockingAlloc: fail to alloc scaler cu, ret is %d\n", ret);
     } else {
         printf("Allocated scaler cu: \n");
         printf("   xclbinFileName is:  %s\n", scalerCuRes.xclbinFileName);
@@ -1492,6 +1492,56 @@ void xrmCuBlockingAllocReleaseTest(xrmContext* ctx) {
     else
         printf("fail to release scaler cu\n");
 
+    // alloc cal cu
+    xrmCuProperty addCuProp;
+    xrmCuResource addCuRes;
+
+    memset(&addCuProp, 0, sizeof(xrmCuProperty));
+    memset(&addCuRes, 0, sizeof(xrmCuResource));
+    strcpy(addCuProp.kernelName, "krnl_vadd");
+    strcpy(addCuProp.kernelAlias, "");
+    addCuProp.devExcl = false;
+    addCuProp.requestLoad = 45;
+    addCuProp.poolId = 0;
+
+    interval = 200000; // 200000 useconds (200 ms)
+
+    printf("Test 16-3: Using blocking API to alloc add cu\n");
+    printf("    add cu prop: kernelName is %s\n", addCuProp.kernelName);
+    printf("    add cu prop: kernelAlias is %s\n", addCuProp.kernelAlias);
+    printf("NOTE: The test will be blocked here if requested cu is NOT available on system.\n");
+    printf("      You can safely stop the test with Ctrl+c\n");
+    ret = xrmCuBlockingAlloc(ctx, &addCuProp, interval, &addCuRes);
+    if (ret != 0) {
+        printf("xrmCuBlockingAlloc: fail to alloc add cu, ret is %d\n", ret);
+    } else {
+        printf("Allocated add cu: \n");
+        printf("   xclbinFileName is:  %s\n", addCuRes.xclbinFileName);
+        printf("   kernelPluginFileName is:  %s\n", addCuRes.kernelPluginFileName);
+        printf("   kernelName is:  %s\n", addCuRes.kernelName);
+        printf("   instanceName is:  %s\n", addCuRes.instanceName);
+        printf("   cuName is:  %s\n", addCuRes.cuName);
+        printf("   kernelAlias is:  %s\n", addCuRes.kernelAlias);
+        printf("   deviceId is:  %d\n", addCuRes.deviceId);
+        printf("   cuId is:  %d\n", addCuRes.cuId);
+        printf("   channelId is:  %d\n", addCuRes.channelId);
+        printf("   cuType is:  %d\n", addCuRes.cuType);
+        printf("   baseAddr is:  0x%lx\n", addCuRes.baseAddr);
+        printf("   membankId is:  %d\n", addCuRes.membankId);
+        printf("   membankType is:  %d\n", addCuRes.membankType);
+        printf("   membankSize is:  0x%lx\n", addCuRes.membankSize);
+        printf("   membankBaseAddr is:  0x%lx\n", addCuRes.membankBaseAddr);
+        printf("   allocServiceId is:  %lu\n", addCuRes.allocServiceId);
+        printf("   poolId is:  %lu\n", addCuRes.poolId);
+        printf("   channelLoad is:  %d\n", addCuRes.channelLoad);
+    }
+
+    printf("Test 16-4:  release add cu\n");
+    if (xrmCuRelease(ctx, &addCuRes))
+        printf("success to  release add cu\n");
+    else
+        printf("fail to release add cu\n");
+
     printf("<<<<<<<==  end the xrm cu blocking allocation test ===>>>>>>>>\n");
 }
 
@@ -1511,8 +1561,8 @@ void xrmCuListBlockingAllocReleaseTest(xrmContext* ctx) {
     xrmCuListProperty scalerCuListProp;
     xrmCuListResource scalerCuListRes;
 
-    memset(&scalerCuListProp, 0, sizeof(scalerCuListProp));
-    memset(&scalerCuListRes, 0, sizeof(scalerCuListRes));
+    memset(&scalerCuListProp, 0, sizeof(xrmCuListProperty));
+    memset(&scalerCuListRes, 0, sizeof(xrmCuListResource));
 
     scalerCuListProp.cuNum = 4;
     for (i = 0; i < scalerCuListProp.cuNum; i++) {
@@ -1552,11 +1602,67 @@ void xrmCuListBlockingAllocReleaseTest(xrmContext* ctx) {
         }
     }
 
-    printf("Test 17-2:   release scaler cu list\n");
+    printf("Test 17-1:   release scaler cu list\n");
     if (xrmCuListRelease(ctx, &scalerCuListRes))
         printf("success to release scaler cu list\n");
     else
         printf("fail to release scaler cu list\n");
+
+    // alloc calculate cu
+    xrmCuListProperty calculateCuListProp;
+    xrmCuListResource calculateCuListRes;
+
+    memset(&calculateCuListProp, 0, sizeof(xrmCuListProperty));
+    memset(&calculateCuListRes, 0, sizeof(xrmCuListResource));
+
+    calculateCuListProp.cuNum = 2;
+    strcpy(calculateCuListProp.cuProps[0].kernelName, "krnl_vadd");
+    strcpy(calculateCuListProp.cuProps[0].kernelAlias, "");
+    calculateCuListProp.cuProps[0].devExcl = false;
+    calculateCuListProp.cuProps[0].requestLoad = 45;
+    calculateCuListProp.cuProps[0].poolId = 0;
+
+    strcpy(calculateCuListProp.cuProps[1].kernelName, "krnl_vsub");
+    strcpy(calculateCuListProp.cuProps[1].kernelAlias, "");
+    calculateCuListProp.cuProps[1].devExcl = false;
+    calculateCuListProp.cuProps[1].requestLoad = 45;
+    calculateCuListProp.cuProps[1].poolId = 0;
+
+    interval = 200000; // 200000 useconds (200 ms)
+
+    ret = xrmCuListBlockingAlloc(ctx, &calculateCuListProp, interval, &calculateCuListRes);
+    if (ret != 0) {
+        printf("xrmCuListBlockingAlloc: fail to alloc calculate cu list\n");
+    } else {
+        for (i = 0; i < calculateCuListRes.cuNum; i++) {
+            printf("Blocking allocated calculate cu list: cu %d\n", i);
+            printf("   xclbinFileName is:  %s\n", calculateCuListRes.cuResources[i].xclbinFileName);
+            printf("   kernelPluginFileName is:  %s\n", calculateCuListRes.cuResources[i].kernelPluginFileName);
+            printf("   kernelName is:  %s\n", calculateCuListRes.cuResources[i].kernelName);
+            printf("   kernelAlias is:  %s\n", calculateCuListRes.cuResources[i].kernelAlias);
+            printf("   instanceName is:  %s\n", calculateCuListRes.cuResources[i].instanceName);
+            printf("   cuName is:  %s\n", calculateCuListRes.cuResources[i].cuName);
+            printf("   deviceId is:  %d\n", calculateCuListRes.cuResources[i].deviceId);
+            printf("   cuId is:  %d\n", calculateCuListRes.cuResources[i].cuId);
+            printf("   channelId is:  %d\n", calculateCuListRes.cuResources[i].channelId);
+            printf("   cuType is:  %d\n", calculateCuListRes.cuResources[i].cuType);
+            printf("   baseAddr is:  0x%lx\n", calculateCuListRes.cuResources[i].baseAddr);
+            printf("   membankId is:  %d\n", calculateCuListRes.cuResources[i].membankId);
+            printf("   membankType is:  %d\n", calculateCuListRes.cuResources[i].membankType);
+            printf("   membankSize is:  0x%lx\n", calculateCuListRes.cuResources[i].membankSize);
+            printf("   membankBaseAddr is:  0x%lx\n", calculateCuListRes.cuResources[i].membankBaseAddr);
+            printf("   allocServiceId is:  %lu\n", calculateCuListRes.cuResources[i].allocServiceId);
+            printf("   poolId is:  %lu\n", calculateCuListRes.cuResources[i].poolId);
+            printf("   channelLoad is:  %d\n", calculateCuListRes.cuResources[i].channelLoad);
+        }
+    }
+
+    printf("Test 17-2:   release calculate cu list\n");
+    if (xrmCuListRelease(ctx, &calculateCuListRes))
+        printf("success to release calculate cu list\n");
+    else
+        printf("fail to release calculate cu list\n");
+    printf("<<<<<<<==  end the xrm cu list blocking allocation test ===>>>>>>>>\n");
 }
 
 void xrmCuGroupBlockingAllocReleaseTest(xrmContext* ctx) {

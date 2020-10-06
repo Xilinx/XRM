@@ -10,7 +10,7 @@ SRCS = src/example_xrm_api_block_wrapper.c
 all: ${TARGET}
 
 $(TARGET): $(SRCS)
-	$(CC) $(SRCS) $(CFLAGS) -o $(TARGET) $(LDFLAGS)
+	$(CC) $(SRCS) $(CFLAGS) -o $(TARGET) $(LDFLAGS) -Wl,-rpath,'/opt/xilinx/xrm/lib'
 
 .PHONY: clean
 clean:

@@ -468,6 +468,12 @@ class system {
     uint64_t getCuMaxCapacity(cuProperty* cuProp);
     int32_t checkCuStat(cuResource* crRes, cuStatus* cuStat);
 
+    /* functions to check whether cu/cu list / cu group is existing in current system */
+    bool resIsCuExistingOnDev(int32_t devId, cuProperty* cuProp);
+    bool resIsCuExisting(cuProperty* cuProp);
+    bool resIsCuListExisting(cuListProperty* cuListProp);
+    bool resIsCuGroupExisting(cuGroupProperty* cuGroupProp);
+
     /* following alloc and free function need to do lock protect */
     int32_t resAllocCu(cuProperty* cuProp, cuResource* cuRes, bool updateId);
     int32_t resAllocCuList(cuListProperty* cuListProp, cuListResource* cuListRes);

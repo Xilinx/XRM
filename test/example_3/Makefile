@@ -16,7 +16,7 @@ SRC = src/example_xrm_host_xcl.cpp
 all: ${TARGET}
 
 $(TARGET): $(SRC)
-	$(CXX) $+ $(CXXFLAGS) -I/opt/xilinx/xrm/include -o $(TARGET) $(LDFLAGS) -lxrm -L/opt/xilinx/xrm/lib 
+	$(CXX) $+ $(CXXFLAGS) -I/opt/xilinx/xrm/include -o $(TARGET) $(LDFLAGS) -lxrm -Wl,-rpath,'/opt/xilinx/xrm/lib' -L/opt/xilinx/xrm/lib
 	@echo "INFO: Compiled Host Executable: $(TARGET)"
 	
 clean:
