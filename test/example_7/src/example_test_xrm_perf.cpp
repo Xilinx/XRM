@@ -71,31 +71,64 @@ uint64_t xrmCuAllocReleasePerfTest(xrmContext* ctx, string cuNameStr, int cuNum,
     return (usecondsUsed);
 }
 
+void xrmCreateContextTest(int times) {
+    int32_t testTimes;
+
+    struct timeval tvStart, tvEnd;
+    xrmContext* ctx;
+    uint64_t usecondsUsed;
+
+    printf("<<<<<<<==  Start the xrm create/destory context performance test ===>>>>>>>>\n\n");
+    for (testTimes = 0; testTimes < times; testTimes++) {
+        gettimeofday(&tvStart, NULL);
+        ctx = (xrmContext*)xrmCreateContext(XRM_API_VERSION_1);
+        if (ctx == NULL) {
+            printf("Test 0-1: create context failed\n");
+            break;
+        }
+        gettimeofday(&tvEnd, NULL);
+        usecondsUsed = getTimeCost(tvStart, tvEnd);
+        printf("create context\n");
+        printf("Time Cost: %lu useconds (10^-6 seconds)\n\n", usecondsUsed);
+
+        gettimeofday(&tvStart, NULL);
+        if (xrmDestroyContext(ctx) != XRM_SUCCESS) {
+            printf("Test 0-2: destroy context failed\n");
+            break;
+        }
+        gettimeofday(&tvEnd, NULL);
+        usecondsUsed = getTimeCost(tvStart, tvEnd);
+        printf("destroy context\n");
+        printf("Time Cost: %lu useconds (10^-6 seconds)\n\n", usecondsUsed);
+    }
+    printf("<<<<<<<==  End the xrm create/destory context performance test ===>>>>>>>>\n\n");
+}
+
 void testXrmPerformance(string cuNameStr, int cuNum, int times) {
     printf("<<<<<<<==  Start the xrm performance test ===>>>>>>>>\n\n");
     xrmContext* ctx = (xrmContext*)xrmCreateContext(XRM_API_VERSION_1);
     if (ctx == NULL) {
-        printf("Test 0-1: create context failed\n");
+        printf("Test 1-1: create context failed\n");
         return;
     }
-    printf("Test 0-1: create context success\n");
+    printf("Test 1-1: create context success\n");
 
     int32_t round;
     uint64_t totalUsecondsUsed = 0;
-    printf("Test 1-1: start performance test: %d cu, %d times, %d round\n\n", cuNum, times, MAX_ROUND_NUM);
+    printf("Test 2-1: start performance test: %d cu, %d times, %d round\n\n", cuNum, times, MAX_ROUND_NUM);
     for (round = 0; round < MAX_ROUND_NUM; round++) {
         printf("Round %d :\n", (round + 1));
         totalUsecondsUsed += xrmCuAllocReleasePerfTest(ctx, cuNameStr, cuNum, times);
     }
     uint64_t avarageUsecondsUsed = totalUsecondsUsed / round;
     printf("%d Rounds Avarage Time Cost: %lu useconds (10^-6 seconds)\n\n", round, avarageUsecondsUsed);
-    printf("Test 1-2: end performance test\n");
+    printf("Test 2-2: end performance test\n");
 
-    printf("Test 0-2: destroy context\n");
+    printf("Test 3-1: destroy context\n");
     if (xrmDestroyContext(ctx) != XRM_SUCCESS)
-        printf("Test 0-2: destroy context failed\n");
+        printf("Test 3-2: destroy context failed\n");
     else
-        printf("Test 0-2: destroy context success\n");
+        printf("Test 3-2: destroy context success\n");
 
     printf("<<<<<<<==  End the xrm performance test ===>>>>>>>>\n\n");
 }
@@ -125,6 +158,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    xrmCreateContextTest(times);
     testXrmPerformance(cuNameStr, cuNum, times);
 
     return 0;

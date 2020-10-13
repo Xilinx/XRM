@@ -32,7 +32,8 @@ void xrm::echoContextCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
 
 void xrm::destroyContextCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     auto context = incmd.get<std::string>("request.parameters.context");
-    m_system->save();
+    /* the save() function is time cost operation, so not do it here */
+    //m_system->save();
     outrsp.put("response.status.value", XRM_SUCCESS);
 }
 
