@@ -21,13 +21,36 @@ void xrm::listCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     int32_t numDev = m_system->getDeviceNumber();
     int32_t numPlugin = m_system->getXrmPluginNumber();
     int32_t devId, cuId, pluginId;
+    std::string strDevId;
+    int32_t listStartDevId, listEndDevId, listNumDev;
+
     auto requestId = incmd.get<int>("request.requestId");
+    strDevId = incmd.get<std::string>("request.device", "");
+    if (strDevId.c_str()[0] != '\0') {
+        listStartDevId = std::stoi(strDevId, nullptr, 0);
+        if (listStartDevId < 0 || listStartDevId >= numDev) {
+            std::string errmsg;
+            errmsg = "device " + std::to_string(listStartDevId) + " not found";
+            outrsp.put("response.name", "list");
+            outrsp.put("response.requestId", requestId);
+            outrsp.put("response.status", "failed");
+            outrsp.put("response.data.failed", errmsg);
+            return;
+        } else {
+            listEndDevId = listStartDevId + 1;
+            listNumDev = 1;
+        }
+    } else {
+        listStartDevId = 0;
+        listEndDevId = numDev; // this id will NOT be listed
+        listNumDev = numDev;
+    }
 
     outrsp.put("response.name", "list");
     outrsp.put("response.requestId", requestId);
     outrsp.put("response.status", "ok");
     outrsp.put("response.data.deviceNumber", numDev);
-    for (devId = 0; devId < numDev; devId++) {
+    for (devId = listStartDevId; devId < listEndDevId; devId++) {
         std::string devNode = "response.data.device_" + std::to_string(devId);
         xrm::deviceData* devData = NULL;
         devData = (xrm::deviceData*)m_system->listDevice(devId);
@@ -38,6 +61,11 @@ void xrm::listCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
             outrsp.add(devNode + ".isExclusive", devData->isExcl);
             outrsp.add(devNode + ".cuNumber   ", devData->xclbinInfo.numCu);
             for (cuId = 0; cuId < devData->xclbinInfo.numCu; cuId++) {
+                if ((listNumDev > 1) && (cuId > 7)) {
+                    std::string cuNode = "response.data.device_" + std::to_string(devId) + ".cu_others";
+                    outrsp.add(cuNode + ".other cu     ", "details are omitted due to large number of cu");
+                    break;
+                }
                 xrm::cuData* cuData = &(devData->xclbinInfo.cuList[cuId]);
                 std::string cuNode = "response.data.device_" + std::to_string(devId) + ".cu_" + std::to_string(cuId);
                 outrsp.add(cuNode + ".cuId         ", cuData->cuId);
