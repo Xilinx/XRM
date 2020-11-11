@@ -587,7 +587,7 @@ int32_t xrmLoadAndAllCuAlloc(xrmContext context, char* xclbinFileName, xrmCuList
  *             devExcl: request exclusive device usage for this client.
  *             requestLoad: request load (1 - 100).
  *             poolId: request to allocate cu from specified resource pool.
- * @param interval the interval time (useconds) before re-trying, To set it as 0 to use XRM default interval
+ * @param interval the interval time (useconds) before re-trying, [0 - 1000000], other value is invalid.
  * @param cuRes cu resource.
  *             xclbinFileName: xclbin (path and name) attached to this device.
  *             kernelPluginFileName: kernel plugin (only name) attached to this device.
@@ -616,7 +616,7 @@ int32_t xrmCuBlockingAlloc(xrmContext context, xrmCuProperty* cuProp, uint64_t i
  *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole.
  *             cuNum: request number of cu in this list.
  *             sameDevice request this list of cu from same device.
- * @param interval the interval time (useconds) before re-trying, To set it as 0 to use XRM default interval
+ * @param interval the interval time (useconds) before re-trying, [0 - 1000000], other value is invalid.
  * @param cuListRes cu list resource.
  *             cuResources: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
  *             cuNum: allocated cu number in this list.
@@ -635,7 +635,7 @@ int32_t xrmCuListBlockingAlloc(xrmContext context,
  * @param cuGroupProp the property of cu group.
  *            udfCuGroupName: user defined cu group type name.
  *            poolId: id of the cu pool this group CUs come from, the system default pool id is 0.
- * @param interval the interval time (useconds) before re-trying, To set it as 0 to use XRM default interval
+ * @param interval the interval time (useconds) before re-trying, [0 - 1000000], other value is invalid.
  * @param cuGroupRes cu group resource.
  *            cuResources cu resource group to fill the allocated cus infor, starting from cuResources[0], no hole.
  *            cuNum allocated cu number in this list.

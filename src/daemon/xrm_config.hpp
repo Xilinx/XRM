@@ -45,6 +45,7 @@ namespace config {
  */
 
 uint32_t getVerbosity();
+uint32_t getLimitConcurrentClient();
 std::string getXrtVersionFileFullPathName();
 std::string getLibXrtCoreFileFullPathName();
 

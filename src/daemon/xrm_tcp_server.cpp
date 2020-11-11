@@ -24,6 +24,9 @@ void xrm::server::doAccept() {
     m_acceptor.async_accept(m_socket, [this](boost::system::error_code ec) {
         if (ec) {
             m_system->logMsg(XRM_LOG_ERROR, "%s: error %s = %d", __func__, ec.category().name(), ec.value());
+            // uint32_t numConcurrentClient = m_system->getNumConcurrentClient();
+            // m_system->logMsg(XRM_LOG_ERROR, "%s: doAccept(), numConcurrentClient = %lu", __func__,
+            // numConcurrentClient);
         } else {
             auto thisSession = std::make_shared<xrm::session>(std::move(m_socket));
             thisSession->setSystem(m_system);

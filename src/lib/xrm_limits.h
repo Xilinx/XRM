@@ -52,4 +52,7 @@
 #define XRM_MAX_LOG_LEVEL XRM_LOG_DEBUG     // max log level
 #define XRM_DEFAULT_LOG_LEVEL XRM_LOG_ERROR // default log level
 
+#define XRM_MAX_LIMIT_CONCURRENT_CLIENT 1000000     // max limit concurrent client
+#define XRM_DEFAULT_LIMIT_CONCURRENT_CLIENT 1000 // default limit concurrent client
+
 #endif // _XRM_LIMITS_H_

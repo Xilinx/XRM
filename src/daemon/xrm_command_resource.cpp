@@ -20,7 +20,11 @@
 void xrm::createContextCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     auto context = incmd.get<std::string>("request.parameters.context");
     int32_t logLevel = m_system->getLogLevel();
-    uint64_t clientId = m_system->getNewClientId();
+    uint64_t clientId;
+    if (m_system->incNumConcurrentClient())
+        clientId = m_system->getNewClientId();
+    else
+        clientId = 0; // reach the limit of concurrent client, fail to create new context
     outrsp.put("response.status.value", logLevel);
     outrsp.put("response.data.clientId", clientId);
 }
@@ -32,8 +36,9 @@ void xrm::echoContextCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
 
 void xrm::destroyContextCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     auto context = incmd.get<std::string>("request.parameters.context");
+    m_system->decNumConcurrentClient();
     /* the save() function is time cost operation, so not do it here */
-    //m_system->save();
+    // m_system->save();
     outrsp.put("response.status.value", XRM_SUCCESS);
 }
 

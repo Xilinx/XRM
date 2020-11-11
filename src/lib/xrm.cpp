@@ -110,6 +110,10 @@ xrmContext xrmCreateContext(uint32_t xrmApiVersion) {
     createContextTree.put("request.requestId", 1);
     createContextTree.put("request.parameters.context", "readContext");
     std::stringstream reqstr;
+    /*
+     * Need to temporarily set the log level to avoid debug message during context creating.
+     */
+    ctx->xrmLogLevel = (xrmLogLevelType)XRM_DEFAULT_LOG_LEVEL;
     boost::property_tree::write_json(reqstr, createContextTree);
     if (xrmJsonRequest((xrmContext)ctx, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) {
         xrmDestroyContext(ctx);
@@ -122,6 +126,11 @@ xrmContext xrmCreateContext(uint32_t xrmApiVersion) {
     auto logLevel = rspTree.get<int32_t>("response.status.value");
     ctx->xrmLogLevel = (xrmLogLevelType)logLevel;
     ctx->xrmClientId = rspTree.get<uint64_t>("response.data.clientId");
+    if (ctx->xrmClientId == 0) {
+        // clientId is 0 means reaching limit of concurrent client
+        xrmDestroyContext(ctx);
+        return (NULL);
+    }
 
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree echoContextTree;
@@ -164,22 +173,12 @@ int32_t xrmDestroyContext(xrmContext context) {
         destroyContextTree.put("request.parameters.clientId", ctx->xrmClientId);
         std::stringstream reqstr;
         boost::property_tree::write_json(reqstr, destroyContextTree);
-        if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
-        std::stringstream rspstr;
-        rspstr << jsonRsp;
-        pt::ptree rspTree;
-        boost::property_tree::read_json(rspstr, rspTree);
-        auto ret = rspTree.get<int32_t>("response.status.value");
+        xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp);
 
         if (ctx->socket) {
             /* disconnect first, then release resource */
             boost::system::error_code ec;
             ctx->socket->shutdown(tcp::socket::shutdown_both, ec);
-            if (ec) {
-                xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s: socket shutdown error %s = %d", __func__,
-                       ec.category().name(), ec.value());
-                return (XRM_ERROR);
-            }
             delete ctx->socket;
         }
         if (ctx->resolver) {
@@ -259,6 +258,13 @@ static int32_t xrmJsonRequest(xrmContext context, const char* jsonReq, char* jso
         xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "Sending %s\n", jsonReq);
         pthread_mutex_lock(&ctx->lock);
         boost::asio::write(*ctx->socket, boost::asio::buffer(jsonReq, reqLen), ec);
+        if (ec) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s: write error %s = %d", __func__,
+                  ec.category().name(), ec.value());
+            pthread_mutex_unlock(&ctx->lock);
+            rc = XRM_ERROR;
+            return (rc);
+        }
 
         // Get response
         xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "Getting response");
@@ -275,7 +281,10 @@ static int32_t xrmJsonRequest(xrmContext context, const char* jsonReq, char* jso
         pthread_mutex_unlock(&ctx->lock);
 
         xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "%s\n", jsonRsp);
-
+        if (replyLength == 0) {
+            rc = XRM_ERROR;
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s read 0 data\n", __func__);
+        }
     } catch (std::exception& e) {
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s Exception: %s\n", __func__, e.what());
         rc = XRM_ERROR;
@@ -364,7 +373,7 @@ int32_t xrmLoadOneDevice(xrmContext context, int32_t deviceId, char* xclbinFileN
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, loadOneDeviceTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -409,7 +418,7 @@ int32_t xrmUnloadOneDevice(xrmContext context, int32_t deviceId) {
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, unloadOneDeviceTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -539,7 +548,7 @@ int32_t xrmCuAlloc(xrmContext context, xrmCuProperty* cuProp, xrmCuResource* cuR
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, cuAllocTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -653,7 +662,7 @@ int32_t xrmCuListAlloc(xrmContext context, xrmCuListProperty* cuListProp, xrmCuL
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, cuListAllocTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -775,7 +784,7 @@ int32_t xrmUdfCuGroupDeclare(xrmContext context, xrmUdfCuGroupProperty* udfCuGro
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, groupDeclareTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -823,7 +832,7 @@ int32_t xrmUdfCuGroupUndeclare(xrmContext context, char* udfCuGroupName) {
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, groupUndeclareTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -882,7 +891,7 @@ int32_t xrmCuGroupAlloc(xrmContext context, xrmCuGroupProperty* cuGroupProp, xrm
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, cuGroupAllocTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -1020,7 +1029,7 @@ int32_t xrmCuCheckStatus(xrmContext context, xrmCuResource* cuRes, xrmCuStat* cu
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, cuCheckStatusTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -1286,7 +1295,7 @@ int32_t xrmAllocationQuery(xrmContext context, xrmAllocationQueryInfo* allocQuer
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, allocQueryTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -1372,7 +1381,7 @@ bool xrmIsCuExisting(xrmContext context, xrmCuProperty* cuProp) {
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, isCuExistingTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (ret);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -1445,7 +1454,7 @@ bool xrmIsCuListExisting(xrmContext context, xrmCuListProperty* cuListProp) {
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, isCuListExistingTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (ret);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -1500,7 +1509,7 @@ bool xrmIsCuGroupExisting(xrmContext context, xrmCuGroupProperty* cuGroupProp) {
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, checkCuGroupTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (ret);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -1571,7 +1580,7 @@ int32_t xrmCheckCuAvailableNum(xrmContext context, xrmCuProperty* cuProp) {
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, checkCuAvailableTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -1655,7 +1664,7 @@ int32_t xrmCheckCuListAvailableNum(xrmContext context, xrmCuListProperty* cuList
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, checkCuListAvailableNumTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -1710,7 +1719,7 @@ int32_t xrmCheckCuGroupAvailableNum(xrmContext context, xrmCuGroupProperty* cuGr
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, checkCuGroupTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -1810,7 +1819,7 @@ int32_t xrmCheckCuPoolAvailableNum(xrmContext context, xrmCuPoolProperty* cuPool
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, checkCuPoolTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -2014,7 +2023,7 @@ int32_t xrmReservationQuery(xrmContext context, uint64_t poolId, xrmCuPoolResour
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, reservationQueryTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -2095,7 +2104,7 @@ int32_t xrmExecPluginFunc(xrmContext context, char* xrmPluginName, uint32_t func
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, execPluginFuncTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -2191,7 +2200,7 @@ int32_t xrmCuAllocWithLoad(xrmContext context, xrmCuProperty* cuProp, char* xclb
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, cuAllocWithLoadTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -2270,7 +2279,7 @@ int32_t xrmLoadAndAllCuAlloc(xrmContext context, char* xclbinFileName, xrmCuList
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, loadAndAllCuAllocTree);
-    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
 
     std::stringstream rspstr;
     rspstr << jsonRsp;
@@ -2329,7 +2338,7 @@ int32_t xrmLoadAndAllCuAlloc(xrmContext context, char* xclbinFileName, xrmCuList
  *             devExcl: request exclusive device usage for this client.
  *             requestLoad: request load (1 - 100).
  *             poolId: request to allocate cu from specified resource pool.
- * @param interval the interval time (useconds) before re-trying, To set it as 0 to use XRM default interval
+ * @param interval the interval time (useconds) before re-trying, [0 - 1000000], other value is invalid.
  * @param cuRes cu resource.
  *             xclbinFileName: xclbin (path and name) attached to this device.
  *             kernelPluginFileName: kernel plugin (only name) attached to this device.
@@ -2366,16 +2375,25 @@ int32_t xrmCuBlockingAlloc(xrmContext context, xrmCuProperty* cuProp, uint64_t i
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): wrong request load: %d", __func__, cuProp->requestLoad);
         return (XRM_ERROR_INVALID);
     }
+    if (interval > 1000000) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): invalid input: interval out range [0 - 1000000].\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
 
-    uint64_t useconds;
-    if (interval == 0)
-        useconds = XRM_DEFAULT_INTERVAL_US;
-    else
-        useconds = interval;
     if (!xrmIsCuExisting(ctx, cuProp))
         return (XRM_ERROR_NO_KERNEL);
-    while (xrmCuAlloc(ctx, cuProp, cuRes) != XRM_SUCCESS) usleep(useconds);
-    return (XRM_SUCCESS);
+    int32_t ret = XRM_ERROR_NO_KERNEL;
+    if (interval)
+        while ((ret != XRM_SUCCESS) && (ret != XRM_ERROR_CONNECT_FAIL)) {
+            ret = xrmCuAlloc(ctx, cuProp, cuRes);
+            usleep(interval);
+        }
+    else
+        while ((ret != XRM_SUCCESS) && (ret != XRM_ERROR_CONNECT_FAIL)) {
+            ret = xrmCuAlloc(ctx, cuProp, cuRes);
+            sched_yield();
+        }
+    return (ret);
 }
 
 /**
@@ -2387,7 +2405,7 @@ int32_t xrmCuBlockingAlloc(xrmContext context, xrmCuProperty* cuProp, uint64_t i
  *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole.
  *             cuNum: request number of cu in this list.
  *             sameDevice request this list of cu from same device.
- * @param interval the interval time (useconds) before re-trying, To set it as 0 to use XRM default interval
+ * @param interval the interval time (useconds) before re-trying, [0 - 1000000], other value is invalid.
  * @param cuListRes cu list resource.
  *             cuResources: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
  *             cuNum: allocated cu number in this list.
@@ -2413,16 +2431,25 @@ int32_t xrmCuListBlockingAlloc(xrmContext context,
                __func__, cuListProp->cuNum, XRM_MAX_LIST_CU_NUM);
         return (XRM_ERROR_INVALID);
     }
+    if (interval > 1000000) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): invalid input: interval out range [0 - 1000000].\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
 
-    uint64_t useconds;
-    if (interval == 0)
-        useconds = XRM_DEFAULT_INTERVAL_US;
-    else
-        useconds = interval;
     if (!xrmIsCuListExisting(ctx, cuListProp))
         return (XRM_ERROR_NO_KERNEL);
-    while (xrmCuListAlloc(ctx, cuListProp, cuListRes) != XRM_SUCCESS) usleep(useconds);
-    return (XRM_SUCCESS);
+    int32_t ret = XRM_ERROR_NO_KERNEL;
+    if (interval)
+        while ((ret != XRM_SUCCESS) && (ret != XRM_ERROR_CONNECT_FAIL)) {
+            ret = xrmCuListAlloc(ctx, cuListProp, cuListRes);
+            usleep(interval);
+        }
+    else
+        while ((ret != XRM_SUCCESS) && (ret != XRM_ERROR_CONNECT_FAIL)) {
+            ret = xrmCuListAlloc(ctx, cuListProp, cuListRes);
+            sched_yield();
+        }
+    return (ret);
 }
 
 /**
@@ -2433,7 +2460,7 @@ int32_t xrmCuListBlockingAlloc(xrmContext context,
  * @param cuGroupProp the property of cu group.
  *            udfCuGroupName: user defined cu group type name.
  *            poolId: id of the cu pool this group CUs come from, the system default pool id is 0.
- * @param interval the interval time (useconds) before re-trying, To set it as 0 to use XRM default interval
+ * @param interval the interval time (useconds) before re-trying, [0 - 1000000], other value is invalid.
  * @param cuGroupRes cu group resource.
  *            cuResources cu resource group to fill the allocated cus infor, starting from cuResources[0], no hole.
  *            cuNum allocated cu number in this list.
@@ -2443,7 +2470,6 @@ int32_t xrmCuGroupBlockingAlloc(xrmContext context,
                                 xrmCuGroupProperty* cuGroupProp,
                                 uint64_t interval,
                                 xrmCuGroupResource* cuGroupRes) {
-    int32_t ret = XRM_ERROR;
     int32_t i;
     xrmCuProperty* cuProp;
     xrmCuResource* cuRes;
@@ -2462,14 +2488,23 @@ int32_t xrmCuGroupBlockingAlloc(xrmContext context,
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): invalid input: udfCuGroupName is not provided.\n", __func__);
         return (XRM_ERROR_INVALID);
     }
+    if (interval > 1000000) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): invalid input: interval out range [0 - 1000000].\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
 
-    uint64_t useconds;
-    if (interval == 0)
-        useconds = XRM_DEFAULT_INTERVAL_US;
-    else
-        useconds = interval;
     if (!xrmIsCuGroupExisting(ctx, cuGroupProp))
         return (XRM_ERROR_NO_KERNEL);
-    while (xrmCuGroupAlloc(ctx, cuGroupProp, cuGroupRes) != XRM_SUCCESS) usleep(useconds);
-    return (XRM_SUCCESS);
+    int32_t ret = XRM_ERROR_NO_KERNEL;
+    if (interval)
+        while ((ret != XRM_SUCCESS) && (ret != XRM_ERROR_CONNECT_FAIL)) {
+            ret = xrmCuGroupAlloc(ctx, cuGroupProp, cuGroupRes);
+            usleep(interval);
+        }
+    else
+        while ((ret != XRM_SUCCESS) && (ret != XRM_ERROR_CONNECT_FAIL)) {
+            ret = xrmCuGroupAlloc(ctx, cuGroupProp, cuGroupRes);
+            sched_yield();
+        }
+    return (ret);
 }

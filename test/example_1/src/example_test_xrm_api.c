@@ -1776,6 +1776,38 @@ void xrmCuGroupBlockingAllocReleaseTest(xrmContext* ctx) {
     printf("<<<<<<<==  end the xrm user defined cu group blocking alloc release test ===>>>>>>>>\n");
 }
 
+void xrmConcurrentContextTest(int32_t numContext) {
+    printf("<<<<<<<==  Start the xrm context test ===>>>>>>>>\n\n");
+    xrmContext* ctx;
+    ctx = malloc(numContext * sizeof(xrmContext*));
+    int i;
+    for (i = 0; i < numContext; i++) {
+        printf("Test 0-01: create context round %d\n", (i + 1));
+        ctx[i] = (xrmContext*)xrmCreateContext(XRM_API_VERSION_1);
+        if (ctx[i] == NULL) {
+            printf("Test 0-01: create context failed\n");
+            break;
+        } else {
+            printf("Test 0-01: create context success\n");
+        }
+    }
+
+    for (i = 0; i < numContext; i++) {
+        printf("Test 0-02: destory context round %d\n", (i + 1));
+        if (ctx[i] == NULL) {
+            break;
+        }
+        printf("Test 0-02: destroy context\n");
+        if (xrmDestroyContext(ctx[i]) != XRM_SUCCESS)
+            printf("Test 0-02: destroy context failed\n");
+        else
+            printf("Test 0-02: destroy context success\n");
+    }
+    free(ctx);
+
+    printf("<<<<<<<==  End the xrm context test ===>>>>>>>>\n\n");
+}
+
 void testXrmFunctions(void) {
     printf("<<<<<<<==  Start the xrm function test ===>>>>>>>>\n\n");
     xrmContext* ctx = (xrmContext*)xrmCreateContext(XRM_API_VERSION_1);
@@ -1785,6 +1817,7 @@ void testXrmFunctions(void) {
     }
     printf("Test 0-1: create context success\n");
 
+    xrmConcurrentContextTest(256);
     xrmCheckDaemonTest(ctx);
     xrmCuAllocReleaseTest(ctx);
     xrmCuListAllocReleaseTest(ctx);

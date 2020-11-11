@@ -80,5 +80,5 @@ set(CPACK_RPM_PACKAGE_DEPENDS "xrt >= 2.1.0,
                                boost-system >= 1.58.0,
                                boost-filesystem >= 1.58.0,
                                boost-thread >= 1.58.0")
-set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc" "/etc/systemd" "/etc/systemd/system" "/opt" "/opt/xilinx" "/usr/lib" "/usr/lib/pkgconfig")
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc" "/etc/systemd" "/etc/systemd/system" "/opt" "/opt/xilinx" "/usr/lib" "/usr/lib/pkgconfig" "/usr/lib64/pkgconfig")
 include(CPack)

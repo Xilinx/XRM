@@ -449,6 +449,9 @@ class system {
     int32_t getDeviceNumber();
     int32_t getLogLevel();
     uint64_t getNewClientId();
+    uint32_t getNumConcurrentClient();
+    bool incNumConcurrentClient();
+    bool decNumConcurrentClient();
     void* listXrmPlugin(int32_t pluginId);
     int32_t getXrmPluginNumber();
 
@@ -565,6 +568,8 @@ class system {
     deviceData m_devList[XRM_MAX_XILINX_DEVICES];
     uint32_t m_logLevel;
     uint64_t m_clientId;
+    uint32_t m_numConcurrentClient;
+    uint32_t m_limitConcurrentClient;
     int32_t m_numDevice;
     pluginInformation m_xrmPluginList[XRM_MAX_PLUGIN_NUM];
     uint32_t m_numXrmPlugin;
@@ -583,7 +588,8 @@ class system {
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
-        ar& m_logLevel& m_clientId& m_devList& m_numDevice& m_udfCuGroups& m_allocServiceId& m_reservePoolId;
+        ar& m_logLevel& m_clientId& m_numConcurrentClient& m_devList& m_numDevice& m_udfCuGroups& m_allocServiceId&
+            m_reservePoolId;
     }
 };
 } // namespace xrm

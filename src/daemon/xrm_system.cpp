@@ -52,6 +52,7 @@ void xrm::system::initSystem() {
     initUdfCuGroups();
 
     m_clientId = 0;
+    m_numConcurrentClient = 0;
     m_allocServiceId = 0;
     m_reservePoolId = 0;
     exitLock();
@@ -93,6 +94,10 @@ void xrm::system::initConfig() {
     m_logLevel = xrm::config::getVerbosity();
     if (m_logLevel > XRM_MAX_LOG_LEVEL) m_logLevel = XRM_DEFAULT_LOG_LEVEL;
     logMsg(XRM_LOG_NOTICE, "%s : logLevel = %d", __func__, m_logLevel);
+    m_limitConcurrentClient = xrm::config::getLimitConcurrentClient();
+    if (m_limitConcurrentClient > XRM_MAX_LIMIT_CONCURRENT_CLIENT)
+        m_limitConcurrentClient = XRM_MAX_LIMIT_CONCURRENT_CLIENT;
+    logMsg(XRM_LOG_NOTICE, "%s : limitConcurrentClient = %d", __func__, m_limitConcurrentClient);
     m_xrtVersionFileFullPathName = xrm::config::getXrtVersionFileFullPathName();
     logMsg(XRM_LOG_NOTICE, "%s : xrtVersionFileFullPathName = %s", __func__, m_xrtVersionFileFullPathName.c_str());
     m_libXrtCoreFileFullPathName = xrm::config::getLibXrtCoreFileFullPathName();
@@ -2837,6 +2842,48 @@ int32_t xrm::system::checkCuStat(cuResource* cuRes, cuStatus* cuStat) {
 }
 
 /*
+ * increase number of concurrent client
+ */
+bool xrm::system::incNumConcurrentClient() {
+    enterLock();
+    if (m_numConcurrentClient < m_limitConcurrentClient) {
+        m_numConcurrentClient++;
+        return (true);
+    } else {
+        logMsg(XRM_LOG_DEBUG, "Reach limit of concurrent client (%d)\n", m_limitConcurrentClient);
+        return (false);
+    }
+    exitLock();
+}
+
+/*
+ * decrease number of concurrent client
+ */
+bool xrm::system::decNumConcurrentClient() {
+    enterLock();
+    if (m_numConcurrentClient > 0) {
+        m_numConcurrentClient--;
+        return (true);
+    } else {
+        return (false);
+    }
+    exitLock();
+}
+
+/*
+ * get number of concurrent client
+ *
+ * Need to be proected by lock.
+ */
+uint32_t xrm::system::getNumConcurrentClient() {
+    uint32_t numConcurrentClient;
+    enterLock();
+    numConcurrentClient = m_numConcurrentClient;
+    exitLock();
+    return (numConcurrentClient);
+}
+
+/*
  * get next allocation service id (0x1 - 0xFFFFFFFFFFFFFFFF)
  *
  * return: next allocation service id
@@ -3013,6 +3060,7 @@ void xrm::system::recycleResource(uint64_t clientId) {
             }
         }
     }
+    decNumConcurrentClient();
     save();
     exitLock();
 }

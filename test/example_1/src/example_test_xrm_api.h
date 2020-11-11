@@ -33,6 +33,7 @@
 extern "C" {
 #endif
 
+void xrmConcurrentContextTest(int32_t numContext);
 void xrmCuAllocReleaseTest(xrmContext* ctx);
 void xrmCuListAllocReleaseTest(xrmContext* ctx);
 void xrmSoftCuAllocReleaseTest(xrmContext* ctx);

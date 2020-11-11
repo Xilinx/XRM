@@ -131,6 +131,10 @@ uint32_t getVerbosity() {
     return (getUint32Value("XRM.verbosity", XRM_DEFAULT_LOG_LEVEL));
 }
 
+uint32_t getLimitConcurrentClient() {
+    return (getUint32Value("XRM.limitConcurrentClient", XRM_DEFAULT_LIMIT_CONCURRENT_CLIENT));
+}
+
 std::string getLibXrtCoreFileFullPathName() {
     return (getStringValue("XRM.libXrtCoreFileFullPathName", XRM_DEFAULT_LIB_XRT_CORE_FILE_FULL_PATH_NAME));
 }

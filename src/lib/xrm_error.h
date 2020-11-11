@@ -27,6 +27,7 @@
  *  @def @XRM_ERROR_NO_KERNEL - No kernel resource exists or is available.
  *  @def @XRM_ERROR_NO_DEV - No free device.
  *  @def @XRM_ERROR_NO_CHAN - No channels remain to be allocated on the kernel.
+ *  @def @XRM_ERROR_CONNECT_FAIL - Connect to xrm daemon fail.
  **/
 
 #define XRM_SUCCESS (0)
@@ -36,5 +37,6 @@
 #define XRM_ERROR_NO_DEV (-3)
 #define XRM_ERROR_NO_KERNEL (-4)
 #define XRM_ERROR_NO_CHAN (-5)
+#define XRM_ERROR_CONNECT_FAIL (-21)
 
 #endif // _XRM_ERROR_H_
