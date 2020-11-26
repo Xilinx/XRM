@@ -42,6 +42,7 @@ XRM Architecture
 .. toctree::
    :caption: Quick Start 
    :maxdepth: 1
+   :hidden:
 
    Prerequisites.rst
    Build.rst
@@ -52,6 +53,7 @@ XRM Architecture
 .. toctree::
    :caption: User Guide
    :maxdepth: 1
+   :hidden:
 
    cli.rst
    lib.rst
@@ -60,7 +62,18 @@ XRM Architecture
 
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Versions
+   :hidden:
+
+   2020.2 <https://xilinx.github.io/XRM/>
+
+   2020.1 <https://xilinx.github.io/XRM/2020.1/>
+
+
+.. toctree::
    :caption: Notice
    :maxdepth: 1
+   :hidden:
 
    notice.rst
