@@ -43,9 +43,9 @@ copyright = 'Copyright (C) 2019-2020, Xilinx Inc - All rights reserved'
 author = 'Xilinx'
 
 # The short X.Y version
-version = '2020.1'
+version = '2021.1'
 # The full version, including alpha/beta/rc tags
-release = '202001'
+release = '202101'
 
 
 # -- General configuration ---------------------------------------------------
@@ -70,7 +70,7 @@ extensions = [
 	'recommonmark',
 	#'edit_on_github',
     # Auto-generate section labels.
-    'sphinx.ext.autosectionlabel',	
+    'sphinx.ext.autosectionlabel',
     #'sphinx.ext.imgmath',
     'doxyrest',
     #'cpplexer',
