@@ -45,10 +45,10 @@ void xrm::session::doWrite(std::size_t length) {
     boost::asio::async_write(m_socket, boost::asio::buffer(m_outdata, length),
                              [this, self](boost::system::error_code const& ec, std::size_t /*length*/) {
                                  if (ec) {
-                                    /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
-                                     m_system->logMsg(XRM_LOG_DEBUG, "doWrite(): ec %s = %d", ec.category().name(),
-                                                      ec.value());
                                      uint64_t clientId = this->getClientId();
+                                    /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
+                                     m_system->logMsg(XRM_LOG_DEBUG, "doWrite(): ec %s = %d, clientId = %lu",
+                                                      ec.category().name(), ec.value(), clientId);
                                      if (clientId) m_system->recycleResource(clientId);
                                  } else {
                                      doRead();
@@ -92,6 +92,11 @@ void xrm::session::handleCmd(std::size_t length) {
     /* The cmd received from xrm library will contain the clientId, so it can be used to trace
      * whether the session broken or not.
      * The cmd from xrmadm will NOT contain cliendId, and there is no need to trace the session.
+     *
+     * NOTE: For all xrm library APIs call in xrm.cpp, please make sure the API call
+     * implementation containing "request.parameters.echoClientId" and
+     * "request.parameters.clientId", these information is required for resource automatic recycle
+     * when host application closes connection to XRM daemon.
      */
     echoClientId = m_cmdtree.get<std::string>("request.parameters.echoClientId", "");
     if (echoClientId.c_str()[0] != '\0')

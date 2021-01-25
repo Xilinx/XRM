@@ -751,6 +751,8 @@ int32_t xrmUdfCuGroupDeclare(xrmContext context, xrmUdfCuGroupProperty* udfCuGro
     pt::ptree groupDeclareTree;
     groupDeclareTree.put("request.name", "udfCuGroupDeclare");
     groupDeclareTree.put("request.requestId", 1);
+    groupDeclareTree.put("request.parameters.echoClientId", "echo");
+    groupDeclareTree.put("request.parameters.clientId", ctx->xrmClientId);
     groupDeclareTree.put("request.parameters.udfCuGroupName", udfCuGroupName);
     groupDeclareTree.put("request.parameters.optionUdfCuListNum", udfCuGroupProp->optionUdfCuListNum);
     for (cuListIdx = 0; cuListIdx < udfCuGroupProp->optionUdfCuListNum; cuListIdx++) {
@@ -828,6 +830,8 @@ int32_t xrmUdfCuGroupUndeclare(xrmContext context, char* udfCuGroupName) {
     pt::ptree groupUndeclareTree;
     groupUndeclareTree.put("request.name", "udfCuGroupUndeclare");
     groupUndeclareTree.put("request.requestId", 1);
+    groupUndeclareTree.put("request.parameters.echoClientId", "echo");
+    groupUndeclareTree.put("request.parameters.clientId", ctx->xrmClientId);
     groupUndeclareTree.put("request.parameters.udfCuGroupName", udfCuGroupName);
 
     std::stringstream reqstr;
@@ -968,6 +972,8 @@ uint64_t xrmCuGetMaxCapacity(xrmContext context, xrmCuProperty* cuProp) {
     pt::ptree cuGetMaxCapacityTree;
     cuGetMaxCapacityTree.put("request.name", "cuGetMaxCapacity");
     cuGetMaxCapacityTree.put("request.requestId", 1);
+    cuGetMaxCapacityTree.put("request.parameters.echoClientId", "echo");
+    cuGetMaxCapacityTree.put("request.parameters.clientId", ctx->xrmClientId);
     cuGetMaxCapacityTree.put("request.parameters.kernelName", cuProp->kernelName);
     cuGetMaxCapacityTree.put("request.parameters.kernelAlias", cuProp->kernelAlias);
 
@@ -1021,6 +1027,8 @@ int32_t xrmCuCheckStatus(xrmContext context, xrmCuResource* cuRes, xrmCuStat* cu
     pt::ptree cuCheckStatusTree;
     cuCheckStatusTree.put("request.name", "cuCheckStatus");
     cuCheckStatusTree.put("request.requestId", 1);
+    cuCheckStatusTree.put("request.parameters.echoClientId", "echo");
+    cuCheckStatusTree.put("request.parameters.clientId", ctx->xrmClientId);
     cuCheckStatusTree.put("request.parameters.deviceId", cuRes->deviceId);
     cuCheckStatusTree.put("request.parameters.cuId", cuRes->cuId);
     cuCheckStatusTree.put("request.parameters.channelId", cuRes->channelId);
@@ -1289,6 +1297,8 @@ int32_t xrmAllocationQuery(xrmContext context, xrmAllocationQueryInfo* allocQuer
     pt::ptree allocQueryTree;
     allocQueryTree.put("request.name", "allocationQuery");
     allocQueryTree.put("request.requestId", 1);
+    allocQueryTree.put("request.parameters.echoClientId", "echo");
+    allocQueryTree.put("request.parameters.clientId", ctx->xrmClientId);
     allocQueryTree.put("request.parameters.allocServiceId", allocQuery->allocServiceId);
     allocQueryTree.put("request.parameters.kernelName", allocQuery->kernelName);
     allocQueryTree.put("request.parameters.kernelAlias", allocQuery->kernelAlias);
@@ -2019,6 +2029,8 @@ int32_t xrmReservationQuery(xrmContext context, uint64_t poolId, xrmCuPoolResour
     pt::ptree reservationQueryTree;
     reservationQueryTree.put("request.name", "reservationQuery");
     reservationQueryTree.put("request.requestId", 1);
+    reservationQueryTree.put("request.parameters.echoClientId", "echo");
+    reservationQueryTree.put("request.parameters.clientId", ctx->xrmClientId);
     reservationQueryTree.put("request.parameters.poolId", poolId);
 
     std::stringstream reqstr;
@@ -2098,6 +2110,8 @@ int32_t xrmExecPluginFunc(xrmContext context, char* xrmPluginName, uint32_t func
     pt::ptree execPluginFuncTree;
     execPluginFuncTree.put("request.name", "execXrmPluginFunc");
     execPluginFuncTree.put("request.requestId", 1);
+    execPluginFuncTree.put("request.parameters.echoClientId", "echo");
+    execPluginFuncTree.put("request.parameters.clientId", ctx->xrmClientId);
     execPluginFuncTree.put("request.parameters.xrmPluginName", xrmPluginName);
     execPluginFuncTree.put("request.parameters.funcId", funcId);
     execPluginFuncTree.put("request.parameters.input", param->input);

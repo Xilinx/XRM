@@ -36,9 +36,19 @@ void xrm::echoContextCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
 
 void xrm::destroyContextCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     auto context = incmd.get<std::string>("request.parameters.context");
+#if 0
     m_system->decNumConcurrentClient();
     /* the save() function is time cost operation, so not do it here */
     // m_system->save();
+#endif
+#if 1
+    /*
+     * This is to make sure resource will be automaticly recycled after context destroy.
+     * But there maybe duplicate work here since resource may already be released/relinquished.
+     */
+    auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    if (clientId) m_system->recycleResource(clientId);
+#endif
     outrsp.put("response.status.value", XRM_SUCCESS);
 }
 

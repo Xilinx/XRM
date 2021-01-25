@@ -3081,7 +3081,8 @@ void xrm::system::recycleResource(uint64_t clientId) {
         }
     }
     decNumConcurrentClient();
-    save();
+    /* The save() function is time cost operation, so decide to not it here. */
+    // save();
     exitLock();
 }
 
