@@ -22,11 +22,14 @@ void xrm::session::doRead() {
     m_socket.async_read_some(boost::asio::buffer(m_indata, max_length),
                              [this, self](boost::system::error_code const& ec, std::size_t length) {
                                  if (ec) {
+                                    /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
                                      m_system->logMsg(XRM_LOG_DEBUG, "doRead(): ec %s = %d", ec.category().name(),
                                                       ec.value());
                                  }
                                  if ((boost::asio::error::eof == ec) || (boost::asio::error::connection_reset == ec)) {
                                      uint64_t clientId = this->getClientId();
+                                    /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
+                                     m_system->logMsg(XRM_LOG_DEBUG, "doRead(): clintId = %lu", clientId);
                                      if (clientId) m_system->recycleResource(clientId);
                                  }
                                  if (length == 0) {
@@ -42,6 +45,7 @@ void xrm::session::doWrite(std::size_t length) {
     boost::asio::async_write(m_socket, boost::asio::buffer(m_outdata, length),
                              [this, self](boost::system::error_code const& ec, std::size_t /*length*/) {
                                  if (ec) {
+                                    /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
                                      m_system->logMsg(XRM_LOG_DEBUG, "doWrite(): ec %s = %d", ec.category().name(),
                                                       ec.value());
                                      uint64_t clientId = this->getClientId();

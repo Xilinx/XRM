@@ -241,13 +241,14 @@ typedef struct cuData {
     int32_t numClient;                         // current number of processes attached to cu
     reserveData reserves[XRM_MAX_KERNEL_RESERVES];
     int32_t numReserve; // number of reserves on this cu
-    int32_t usedLoad;   // percentage: 0 - 100, allocated or reserved load
+    int32_t totalUsedLoad;   // percentage: 0 - 100, allocated load in default pool + reserved load
+    int32_t totalReservedLoad;   // percentage: 0 - 100, reserved load
 
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
         ar& cuId& cuType& kernelName& kernelAlias& cuName& instanceName& kernelPluginFileName& maxCapacity& baseAddr&
-            baseAddr& channels& numChanInuse& clients& numClient& reserves& numReserve& usedLoad;
+            baseAddr& channels& numChanInuse& clients& numClient& reserves& numReserve& totalUsedLoad& totalReservedLoad;
     }
 } cuData;
 

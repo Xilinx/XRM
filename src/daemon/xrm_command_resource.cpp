@@ -825,8 +825,12 @@ void xrm::reservationQueryCommand::processCmd(pt::ptree& incmd, pt::ptree& outrs
     int32_t ret = m_system->resReservationQuery(poolId, &cuPoolRes);
     outrsp.put("response.status.value", ret);
     if (ret == XRM_SUCCESS) {
-        outrsp.put("response.data.cuNum", cuPoolRes.cuNum);
-        for (i = 0; i < cuPoolRes.cuNum; i++) {
+        if (cuPoolRes.cuNum > 16)
+            outrsp.put("response.data.cuNum", 16);
+        else
+            outrsp.put("response.data.cuNum", cuPoolRes.cuNum);
+//        for (i = 0; i < cuPoolRes.cuNum; i++) {
+        for (i = 0; (i < cuPoolRes.cuNum) && (i < 16); i++) {
             outrsp.put("response.data.xclbinFileName" + std::to_string(i), cuPoolRes.cuResources[i].xclbinFileName);
             outrsp.put("response.data.uuidStr" + std::to_string(i), cuPoolRes.cuResources[i].uuidStr);
             outrsp.put("response.data.kernelPluginFileName" + std::to_string(i),
