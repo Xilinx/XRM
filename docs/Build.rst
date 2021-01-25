@@ -36,6 +36,14 @@ RHEL/CentOS, if ``build.sh`` was accidentally run prior to enabling
 the devtoolset, then it is necessary to clean stale files makefiles by
 running ``build.sh clean`` prior to the next build.
 
+If you want to build XRM with static boost lib, here is the way.
+
+::
+
+   ./boost.sh
+   ./build.sh clean
+   env XRM_BOOST_INSTALL=/PATH/TO/BOOST ./build.sh
+
 Build RPM package on RHEL/CentOS or DEB package on Ubuntu
 .........................................................
 

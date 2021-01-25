@@ -22,10 +22,24 @@ set(XRM_VERSION_STRING ${XRM_VERSION_MAJOR}.${XRM_VERSION_MINOR}.${XRM_VERSION_P
 
 # Linking variables
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(XRT REQUIRED xrt)
-pkg_search_module(UUID REQUIRED uuid)
+find_package(XRT PATHS /opt/xilinx/xrt)
+find_library(UUID_LIBRARIES NAMES uuid REQUIRED)
 
-find_package(Boost COMPONENTS system filesystem thread serialization REQUIRED)
+# Try pkg-config for older XRT
+if (NOT ${XRT_FOUND})
+  pkg_check_modules(XRT REQUIRED xrt)
+  set(XRT_CORE_LIBRARIES ${XRT_LDFLAGS})
+endif()
+
+if (DEFINED ENV{XRM_BOOST_INSTALL})
+  set(Boost_USE_STATIC_LIBS ON)
+  find_package(Boost 
+      HINTS $ENV{XRM_BOOST_INSTALL}
+      COMPONENTS system filesystem thread serialization REQUIRED)
+else()
+  find_package(Boost COMPONENTS system filesystem thread serialization REQUIRED)
+endif()
+
 set (CMAKE_CXX_STANDARD 14)
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMake/")
 file(GLOB SOURCES "src/daemon/*.cpp")
@@ -36,14 +50,13 @@ include_directories(${XRT_INCLUDE_DIRS}
                      "src/daemon")
 # Generate the executable
 add_executable(${PROJECT_NAME} ${SOURCES} ${CONFIG_FILE} ${SERVICE_FILE})
-target_compile_options(${PROJECT_NAME} PUBLIC ${XRT_CFLAGS})
 target_compile_options(${PROJECT_NAME} PRIVATE -Werror -Wall -Wextra)
 target_link_libraries(${PROJECT_NAME}
   ${Boost_SYSTEM_LIBRARY}
   ${Boost_FILESYSTEM_LIBRARY}
   ${Boost_THREAD_LIBRARY}
   ${Boost_SERIALIZATION_LIBRARY}
-  ${XRT_LDFLAGS}
+  ${XRT_CORE_LIBRARIES}
   ${UUID_LIBRARIES}
   ${CMAKE_DL_LIBS}
 )
@@ -74,7 +87,7 @@ target_link_libraries("xrmpluginexample"
 
 # Set the location for library installation
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/xrm/bin)
-install(TARGETS "xrm" DESTINATION ${CMAKE_INSTALL_PREFIX}/xrm/lib)
+install(TARGETS "xrm" DESTINATION ${CMAKE_INSTALL_PREFIX}/xrm/lib EXPORT xrm-targets)
 install(TARGETS "xrmpluginexample" DESTINATION ${CMAKE_INSTALL_PREFIX}/xrm/plugin)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/lib/
         DESTINATION ${CMAKE_INSTALL_PREFIX}/xrm/include
@@ -105,3 +118,4 @@ include(CMake/version.cmake)
 include(CMake/service.cmake)
 include(CMake/package.cmake)
 include(CMake/pkgconfig.cmake)
+include(CMake/findpackage.cmake)

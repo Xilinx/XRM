@@ -4,5 +4,7 @@ configure_file(
 set(SERVICE_FILE "CMake/config/xrmd.service")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    install(FILES ${SERVICE_FILE} DESTINATION "/etc/systemd/system" )
+    if(NOT DEFINED ENV{CONDA_DEFAULT_ENV})
+      install(FILES ${SERVICE_FILE} DESTINATION "/etc/systemd/system" )
+    endif()
 endif(CMAKE_BUILD_TYPE STREQUAL "Release")

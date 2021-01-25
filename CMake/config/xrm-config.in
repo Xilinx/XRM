@@ -1,0 +1,22 @@
+# --------------------
+# @PACKAGE_NAME@-config.cmake
+# --------------------
+#
+# @PACKAGE_NAME@ cmake module.
+# This module sets the following variables in your project::
+#
+#   @PACKAGE_NAME@_FOUND              - true if @PACKAGE_NAME@ and all required components found on the system
+#   @PACKAGE_NAME@_VERSION            - VERSION of this package in x.y.z format
+#   @PACKAGE_NAME@_CMAKE_DIR          - Directory where this cmake module was found
+#   @PACKAGE_NAME@_INCLUDE_DIRS       - Directory where @PACKAGE_NAME@ headers are located.
+#   @PACKAGE_NAME@_LIBRARIES          - libraries to link against.
+@PACKAGE_INIT@
+
+set(@PACKAGE_NAME@_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/xrm/include")
+
+include("${CMAKE_CURRENT_LIST_DIR}/xrm-targets.cmake")
+
+set(@PACKAGE_NAME@_LIBRARIES @PACKAGE_NAME@::xrm)
+
+get_filename_component(@PACKAGE_NAME@_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+set(@PACKAGE_NAME@_FOUND True)

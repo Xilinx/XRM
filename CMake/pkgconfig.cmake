@@ -1,4 +1,6 @@
-if (${LINUX_FLAVOR} MATCHES "^(Ubuntu)")
+if(DEFINED ENV{CONDA_DEFAULT_ENV})
+  set(XRM_PKG_CONFIG_DIR "lib/pkgconfig")
+elseif (${LINUX_FLAVOR} MATCHES "^(Ubuntu)")
   set(XRM_PKG_CONFIG_DIR "/usr/lib/pkgconfig")
 elseif (${LINUX_FLAVOR} MATCHES "^(RedHat|CentOS)")
   set(XRM_PKG_CONFIG_DIR "/usr/lib64/pkgconfig")
