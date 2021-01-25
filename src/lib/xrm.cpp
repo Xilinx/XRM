@@ -138,6 +138,7 @@ xrmContext xrmCreateContext(uint32_t xrmApiVersion) {
     echoContextTree.put("request.requestId", 1);
     echoContextTree.put("request.parameters.context", "echoContext");
     echoContextTree.put("request.parameters.echo", "echo");
+    echoContextTree.put("request.parameters.recordClientId", "recordClientId");
     echoContextTree.put("request.parameters.clientId", ctx->xrmClientId);
     std::stringstream echoReqstr;
     boost::property_tree::write_json(echoReqstr, echoContextTree);

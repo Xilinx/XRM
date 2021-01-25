@@ -61,7 +61,7 @@ void xrm::session::handleCmd(std::size_t length) {
 
     std::stringstream instr;
     std::stringstream outstr;
-    std::string name, strRequestId, echoClientId;
+    std::string name, strRequestId, recordClientId;
 
     m_indata[length] = 0;
     instr << m_indata;
@@ -93,16 +93,12 @@ void xrm::session::handleCmd(std::size_t length) {
      * whether the session broken or not.
      * The cmd from xrmadm will NOT contain cliendId, and there is no need to trace the session.
      *
-     * NOTE: For all xrm library APIs call in xrm.cpp, please make sure the API call
-     * implementation containing "request.parameters.echoClientId" and
-     * "request.parameters.clientId", these information is required for resource automatic recycle
-     * when host application closes connection to XRM daemon.
+     * NOTE: During xrm context creating call, the client id will be recorded. It will be used
+     * for resource automatic recycle when host application closes connection to XRM daemon.
      */
-    echoClientId = m_cmdtree.get<std::string>("request.parameters.echoClientId", "");
-    if (echoClientId.c_str()[0] != '\0')
+    recordClientId = m_cmdtree.get<std::string>("request.parameters.recordClientId", "");
+    if (recordClientId.c_str()[0] != '\0')
         m_clientId = m_cmdtree.get<uint64_t>("request.parameters.clientId");
-    else
-        m_clientId = 0;
     m_registry->dispatch(name, m_cmdtree, outrsp);
 
 end_of_cmd:

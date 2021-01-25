@@ -53,7 +53,7 @@ class session : public std::enable_shared_from_this<session> {
     enum { max_length = 131072 };
 
     tcp::socket m_socket;
-    uint64_t m_clientId;
+    uint64_t m_clientId = 0;
     char m_indata[max_length];
     char m_outdata[max_length];
     boost::property_tree::ptree m_cmdtree;

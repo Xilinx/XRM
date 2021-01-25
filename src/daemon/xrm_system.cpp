@@ -2239,42 +2239,26 @@ int32_t xrm::system::resReleaseCu(cuResource* cuRes) {
             continue;
         }
 
+        /*
+         * For the release cu:
+         * if not from reserve pool, then return to Big pool
+         * if from reserve pool, pool is active, return to pool
+         * if from reserve pool, pool is in-active, return to Big pool
+         */
         if (cuRes->poolId) {
-            /* return the resource into reserve pool */
+            /* from the reserve pool */
             reserveIdx = isReservePoolUsingCu(cu, cuRes->poolId);
             if (reserveIdx != -1) {
-                cu->reserves[reserveIdx].reserveUsedLoad -= cu->channels[i].channelLoad;
-                /* if reserve client is NOT active, then need to return resource to default pool */
-                if (!cu->reserves[reserveIdx].clientIsActive) {
-                    /* update reserve information */
+                if (cu->reserves[reserveIdx].clientIsActive) {
+                    /* From reserve pool, reserve client is active, return to reserve pool */
+                    cu->reserves[reserveIdx].reserveUsedLoad -= cu->channels[i].channelLoad;
+                } else {
+                    /* From reserve pool, reserve client is NOT active, return resource to default pool */
                     cu->totalUsedLoad -= cu->channels[i].channelLoad;
-                    cu->totalReservedLoad -= cu->channels[i].channelLoad;
-                    cu->reserves[reserveIdx].reserveLoad -= cu->channels[i].channelLoad;
-                    if (cu->reserves[reserveIdx].reserveUsedLoad == 0) {
-                        cu->totalUsedLoad -= cu->reserves[reserveIdx].reserveLoad;
-                        cu->totalReservedLoad -= cu->reserves[reserveIdx].reserveLoad;
-
-                        /* switch the slot until the last one */
-                        int32_t slot;
-                        for (slot = reserveIdx; slot < cu->numReserve - 1; slot++) {
-                            cu->reserves[slot].reserveLoad = cu->reserves[slot + 1].reserveLoad;
-                            cu->reserves[slot].reserveUsedLoad = cu->reserves[slot + 1].reserveUsedLoad;
-                            cu->reserves[slot].reservePoolId = cu->reserves[slot + 1].reservePoolId;
-                            cu->reserves[slot].clientIsActive = cu->reserves[slot + 1].clientIsActive;
-                            cu->reserves[slot].clientId = cu->reserves[slot + 1].clientId;
-                        }
-                        /* empty the last slot */
-                        cu->reserves[slot].reserveLoad = 0;
-                        cu->reserves[slot].reserveUsedLoad = 0;
-                        cu->reserves[slot].reservePoolId = 0;
-                        cu->reserves[slot].clientIsActive = false;
-                        cu->reserves[slot].clientId = 0;
-                        cu->numReserve--;
-                    }
                 }
             } else {
-                exitLock();
-                return (ret);
+                /* From reserve pool, reserve client is NOT active, return resource to default pool */
+                cu->totalUsedLoad -= cu->channels[i].channelLoad;
             }
         } else {
             /* return the resource into default pool */
@@ -2775,6 +2759,14 @@ void xrm::system::releaseAllCuChanClientOnDev(deviceData* dev, uint64_t clientId
     for (i = 0; i < XRM_MAX_XILINX_KERNELS && i < dev->xclbinInfo.numCu; i++) {
         cuData* cu = &dev->xclbinInfo.cuList[i];
 
+        /*
+         * for each CU:
+         * 1) resource NOT allocated from reserve pool: return to Big pool (default pool)
+         * 2) resource allocated from reserve pool:
+         *    2.1) reserve pool is active: return to reserver pool
+         *    2.2) reserve pool is in-active: return to Big pool (default pool)
+         */
+
         /* Determine if client is using this cu */
         if (clientId && (isClientUsingCu(cu, clientId) < 0)) continue;
 
@@ -2788,12 +2780,48 @@ void xrm::system::releaseAllCuChanClientOnDev(deviceData* dev, uint64_t clientId
             /* clientId is 0, the channelLoad are also 0 */
             if (!cu_client || cu_client != clientId) continue;
 
-            cu->totalUsedLoad -= cu->channels[j].channelLoad;
-            cu->numChanInuse--;
-            cu->channels[j].clientId = 0;
-            cu->channels[j].channelLoad = 0;
-            cu->channels[j].allocServiceId = 0;
-            cu->channels[j].poolId = 0;
+            /*
+             * if not from reserve pool, then return to Big pool
+             * if from reserve pool, pool is active, return to pool
+             * if from reserve pool, pool is in-active, return to Big pool
+             */
+            if (cu->channels[j].poolId == 0) {
+                /* Not allocated from reserve pool, then return to Big pool */
+                cu->totalUsedLoad -= cu->channels[j].channelLoad;
+                cu->numChanInuse--;
+                cu->channels[j].clientId = 0;
+                cu->channels[j].channelLoad = 0;
+                cu->channels[j].allocServiceId = 0;
+                cu->channels[j].poolId = 0;
+            } else {
+                /* Allocated from reserve pool */
+                int32_t reservePoolIdx = -1;
+                for (int32_t reserveIdx = 0; reserveIdx < cu->numReserve; reserveIdx++) {
+                    if (!cu->reserves[reserveIdx].clientIsActive) continue;
+                    if (cu->reserves[reserveIdx].reservePoolId == cu->channels[j].poolId) {
+                        reservePoolIdx = reserveIdx;
+                        break;
+                    }
+                }
+
+                if (reservePoolIdx != -1) {
+                    /* from reserve pool, reserve pool is active, return to reserve pool */
+                    cu->reserves[reservePoolIdx].reserveUsedLoad -= cu->channels[j].channelLoad;
+                    cu->numChanInuse--;
+                    cu->channels[j].clientId = 0;
+                    cu->channels[j].channelLoad = 0;
+                    cu->channels[j].allocServiceId = 0;
+                    cu->channels[j].poolId = 0;
+                } else {
+                    /* from reserve pool, reserve pool is in-active, return to Big pool */
+                    cu->totalUsedLoad -= cu->channels[j].channelLoad;
+                    cu->numChanInuse--;
+                    cu->channels[j].clientId = 0;
+                    cu->channels[j].channelLoad = 0;
+                    cu->channels[j].allocServiceId = 0;
+                    cu->channels[j].poolId = 0;
+                }
+            } // end from reserve pool
         } /* end channel clearing loop */
     }     /* end cu loop */
 }
@@ -3023,7 +3051,60 @@ void xrm::system::recycleResource(uint64_t clientId) {
         dev = &m_devList[devId];
         if (!dev->isLoaded) continue;
 
+        /* relinquish all reserved resource from the client */
+        /*
+         * for each CU:
+         * 1) no resource still allocated from pool of this client: reserved resource back to
+         *    Big pool (default pool), de-active the client and remove reserve pool
+         * 2) resource allocated from pool of this client: reserved but not allocated back
+         *    to Big pool (default pool), de-active the client and remove reserve pool
+         */
+        for (int32_t cuId = 0; cuId < dev->xclbinInfo.numCu; cuId++) {
+            cu = &dev->xclbinInfo.cuList[cuId];
+            for (int32_t reserveIdx = 0; reserveIdx < cu->numReserve; reserveIdx++) {
+                if (!cu->reserves[reserveIdx].clientIsActive) continue;
+                if (cu->reserves[reserveIdx].clientId == clientId) {
+                    cu->totalUsedLoad -=
+                        (cu->reserves[reserveIdx].reserveLoad - cu->reserves[reserveIdx].reserveUsedLoad);
+                    cu->totalReservedLoad -= cu->reserves[reserveIdx].reserveLoad;
+                    /*
+                     * To de-active the client and remove reserve pool.
+                     * The allocated resource from this reserve pool will be directly return
+                     * to Big pool in future (either during release or recycle) since the pool is de-active.
+                     */
+                    cu->reserves[reserveIdx].clientIsActive = false;
+                    cu->reserves[reserveIdx].reserveLoad = 0;
+
+                    /* switch the slot until the last one */
+                    int32_t i;
+                    for (i = reserveIdx; i < cu->numReserve - 1; i++) {
+                        cu->reserves[i].reserveLoad = cu->reserves[i + 1].reserveLoad;
+                        cu->reserves[i].reserveUsedLoad = cu->reserves[i + 1].reserveUsedLoad;
+                        cu->reserves[i].reservePoolId = cu->reserves[i + 1].reservePoolId;
+                        cu->reserves[i].clientIsActive = cu->reserves[i + 1].clientIsActive;
+                        cu->reserves[i].clientId = cu->reserves[i + 1].clientId;
+                    }
+                    /* empty the last slot */
+                    cu->reserves[i].reserveLoad = 0;
+                    cu->reserves[i].reserveUsedLoad = 0;
+                    cu->reserves[i].reservePoolId = 0;
+                    cu->reserves[i].clientIsActive = false;
+                    cu->reserves[i].clientId = 0;
+                    cu->numReserve--;
+                    /* removed one slot, so set the reserveIdx to the right one */
+                    reserveIdx--;
+                }
+            }
+        } // endif relinquish
+
         /* release all allocated resource from the client */
+        /*
+         * for each CU:
+         * 1) resource NOT allocated from reserve pool: return to Big pool (default pool)
+         * 2) resource allocated from reserve pool:
+         *    2.1) reserve pool is active: return to reserver pool
+         *    2.2) reserve pool is in-active: return to Big pool (default pool)
+         */
         if (dev->isExcl) {
             if (dev->clientProcs[0].ref == 0) break;
             /* recycle the resource from the client */
@@ -3042,44 +3123,9 @@ void xrm::system::recycleResource(uint64_t clientId) {
                     dev->clientProcs[i].ref = 0;
                 }
             }
-        }
-
-        /* relinquish all reserved resource from the client */
-        for (int32_t cuId = 0; cuId < dev->xclbinInfo.numCu; cuId++) {
-            cu = &dev->xclbinInfo.cuList[cuId];
-            for (int32_t reserveIdx = 0; reserveIdx < cu->numReserve; reserveIdx++) {
-//                if (!cu->reserves[reserveIdx].clientIsActive) continue;
-                if (cu->reserves[reserveIdx].clientId == clientId) {
-                    cu->reserves[reserveIdx].clientIsActive = false;
-                    cu->totalUsedLoad -=
-                        (cu->reserves[reserveIdx].reserveLoad - cu->reserves[reserveIdx].reserveUsedLoad);
-                    cu->totalReservedLoad -=
-                        (cu->reserves[reserveIdx].reserveLoad - cu->reserves[reserveIdx].reserveUsedLoad);
-                    cu->reserves[reserveIdx].reserveLoad = cu->reserves[reserveIdx].reserveUsedLoad;
-                    if (cu->reserves[reserveIdx].reserveLoad == 0) {
-                        /* switch the slot until the last one */
-                        int32_t i;
-                        for (i = reserveIdx; i < cu->numReserve - 1; i++) {
-                            cu->reserves[i].reserveLoad = cu->reserves[i + 1].reserveLoad;
-                            cu->reserves[i].reserveUsedLoad = cu->reserves[i + 1].reserveUsedLoad;
-                            cu->reserves[i].reservePoolId = cu->reserves[i + 1].reservePoolId;
-                            cu->reserves[i].clientIsActive = cu->reserves[i + 1].clientIsActive;
-                            cu->reserves[i].clientId = cu->reserves[i + 1].clientId;
-                        }
-                        /* empty the last slot */
-                        cu->reserves[i].reserveLoad = 0;
-                        cu->reserves[i].reserveUsedLoad = 0;
-                        cu->reserves[i].reservePoolId = 0;
-                        cu->reserves[i].clientIsActive = false;
-                        cu->reserves[i].clientId = 0;
-                        cu->numReserve--;
-                        /* removed one slot, so set the reserveIdx to the right one */
-                        reserveIdx--;
-                    }
-                }
-            }
-        }
+        } // end of release
     }
+
     decNumConcurrentClient();
     /* The save() function is time cost operation, so decide to not it here. */
     // save();
