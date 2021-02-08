@@ -7,7 +7,7 @@ set(PACKAGE_NAME "XRM")
 configure_package_config_file (
   ${CMAKE_SOURCE_DIR}/CMake/config/xrm-config.in
   ${CMAKE_CURRENT_BINARY_DIR}/xrm-config.cmake
-  INSTALL_DESTINATION share/cmake/xrm
+  INSTALL_DESTINATION ${CMAKE_INSTALL_PREFIX}/xrm/share/cmake
   )
 
 # Generate xrm-config-version.cmake
@@ -22,7 +22,7 @@ write_basic_package_version_file (
 # Install xrm-config.cmake and xrm-config-version.cmake
 install (
   FILES ${CMAKE_CURRENT_BINARY_DIR}/xrm-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/xrm-config-version.cmake
-  DESTINATION share/cmake/xrm
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/xrm/share/cmake
   )
 
 # Generate and install xrm-targets.cmake
@@ -32,5 +32,5 @@ install (
 install(
   EXPORT xrm-targets
   NAMESPACE ${PACKAGE_NAME}::
-  DESTINATION share/cmake/xrm
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/xrm/share/cmake
   )
