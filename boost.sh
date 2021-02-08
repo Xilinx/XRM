@@ -126,5 +126,5 @@ fi
 echo ""
 echo "Use local build of Boost with XRM:"
 echo "% ./build.sh -clean"
-echo "% env XRM_BOOST_INSTALL=$install ./build.sh ..."
+echo "% env XRM_BOOST_INSTALL=$install ./build.sh"
 
