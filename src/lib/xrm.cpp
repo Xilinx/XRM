@@ -590,6 +590,122 @@ int32_t xrmCuAlloc(xrmContext context, xrmCuProperty* cuProp, xrmCuResource* cuR
 }
 
 /**
+ * \brief Allocates compute unit from specified device given a
+ * kernel name or alias or both and request load (1 - 100). This function also
+ * provides the xclbin and kernel plugin loaded on the device.
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param deviceId the id of target device to allocate the cu.
+ * @param cuProp the property of requested cu.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ *             devExcl: request exclusive device usage for this client.
+ *             requestLoad: request load (1 - 100).
+ *             poolId: request to allocate cu from specified resource pool
+ * @param cuRes the cu resource.
+ *             xclbinFileName: xclbin (path and name) attached to this device.
+ *             kernelPluginFileName: kernel plugin (only name) attached to this device.
+ *             kernelName: the kernel name of allocated cu.
+ *             kernelAlias: the name alias of allocated cu.
+ *             instanceName: the instance name of allocated cu.
+ *             cuName: the name of allocated cu (kernelName:instanceName).
+ *             uuid: uuid of the loaded xclbin file.
+ *             deviceId: device id of this cu.
+ *             cuId: cu id of this cu.
+ *             channelId: channel id of this cu.
+ *             cuType: type of cu, hardware kernel or soft kernel.
+ *             allocServiceId: service id for this cu allocation.
+ *             channelLoad: allocated load of this cu (1 - 100).
+ *             poolId: id of the cu pool this cu comes from, the system default pool id is 0.
+ * @return int32_t, 0 on success or appropriate error number
+ */
+int32_t xrmCuAllocFromDev(xrmContext context, int32_t deviceId, xrmCuProperty* cuProp, xrmCuResource* cuRes) {
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+
+    if (ctx == NULL || cuProp == NULL || cuRes == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context, cu properties or resource pointer is NULL\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    if (deviceId < 0) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s invalid device id %d", __func__, deviceId);
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0')) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s neither kernel name nor alias are provided", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (cuProp->requestLoad <= 0 || cuProp->requestLoad > 100) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): wrong request load: %d", __func__, cuProp->requestLoad);
+        return (XRM_ERROR_INVALID);
+    }
+
+    memset(cuRes, 0, sizeof(xrmCuResource));
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree cuAllocTree;
+    cuAllocTree.put("request.name", "cuAllocFromDev");
+    cuAllocTree.put("request.requestId", 1);
+    cuAllocTree.put("request.parameters.echoClientId", "echo");
+    cuAllocTree.put("request.parameters.clientId", ctx->xrmClientId);
+    cuAllocTree.put("request.parameters.deviceId", deviceId);
+    /* use either kernel name or alias or both to identity the kernel */
+    cuAllocTree.put("request.parameters.kernelName", cuProp->kernelName);
+    cuAllocTree.put("request.parameters.kernelAlias", cuProp->kernelAlias);
+    if (cuProp->devExcl == false)
+        cuAllocTree.put("request.parameters.devExcl", 0);
+    else
+        cuAllocTree.put("request.parameters.devExcl", 1);
+    cuAllocTree.put("request.parameters.requestLoad", cuProp->requestLoad);
+    cuAllocTree.put("request.parameters.poolId", cuProp->poolId);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, cuAllocTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    int32_t ret = rspTree.get<int32_t>("response.status.value");
+    if (ret == XRM_SUCCESS) {
+        auto xclbinFileName = rspTree.get<std::string>("response.data.xclbinFileName");
+        strncpy(cuRes->xclbinFileName, xclbinFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+        auto uuidStr = rspTree.get<std::string>("response.data.uuidStr");
+        hexstrToBin(uuidStr, 2 * sizeof(uuid_t), (unsigned char*)cuRes->uuid);
+        auto kernelPluginFileName = rspTree.get<std::string>("response.data.kernelPluginFileName");
+        strncpy(cuRes->kernelPluginFileName, kernelPluginFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+        auto kernelName = rspTree.get<std::string>("response.data.kernelName");
+        strncpy(cuRes->kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
+        auto kernelAlias = rspTree.get<std::string>("response.data.kernelAlias");
+        strncpy(cuRes->kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
+        auto instanceName = rspTree.get<std::string>("response.data.instanceName");
+        strncpy(cuRes->instanceName, instanceName.c_str(), XRM_MAX_NAME_LEN - 1);
+        auto cuName = rspTree.get<std::string>("response.data.cuName");
+        strncpy(cuRes->cuName, cuName.c_str(), XRM_MAX_NAME_LEN - 1);
+        cuRes->deviceId = rspTree.get<int32_t>("response.data.deviceId");
+        cuRes->cuId = rspTree.get<int32_t>("response.data.cuId");
+        cuRes->channelId = rspTree.get<int32_t>("response.data.channelId");
+        auto cuType = rspTree.get<int32_t>("response.data.cuType");
+        cuRes->cuType = (xrmCuType)cuType;
+        cuRes->allocServiceId = rspTree.get<uint64_t>("response.data.allocServiceId");
+        cuRes->channelLoad = rspTree.get<int32_t>("response.data.channelLoad");
+        cuRes->baseAddr = rspTree.get<uint64_t>("response.data.baseAddr");
+        cuRes->membankId = rspTree.get<uint32_t>("response.data.membankId");
+        cuRes->membankType = rspTree.get<uint32_t>("response.data.membankType");
+        cuRes->membankSize = rspTree.get<uint64_t>("response.data.membankSize");
+        cuRes->membankBaseAddr = rspTree.get<uint64_t>("response.data.membankBaseAddr");
+        cuRes->poolId = rspTree.get<uint64_t>("response.data.poolId");
+    }
+    return (ret);
+}
+
+/**
  * \brief Allocates a list of compute unit resource given a list of
  * kernels's property with kernel name or alias or both and request load (1 - 100).
  *

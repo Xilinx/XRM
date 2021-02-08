@@ -54,6 +54,7 @@ void xrmLoadAndAllCuAllocTest(xrmContext* ctx);
 void xrmCuBlockingAllocReleaseTest(xrmContext* ctx);
 void xrmCuListBlockingAllocReleaseTest(xrmContext* ctx);
 void xrmCuGroupBlockingAllocReleaseTest(xrmContext* ctx);
+void xrmCuAllocFromDevReleaseTest(xrmContext* ctx);
 
 #ifdef __cplusplus
 }

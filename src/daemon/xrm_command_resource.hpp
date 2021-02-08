@@ -56,6 +56,13 @@ class cuAllocCommand : public command {
     void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
 };
 
+class cuAllocFromDevCommand : public command {
+   public:
+    cuAllocFromDevCommand(xrm::system& sys) : command("cuAllocFromDev", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
 class cuListAllocCommand : public command {
    public:
     cuListAllocCommand(xrm::system& sys) : command("cuListAlloc", sys) {}

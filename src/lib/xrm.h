@@ -277,6 +277,38 @@ int32_t xrmUnloadOneDevice(xrmContext context, int32_t deviceId);
 int32_t xrmCuAlloc(xrmContext context, xrmCuProperty* cuProp, xrmCuResource* cuRes);
 
 /**
+ * \brief Allocates compute unit from specified device given a
+ * kernel name or alias or both and request load (1 - 100). This function also
+ * provides the xclbin and kernel plugin loaded on the device.
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param deviceId the id of target device to allocate the cu.
+ * @param cuProp the property of requested cu.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ *             devExcl: request exclusive device usage for this client.
+ *             requestLoad: request load (1 - 100).
+ *             poolId: request to allocate cu from specified resource pool
+ * @param cuRes the cu resource.
+ *             xclbinFileName: xclbin (path and name) attached to this device.
+ *             kernelPluginFileName: kernel plugin (only name) attached to this device.
+ *             kernelName: the kernel name of allocated cu.
+ *             kernelAlias: the name alias of allocated cu.
+ *             instanceName: the instance name of allocated cu.
+ *             cuName: the name of allocated cu (kernelName:instanceName).
+ *             uuid: uuid of the loaded xclbin file.
+ *             deviceId: device id of this cu.
+ *             cuId: cu id of this cu.
+ *             channelId: channel id of this cu.
+ *             cuType: type of cu, hardware kernel or soft kernel.
+ *             allocServiceId: service id for this cu allocation.
+ *             channelLoad: allocated load of this cu (1 - 100).
+ *             poolId: id of the cu pool this cu comes from, the system default pool id is 0.
+ * @return int32_t, 0 on success or appropriate error number
+ */
+int32_t xrmCuAllocFromDev(xrmContext context, int32_t deviceId, xrmCuProperty* cuProp, xrmCuResource* cuRes);
+
+/**
  * \brief Allocates a list of compute unit resource given a list of
  * kernels's property with kernel name or alias or both and request load (1 - 100).
  *

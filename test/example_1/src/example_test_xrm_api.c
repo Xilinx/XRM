@@ -1776,6 +1776,105 @@ void xrmCuGroupBlockingAllocReleaseTest(xrmContext* ctx) {
     printf("<<<<<<<==  end the xrm user defined cu group blocking alloc release test ===>>>>>>>>\n");
 }
 
+void xrmCuAllocFromDevReleaseTest(xrmContext* ctx) {
+    int32_t ret;
+    printf("<<<<<<<==  start the xrm allocation from specified device test ===>>>>>>>>\n");
+    if (ctx == NULL) {
+        printf("ctx is null, fail to do cu alloc from specified device test\n");
+        return;
+    }
+
+    // alloc scaler cu
+    xrmCuProperty scalerCuProp;
+    xrmCuResource scalerCuRes;
+    int32_t deviceId;
+
+    // alloc scaler cu from device 0
+    memset(&scalerCuProp, 0, sizeof(xrmCuProperty));
+    memset(&scalerCuRes, 0, sizeof(xrmCuResource));
+    strcpy(scalerCuProp.kernelName, "scaler");
+    strcpy(scalerCuProp.kernelAlias, "");
+    scalerCuProp.devExcl = false;
+    scalerCuProp.requestLoad = 45;
+    scalerCuProp.poolId = 0;
+    deviceId = 0;
+
+    printf("Test 19-1: Alloc scaler cu from device %d\n", deviceId);
+    ret = xrmCuAllocFromDev(ctx, deviceId, &scalerCuProp, &scalerCuRes);
+    if (ret != 0) {
+        printf("xrmCuAlloc: fail to alloc scaler cu from device %d\n", deviceId);
+    } else {
+        printf("Allocated scaler cu: \n");
+        printf("   xclbinFileName is:  %s\n", scalerCuRes.xclbinFileName);
+        printf("   kernelPluginFileName is:  %s\n", scalerCuRes.kernelPluginFileName);
+        printf("   kernelName is:  %s\n", scalerCuRes.kernelName);
+        printf("   instanceName is:  %s\n", scalerCuRes.instanceName);
+        printf("   cuName is:  %s\n", scalerCuRes.cuName);
+        printf("   kernelAlias is:  %s\n", scalerCuRes.kernelAlias);
+        printf("   deviceId is:  %d\n", scalerCuRes.deviceId);
+        printf("   cuId is:  %d\n", scalerCuRes.cuId);
+        printf("   channelId is:  %d\n", scalerCuRes.channelId);
+        printf("   cuType is:  %d\n", scalerCuRes.cuType);
+        printf("   baseAddr is:  0x%lx\n", scalerCuRes.baseAddr);
+        printf("   membankId is:  %d\n", scalerCuRes.membankId);
+        printf("   membankType is:  %d\n", scalerCuRes.membankType);
+        printf("   membankSize is:  0x%lx\n", scalerCuRes.membankSize);
+        printf("   membankBaseAddr is:  0x%lx\n", scalerCuRes.membankBaseAddr);
+        printf("   allocServiceId is:  %lu\n", scalerCuRes.allocServiceId);
+        printf("   poolId is:  %lu\n", scalerCuRes.poolId);
+        printf("   channelLoad is:  %d\n", scalerCuRes.channelLoad);
+    }
+
+    printf("Test 19-2:  release scaler cu\n");
+    if (xrmCuRelease(ctx, &scalerCuRes))
+        printf("success to  release scaler cu\n");
+    else
+        printf("fail to release scaler cu\n");
+
+    // alloc scaler cu from device 1
+    memset(&scalerCuProp, 0, sizeof(xrmCuProperty));
+    memset(&scalerCuRes, 0, sizeof(xrmCuResource));
+    strcpy(scalerCuProp.kernelName, "");
+    strcpy(scalerCuProp.kernelAlias, "SCALER_MPSOC");
+    scalerCuProp.devExcl = false;
+    scalerCuProp.requestLoad = 55;
+    scalerCuProp.poolId = 0;
+    deviceId = 1;
+
+    printf("Test 19-3: Alloc scaler cu from device %d\n", deviceId);
+    ret = xrmCuAllocFromDev(ctx, deviceId, &scalerCuProp, &scalerCuRes);
+    if (ret != 0) {
+        printf("xrmCuAlloc: fail to alloc scaler cu from device %d\n", deviceId);
+    } else {
+        printf("Allocated scaler cu: \n");
+        printf("   xclbinFileName is:  %s\n", scalerCuRes.xclbinFileName);
+        printf("   kernelPluginFileName is:  %s\n", scalerCuRes.kernelPluginFileName);
+        printf("   kernelName is:  %s\n", scalerCuRes.kernelName);
+        printf("   instanceName is:  %s\n", scalerCuRes.instanceName);
+        printf("   cuName is:  %s\n", scalerCuRes.cuName);
+        printf("   kernelAlias is:  %s\n", scalerCuRes.kernelAlias);
+        printf("   deviceId is:  %d\n", scalerCuRes.deviceId);
+        printf("   cuId is:  %d\n", scalerCuRes.cuId);
+        printf("   channelId is:  %d\n", scalerCuRes.channelId);
+        printf("   cuType is:  %d\n", scalerCuRes.cuType);
+        printf("   baseAddr is:  0x%lx\n", scalerCuRes.baseAddr);
+        printf("   membankId is:  %d\n", scalerCuRes.membankId);
+        printf("   membankType is:  %d\n", scalerCuRes.membankType);
+        printf("   membankSize is:  0x%lx\n", scalerCuRes.membankSize);
+        printf("   membankBaseAddr is:  0x%lx\n", scalerCuRes.membankBaseAddr);
+        printf("   allocServiceId is:  %lu\n", scalerCuRes.allocServiceId);
+        printf("   poolId is:  %lu\n", scalerCuRes.poolId);
+        printf("   channelLoad is:  %d\n", scalerCuRes.channelLoad);
+    }
+
+    printf("Test 19-4:  release scaler cu\n");
+    if (xrmCuRelease(ctx, &scalerCuRes))
+        printf("success to  release scaler cu\n");
+    else
+        printf("fail to release scaler cu\n");
+    printf("<<<<<<<==  end the xrm allocation from specified device test ===>>>>>>>>\n");
+}
+
 void xrmConcurrentContextTest(int32_t numContext) {
     printf("<<<<<<<==  Start the xrm context test ===>>>>>>>>\n\n");
     xrmContext* ctx;
@@ -1837,7 +1936,7 @@ void testXrmFunctions(void) {
     xrmCuBlockingAllocReleaseTest(ctx);
     xrmCuListBlockingAllocReleaseTest(ctx);
     xrmCuGroupBlockingAllocReleaseTest(ctx);
-
+    xrmCuAllocFromDevReleaseTest(ctx);
     printf("Test 0-2: destroy context\n");
     if (xrmDestroyContext(ctx) != XRM_SUCCESS)
         printf("Test 0-2: destroy context failed\n");

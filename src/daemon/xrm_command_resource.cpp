@@ -109,6 +109,55 @@ void xrm::cuAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     }
 }
 
+void xrm::cuAllocFromDevCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
+    cuProperty cuProp;
+    cuResource cuRes;
+    std::string errmsg;
+
+    auto deviceId = incmd.get<std::int32_t>("request.parameters.deviceId");
+    auto kernelName = incmd.get<std::string>("request.parameters.kernelName");
+    auto kernelAlias = incmd.get<std::string>("request.parameters.kernelAlias");
+    auto devExcl = incmd.get<int32_t>("request.parameters.devExcl");
+    auto requestLoad = incmd.get<int32_t>("request.parameters.requestLoad");
+    auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
+    strncpy(cuProp.kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
+    strncpy(cuProp.kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
+    strcpy(cuProp.cuName, "");
+    if (devExcl == 0)
+        cuProp.devExcl = false;
+    else
+        cuProp.devExcl = true;
+    cuProp.requestLoad = requestLoad;
+    cuProp.clientId = clientId;
+    cuProp.poolId = poolId;
+
+    bool update_id = true;
+    int32_t ret = m_system->resAllocCuFromDev(deviceId, &cuProp, &cuRes, update_id);
+    outrsp.put("response.status.value", ret);
+    if (ret == XRM_SUCCESS) {
+        outrsp.put("response.data.xclbinFileName", cuRes.xclbinFileName);
+        outrsp.put("response.data.uuidStr", cuRes.uuidStr);
+        outrsp.put("response.data.kernelPluginFileName", cuRes.kernelPluginFileName);
+        outrsp.put("response.data.kernelName", cuRes.kernelName);
+        outrsp.put("response.data.instanceName", cuRes.instanceName);
+        outrsp.put("response.data.cuName", cuRes.cuName);
+        outrsp.put("response.data.kernelAlias", cuRes.kernelAlias);
+        outrsp.put("response.data.deviceId", cuRes.deviceId);
+        outrsp.put("response.data.cuId", cuRes.cuId);
+        outrsp.put("response.data.channelId", cuRes.channelId);
+        outrsp.put("response.data.cuType", (int32_t)cuRes.cuType);
+        outrsp.put("response.data.baseAddr", cuRes.baseAddr);
+        outrsp.put("response.data.membankId", cuRes.membankId);
+        outrsp.put("response.data.membankType", cuRes.membankType);
+        outrsp.put("response.data.membankSize", cuRes.membankSize);
+        outrsp.put("response.data.membankBaseAddr", cuRes.membankBaseAddr);
+        outrsp.put("response.data.allocServiceId", cuRes.allocServiceId);
+        outrsp.put("response.data.channelLoad", cuRes.channelLoad);
+        outrsp.put("response.data.poolId", cuRes.poolId);
+    }
+}
+
 void xrm::cuListAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuListProperty cuListProp;
     cuListResource cuListRes;
