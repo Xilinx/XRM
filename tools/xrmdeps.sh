@@ -54,10 +54,19 @@ rh_package_list()
      boost-filesystem \
      boost-thread \
      pkgconfig \
-     redhat-lsb \
      rpm-build \
      xrt \
     )
+
+    if [ $FLAVOR == "amzn" ]; then
+        RH_LIST+=(\
+        system-lsb-core \
+        )
+    else
+        RH_LIST+=(\
+        redhat-lsb \
+        )
+    fi
 }
 
 ub_package_list()
@@ -85,7 +94,7 @@ update_package_list()
 {
     if [ $FLAVOR == "ubuntu" ] || [ $FLAVOR == "debian" ]; then
         ub_package_list
-    elif [ $FLAVOR == "centos" ] || [ $FLAVOR == "rhel" ]; then
+    elif [ $FLAVOR == "centos" ] || [ $FLAVOR == "rhel" ] || [ $FLAVOR == "amzn" ]; then
         rh_package_list
     else
         echo "unknown OS flavor $FLAVOR"
@@ -163,6 +172,14 @@ prep_rhel()
     fi
 }
 
+prep_amzn()
+{
+    echo "Installing amazon EPEL..."
+    amazon-linux-extras install epel
+    echo "Installing cmake3 from EPEL repository..."
+    yum install -y cmake3
+}
+
 install()
 {
     if [ $FLAVOR == "ubuntu" ] || [ $FLAVOR == "debian" ]; then
@@ -172,11 +189,13 @@ install()
         apt install -y "${UB_LIST[@]}"
     fi
 
-    # Enable EPEL on CentOS/RHEL
+    # Enable EPEL on CentOS/RHEL/Amazon
     if [ $FLAVOR == "centos" ]; then
         prep_centos
     elif [ $FLAVOR == "rhel" ]; then
         prep_rhel
+    elif [ $FLAVOR == "amzn" ]; then
+        prep_amzn
     fi
 
     if [ $FLAVOR == "rhel" ] || [ $FLAVOR == "centos" ] || [ $FLAVOR == "amzn" ]; then
