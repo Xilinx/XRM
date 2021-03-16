@@ -358,6 +358,13 @@ int32_t xrm::system::loadAnyDevice(int32_t* devId, std::string& xclbin, std::str
     int32_t ret = XRM_ERROR;
     std::string loadErrmsg;
 
+    /*
+     * XRM daemon may start before FPGA device ready during boot,
+     * so try to init devices at the first time using devices.
+     */
+    if (!m_devicesInited)
+        initDevices();
+
     if (xclbin.c_str()[0] == '\0') {
         errmsg += "request parameters xclbin is not provided";
         ret = XRM_ERROR_INVALID;
