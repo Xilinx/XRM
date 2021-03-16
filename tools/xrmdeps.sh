@@ -199,11 +199,13 @@ install()
     fi
 
     if [ $FLAVOR == "rhel" ] || [ $FLAVOR == "centos" ] || [ $FLAVOR == "amzn" ]; then
-        echo "Installing RHEL/CentOS packages..."
+        echo "Installing RHEL/CentOS/Amazon packages..."
         yum install -y "${RH_LIST[@]}"
-	if [ $VERSION -lt "8" ]; then
-        yum install -y devtoolset-6
-	fi
+        if [ $FLAVOR == "rhel" ] || [ $FLAVOR == "centos" ]; then
+            if [ $VERSION -lt "8" ]; then
+                yum install -y devtoolset-6
+            fi
+        fi
     fi
 }
 
