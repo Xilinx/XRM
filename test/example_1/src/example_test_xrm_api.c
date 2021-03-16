@@ -682,7 +682,7 @@ void xrmCuAllocQueryReleaseUsingAliasTest(xrmContext* ctx) {
     }
 
     printf("Test 7-3:  query scaler cu list with allocServiceId and kernel alias\n");
-    memset(&allocQuery, 0, sizeof(xrmAllocationQuery));
+    memset(&allocQuery, 0, sizeof(xrmAllocationQueryInfo));
     memset(&queryScalerCuListRes, 0, sizeof(xrmCuListResource));
     allocQuery.allocServiceId = scalerCuListRes.cuResources[0].allocServiceId;
     strcpy(allocQuery.kernelName, "");

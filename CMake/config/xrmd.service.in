@@ -6,6 +6,7 @@ ConditionDirectoryNotEmpty=/dev/xfpga
 
 [Service]
 Type=simple
+LimitNOFILE=1000000
 Environment="LD_LIBRARY_PATH=/opt/xilinx/xrt/lib"
 Restart=always
 RestartSec=1

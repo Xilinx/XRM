@@ -23,7 +23,8 @@ using boost::asio::ip::tcp;
 void xrm::server::doAccept() {
     m_acceptor.async_accept(m_socket, [this](boost::system::error_code ec) {
         if (ec) {
-            m_system->logMsg(XRM_LOG_ERROR, "%s: error %s = %d", __func__, ec.category().name(), ec.value());
+            m_system->logMsg(XRM_LOG_ERROR, "%s: error %s = %d, %s", __func__, ec.category().name(), ec.value(),
+                ec.message().c_str());
             // uint32_t numConcurrentClient = m_system->getNumConcurrentClient();
             // m_system->logMsg(XRM_LOG_ERROR, "%s: doAccept(), numConcurrentClient = %lu", __func__,
             // numConcurrentClient);
