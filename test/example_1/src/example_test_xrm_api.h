@@ -55,6 +55,21 @@ void xrmCuBlockingAllocReleaseTest(xrmContext* ctx);
 void xrmCuListBlockingAllocReleaseTest(xrmContext* ctx);
 void xrmCuGroupBlockingAllocReleaseTest(xrmContext* ctx);
 void xrmCuAllocFromDevReleaseTest(xrmContext* ctx);
+void xrmCuAllocReleaseGranularity1000000Test(xrmContext* ctx);
+void xrmCuListAllocReleaseGranularity1000000Test(xrmContext* ctx);
+void xrmSoftCuAllocReleaseGranularity1000000Test(xrmContext* ctx);
+void xrmCuListAllocReleaseFromSameDevGranularity1000000Test(xrmContext* ctx);
+void xrmCuAllocReleaseUsingAliasGranularity1000000Test(xrmContext* ctx);
+void xrmCuAllocReleaseUsingKernelNameAndAliasGranularity1000000Test(xrmContext* ctx);
+void xrmCuAllocQueryReleaseUsingAliasGranularity1000000Test(xrmContext* ctx);
+void xrmCheckCuListAvailableNumUsingAliasGranularity1000000Test(xrmContext* ctx);
+void xrmCuPoolReserveAllocReleaseRelinquishGranularity1000000Test(xrmContext* ctx);
+void xrmUdfCuGroupGranularity1000000Test(xrmContext* ctx);
+void xrmCuAllocWithLoadGranularity1000000Test(xrmContext* ctx);
+void xrmCuBlockingAllocReleaseGranularity1000000Test(xrmContext* ctx);
+void xrmCuListBlockingAllocReleaseGranularity1000000Test(xrmContext* ctx);
+void xrmCuGroupBlockingAllocReleaseGranularity1000000Test(xrmContext* ctx);
+void xrmCuAllocFromDevReleaseGranularity1000000Test(xrmContext* ctx);
 
 #ifdef __cplusplus
 }

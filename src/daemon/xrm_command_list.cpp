@@ -93,8 +93,10 @@ void xrm::listCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
                 else
                     outrsp.add(cuNode + ".maxCapacity  ", "");
                 outrsp.add(cuNode + ".numChanInuse ", cuData->numChanInuse);
-                outrsp.add(cuNode + ".usedLoad     ", cuData->totalUsedLoad);
-                outrsp.add(cuNode + ".reservedLoad ", cuData->totalReservedLoad);
+                outrsp.add(cuNode + ".usedLoad     ", std::to_string(cuData->totalUsedLoadUnified) + " of 1000000");
+                outrsp.add(cuNode + ".reservedLoad ", std::to_string(cuData->totalReservedLoadUnified) + " of 1000000");
+                outrsp.add(cuNode + ".resrvUsedLoad",
+                           std::to_string(cuData->totalReservedUsedLoadUnified) + " of 1000000");
             }
         } else {
             outrsp.add(devNode + ".xclbin     ", "is NOT loaded");

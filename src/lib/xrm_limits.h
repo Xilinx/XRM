@@ -28,8 +28,10 @@
 #define XRM_MAX_PLUGIN_NAME XRM_MAX_NAME_LEN
 #define XRM_MAX_KERNEL_NAME XRM_MAX_NAME_LEN
 #define XRM_MAX_DSA_NAME XRM_MAX_NAME_LEN
-#define XRM_MAX_CU_LOAD 100   // percentage: 0 - 100
-#define XRM_MAX_CHAN_LOAD 100 // percentage: 0 - 100
+#define XRM_MAX_CU_LOAD_GRANULARITY_100 100           // percentage (granularity 100): 0 - 100
+#define XRM_MAX_CHAN_LOAD_GRANULARITY_100 100         // percentage (granularity 100): 0 - 100
+#define XRM_MAX_CU_LOAD_GRANULARITY_1000000 1000000   // granularity 1,000,000: 0 - 1,000,000
+#define XRM_MAX_CHAN_LOAD_GRANULARITY_1000000 1000000 // granularity 1,000,000: 0 - 1,000,000
 #define XRM_MAX_LIST_CU_NUM 16
 #define XRM_MAX_UDF_CU_GROUP_NUM 32
 #define XRM_MAX_UDF_CU_GROUP_OPTION_LIST_NUM 8
@@ -52,7 +54,7 @@
 #define XRM_MAX_LOG_LEVEL XRM_LOG_DEBUG     // max log level
 #define XRM_DEFAULT_LOG_LEVEL XRM_LOG_ERROR // default log level
 
-#define XRM_MAX_LIMIT_CONCURRENT_CLIENT 1000000     // max limit concurrent client
+#define XRM_MAX_LIMIT_CONCURRENT_CLIENT 1000000   // max limit concurrent client
 #define XRM_DEFAULT_LIMIT_CONCURRENT_CLIENT 40000 // default limit concurrent client
 
 #endif // _XRM_LIMITS_H_

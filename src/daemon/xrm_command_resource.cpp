@@ -69,7 +69,8 @@ void xrm::cuAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     auto kernelName = incmd.get<std::string>("request.parameters.kernelName");
     auto kernelAlias = incmd.get<std::string>("request.parameters.kernelAlias");
     auto devExcl = incmd.get<int32_t>("request.parameters.devExcl");
-    auto requestLoad = incmd.get<int32_t>("request.parameters.requestLoad");
+    auto requestLoadUnified = incmd.get<int32_t>("request.parameters.requestLoadUnified");
+    auto requestLoadOriginal = incmd.get<int32_t>("request.parameters.requestLoadOriginal");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
     strncpy(cuProp.kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
@@ -79,7 +80,8 @@ void xrm::cuAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
         cuProp.devExcl = false;
     else
         cuProp.devExcl = true;
-    cuProp.requestLoad = requestLoad;
+    cuProp.requestLoadUnified = requestLoadUnified;
+    cuProp.requestLoadOriginal = requestLoadOriginal;
     cuProp.clientId = clientId;
     cuProp.poolId = poolId;
 
@@ -104,7 +106,7 @@ void xrm::cuAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
         outrsp.put("response.data.membankSize", cuRes.membankSize);
         outrsp.put("response.data.membankBaseAddr", cuRes.membankBaseAddr);
         outrsp.put("response.data.allocServiceId", cuRes.allocServiceId);
-        outrsp.put("response.data.channelLoad", cuRes.channelLoad);
+        outrsp.put("response.data.channelLoadOriginal", cuRes.channelLoadOriginal);
         outrsp.put("response.data.poolId", cuRes.poolId);
     }
 }
@@ -118,7 +120,8 @@ void xrm::cuAllocFromDevCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp)
     auto kernelName = incmd.get<std::string>("request.parameters.kernelName");
     auto kernelAlias = incmd.get<std::string>("request.parameters.kernelAlias");
     auto devExcl = incmd.get<int32_t>("request.parameters.devExcl");
-    auto requestLoad = incmd.get<int32_t>("request.parameters.requestLoad");
+    auto requestLoadUnified = incmd.get<int32_t>("request.parameters.requestLoadUnified");
+    auto requestLoadOriginal = incmd.get<int32_t>("request.parameters.requestLoadOriginal");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
     strncpy(cuProp.kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
@@ -128,7 +131,8 @@ void xrm::cuAllocFromDevCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp)
         cuProp.devExcl = false;
     else
         cuProp.devExcl = true;
-    cuProp.requestLoad = requestLoad;
+    cuProp.requestLoadUnified = requestLoadUnified;
+    cuProp.requestLoadOriginal = requestLoadOriginal;
     cuProp.clientId = clientId;
     cuProp.poolId = poolId;
 
@@ -153,7 +157,7 @@ void xrm::cuAllocFromDevCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp)
         outrsp.put("response.data.membankSize", cuRes.membankSize);
         outrsp.put("response.data.membankBaseAddr", cuRes.membankBaseAddr);
         outrsp.put("response.data.allocServiceId", cuRes.allocServiceId);
-        outrsp.put("response.data.channelLoad", cuRes.channelLoad);
+        outrsp.put("response.data.channelLoadOriginal", cuRes.channelLoadOriginal);
         outrsp.put("response.data.poolId", cuRes.poolId);
     }
 }
@@ -177,7 +181,8 @@ void xrm::cuListAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
         auto kernelName = incmd.get<std::string>("request.parameters.kernelName" + std::to_string(i));
         auto kernelAlias = incmd.get<std::string>("request.parameters.kernelAlias" + std::to_string(i));
         auto devExcl = incmd.get<int32_t>("request.parameters.devExcl" + std::to_string(i));
-        auto requestLoad = incmd.get<int32_t>("request.parameters.requestLoad" + std::to_string(i));
+        auto requestLoadUnified = incmd.get<int32_t>("request.parameters.requestLoadUnified" + std::to_string(i));
+        auto requestLoadOriginal = incmd.get<int32_t>("request.parameters.requestLoadOriginal" + std::to_string(i));
         auto poolId = incmd.get<uint64_t>("request.parameters.poolId" + std::to_string(i));
         strncpy(cuListProp.cuProps[i].kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
         strncpy(cuListProp.cuProps[i].kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
@@ -186,7 +191,8 @@ void xrm::cuListAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
             cuListProp.cuProps[i].devExcl = false;
         else
             cuListProp.cuProps[i].devExcl = true;
-        cuListProp.cuProps[i].requestLoad = requestLoad;
+        cuListProp.cuProps[i].requestLoadUnified = requestLoadUnified;
+        cuListProp.cuProps[i].requestLoadOriginal = requestLoadOriginal;
         cuListProp.cuProps[i].clientId = clientId;
         cuListProp.cuProps[i].poolId = poolId;
     }
@@ -215,7 +221,8 @@ void xrm::cuListAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
             outrsp.put("response.data.membankSize" + std::to_string(i), cuListRes.cuResources[i].membankSize);
             outrsp.put("response.data.membankBaseAddr" + std::to_string(i), cuListRes.cuResources[i].membankBaseAddr);
             outrsp.put("response.data.allocServiceId" + std::to_string(i), cuListRes.cuResources[i].allocServiceId);
-            outrsp.put("response.data.channelLoad" + std::to_string(i), cuListRes.cuResources[i].channelLoad);
+            outrsp.put("response.data.channelLoadOriginal" + std::to_string(i),
+                       cuListRes.cuResources[i].channelLoadOriginal);
             outrsp.put("response.data.poolId" + std::to_string(i), cuListRes.cuResources[i].poolId);
         }
     }
@@ -258,7 +265,8 @@ void xrm::cuGroupAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
             outrsp.put("response.data.membankSize" + std::to_string(i), cuGroupRes.cuResources[i].membankSize);
             outrsp.put("response.data.membankBaseAddr" + std::to_string(i), cuGroupRes.cuResources[i].membankBaseAddr);
             outrsp.put("response.data.allocServiceId" + std::to_string(i), cuGroupRes.cuResources[i].allocServiceId);
-            outrsp.put("response.data.channelLoad" + std::to_string(i), cuGroupRes.cuResources[i].channelLoad);
+            outrsp.put("response.data.channelLoadOriginal" + std::to_string(i),
+                       cuGroupRes.cuResources[i].channelLoadOriginal);
             outrsp.put("response.data.poolId" + std::to_string(i), cuGroupRes.cuResources[i].poolId);
         }
     }
@@ -274,7 +282,8 @@ void xrm::cuReleaseCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     auto cuType = incmd.get<int32_t>("request.parameters.cuType");
     auto allocServiceId = incmd.get<uint64_t>("request.parameters.allocServiceId");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
-    auto channelLoad = incmd.get<int32_t>("request.parameters.channelLoad");
+    auto channelLoadUnified = incmd.get<int32_t>("request.parameters.channelLoadUnified");
+    auto channelLoadOriginal = incmd.get<int32_t>("request.parameters.channelLoadOriginal");
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
     cuRes.deviceId = deviceId;
     cuRes.cuId = cuId;
@@ -282,7 +291,8 @@ void xrm::cuReleaseCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuRes.cuType = (cuTypes)cuType;
     cuRes.allocServiceId = allocServiceId;
     cuRes.clientId = clientId;
-    cuRes.channelLoad = channelLoad;
+    cuRes.channelLoadUnified = channelLoadUnified;
+    cuRes.channelLoadOriginal = channelLoadOriginal;
     cuRes.poolId = poolId;
 
     int32_t ret = m_system->resReleaseCu(&cuRes);
@@ -304,7 +314,8 @@ void xrm::cuListReleaseCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
         auto channelId = incmd.get<int32_t>("request.parameters.channelId" + std::to_string(i));
         auto cuType = incmd.get<int32_t>("request.parameters.cuType" + std::to_string(i));
         auto allocServiceId = incmd.get<uint64_t>("request.parameters.allocServiceId" + std::to_string(i));
-        auto channelLoad = incmd.get<int32_t>("request.parameters.channelLoad" + std::to_string(i));
+        auto channelLoadUnified = incmd.get<int32_t>("request.parameters.channelLoadUnified" + std::to_string(i));
+        auto channelLoadOriginal = incmd.get<int32_t>("request.parameters.channelLoadOriginal" + std::to_string(i));
         auto poolId = incmd.get<uint64_t>("request.parameters.poolId" + std::to_string(i));
         cuListRes.cuResources[i].deviceId = deviceId;
         cuListRes.cuResources[i].cuId = cuId;
@@ -312,7 +323,8 @@ void xrm::cuListReleaseCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
         cuListRes.cuResources[i].cuType = (cuTypes)cuType;
         cuListRes.cuResources[i].allocServiceId = allocServiceId;
         cuListRes.cuResources[i].clientId = clientId;
-        cuListRes.cuResources[i].channelLoad = channelLoad;
+        cuListRes.cuResources[i].channelLoadUnified = channelLoadUnified;
+        cuListRes.cuResources[i].channelLoadOriginal = channelLoadOriginal;
         cuListRes.cuResources[i].poolId = poolId;
     }
 
@@ -335,7 +347,8 @@ void xrm::cuGroupReleaseCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp)
         auto channelId = incmd.get<int32_t>("request.parameters.channelId" + std::to_string(i));
         auto cuType = incmd.get<int32_t>("request.parameters.cuType" + std::to_string(i));
         auto allocServiceId = incmd.get<uint64_t>("request.parameters.allocServiceId" + std::to_string(i));
-        auto channelLoad = incmd.get<int32_t>("request.parameters.channelLoad" + std::to_string(i));
+        auto channelLoadUnified = incmd.get<int32_t>("request.parameters.channelLoadUnified" + std::to_string(i));
+        auto channelLoadOriginal = incmd.get<int32_t>("request.parameters.channelLoadOriginal" + std::to_string(i));
         auto poolId = incmd.get<uint64_t>("request.parameters.poolId" + std::to_string(i));
         cuGroupRes.cuResources[i].deviceId = deviceId;
         cuGroupRes.cuResources[i].cuId = cuId;
@@ -343,7 +356,8 @@ void xrm::cuGroupReleaseCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp)
         cuGroupRes.cuResources[i].cuType = (cuTypes)cuType;
         cuGroupRes.cuResources[i].allocServiceId = allocServiceId;
         cuGroupRes.cuResources[i].clientId = clientId;
-        cuGroupRes.cuResources[i].channelLoad = channelLoad;
+        cuGroupRes.cuResources[i].channelLoadUnified = channelLoadUnified;
+        cuGroupRes.cuResources[i].channelLoadOriginal = channelLoadOriginal;
         cuGroupRes.cuResources[i].poolId = poolId;
     }
 
@@ -382,8 +396,10 @@ void xrm::udfCuGroupDeclareCommand::processCmd(pt::ptree& incmd, pt::ptree& outr
                 cuProp->devExcl = false;
             else
                 cuProp->devExcl = true;
-            auto requestLoad = incmd.get<int32_t>(udfCuListStr + ".requestLoad" + std::to_string(i));
-            cuProp->requestLoad = requestLoad;
+            auto requestLoadUnified = incmd.get<int32_t>(udfCuListStr + ".requestLoadUnified" + std::to_string(i));
+            auto requestLoadOriginal = incmd.get<int32_t>(udfCuListStr + ".requestLoadOriginal" + std::to_string(i));
+            cuProp->requestLoadUnified = requestLoadUnified;
+            cuProp->requestLoadOriginal = requestLoadOriginal;
         }
     }
 
@@ -444,7 +460,7 @@ void xrm::cuCheckStatusCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
             outrsp.put("response.data.isBusy", 1);
         else
             outrsp.put("response.data.isBusy", 0);
-        outrsp.put("response.data.usedLoad", cuStat.usedLoad);
+        outrsp.put("response.data.usedLoadOriginal", cuStat.usedLoadOriginal);
     } else {
         outrsp.put("response.data.failed", "failed to check cu status");
     }
@@ -489,7 +505,8 @@ void xrm::allocationQueryCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp
             outrsp.put("response.data.membankBaseAddr" + std::to_string(i),
                        (int32_t)cuListRes.cuResources[i].membankBaseAddr);
             outrsp.put("response.data.allocServiceId" + std::to_string(i), cuListRes.cuResources[i].allocServiceId);
-            outrsp.put("response.data.channelLoad" + std::to_string(i), cuListRes.cuResources[i].channelLoad);
+            outrsp.put("response.data.channelLoadOriginal" + std::to_string(i),
+                       cuListRes.cuResources[i].channelLoadOriginal);
             outrsp.put("response.data.poolId" + std::to_string(i), cuListRes.cuResources[i].poolId);
         }
     }
@@ -575,7 +592,8 @@ void xrm::checkCuAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& ou
     auto kernelName = incmd.get<std::string>("request.parameters.kernelName");
     auto kernelAlias = incmd.get<std::string>("request.parameters.kernelAlias");
     auto devExcl = incmd.get<int32_t>("request.parameters.devExcl");
-    auto requestLoad = incmd.get<int32_t>("request.parameters.requestLoad");
+    auto requestLoadUnified = incmd.get<int32_t>("request.parameters.requestLoadUnified");
+    auto requestLoadOriginal = incmd.get<int32_t>("request.parameters.requestLoadOriginal");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
     strncpy(cuProp.kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
@@ -585,7 +603,8 @@ void xrm::checkCuAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& ou
         cuProp.devExcl = false;
     else
         cuProp.devExcl = true;
-    cuProp.requestLoad = requestLoad;
+    cuProp.requestLoadUnified = requestLoadUnified;
+    cuProp.requestLoadOriginal = requestLoadOriginal;
     cuProp.clientId = clientId;
     cuProp.poolId = poolId;
 
@@ -648,7 +667,8 @@ void xrm::checkCuListAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
         auto kernelName = incmd.get<std::string>("request.parameters.kernelName" + std::to_string(i));
         auto kernelAlias = incmd.get<std::string>("request.parameters.kernelAlias" + std::to_string(i));
         auto devExcl = incmd.get<int32_t>("request.parameters.devExcl" + std::to_string(i));
-        auto requestLoad = incmd.get<int32_t>("request.parameters.requestLoad" + std::to_string(i));
+        auto requestLoadUnified = incmd.get<int32_t>("request.parameters.requestLoadUnified" + std::to_string(i));
+        auto requestLoadOriginal = incmd.get<int32_t>("request.parameters.requestLoadOriginal" + std::to_string(i));
         auto poolId = incmd.get<uint64_t>("request.parameters.poolId" + std::to_string(i));
         strncpy(cuListProp.cuProps[i].kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
         strncpy(cuListProp.cuProps[i].kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
@@ -657,7 +677,8 @@ void xrm::checkCuListAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
             cuListProp.cuProps[i].devExcl = false;
         else
             cuListProp.cuProps[i].devExcl = true;
-        cuListProp.cuProps[i].requestLoad = requestLoad;
+        cuListProp.cuProps[i].requestLoadUnified = requestLoadUnified;
+        cuListProp.cuProps[i].requestLoadOriginal = requestLoadOriginal;
         cuListProp.cuProps[i].clientId = clientId;
         cuListProp.cuProps[i].poolId = poolId;
     }
@@ -776,7 +797,8 @@ void xrm::checkCuPoolAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
         auto kernelName = incmd.get<std::string>("request.parameters.kernelName" + std::to_string(i));
         auto kernelAlias = incmd.get<std::string>("request.parameters.kernelAlias" + std::to_string(i));
         auto devExcl = incmd.get<int32_t>("request.parameters.devExcl" + std::to_string(i));
-        auto requestLoad = incmd.get<int32_t>("request.parameters.requestLoad" + std::to_string(i));
+        auto requestLoadUnified = incmd.get<int32_t>("request.parameters.requestLoadUnified" + std::to_string(i));
+        auto requestLoadOriginal = incmd.get<int32_t>("request.parameters.requestLoadOriginal" + std::to_string(i));
         strncpy(cuListProp->cuProps[i].kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
         strncpy(cuListProp->cuProps[i].kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
         strcpy(cuListProp->cuProps[i].cuName, "");
@@ -784,7 +806,8 @@ void xrm::checkCuPoolAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
             cuListProp->cuProps[i].devExcl = false;
         else
             cuListProp->cuProps[i].devExcl = true;
-        cuListProp->cuProps[i].requestLoad = requestLoad;
+        cuListProp->cuProps[i].requestLoadUnified = requestLoadUnified;
+        cuListProp->cuProps[i].requestLoadOriginal = requestLoadOriginal;
         cuListProp->cuProps[i].clientId = clientId;
         cuListProp->cuProps[i].poolId = 0;
     }
@@ -838,7 +861,10 @@ void xrm::cuPoolReserveCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
         auto kernelName = incmd.get<std::string>("request.parameters.cuList.kernelName" + std::to_string(i));
         auto kernelAlias = incmd.get<std::string>("request.parameters.cuList.kernelAlias" + std::to_string(i));
         auto devExcl = incmd.get<int32_t>("request.parameters.cuList.devExcl" + std::to_string(i));
-        auto requestLoad = incmd.get<int32_t>("request.parameters.cuList.requestLoad" + std::to_string(i));
+        auto requestLoadUnified =
+            incmd.get<int32_t>("request.parameters.cuList.requestLoadUnified" + std::to_string(i));
+        auto requestLoadOriginal =
+            incmd.get<int32_t>("request.parameters.cuList.requestLoadOriginal" + std::to_string(i));
         strncpy(cuListProp->cuProps[i].kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
         strncpy(cuListProp->cuProps[i].kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
         strcpy(cuListProp->cuProps[i].cuName, "");
@@ -846,7 +872,8 @@ void xrm::cuPoolReserveCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
             cuListProp->cuProps[i].devExcl = false;
         else
             cuListProp->cuProps[i].devExcl = true;
-        cuListProp->cuProps[i].requestLoad = requestLoad;
+        cuListProp->cuProps[i].requestLoadUnified = requestLoadUnified;
+        cuListProp->cuProps[i].requestLoadOriginal = requestLoadOriginal;
         cuListProp->cuProps[i].clientId = clientId;
         cuListProp->cuProps[i].poolId = 0;
     }
@@ -888,7 +915,7 @@ void xrm::reservationQueryCommand::processCmd(pt::ptree& incmd, pt::ptree& outrs
             outrsp.put("response.data.cuNum", 16);
         else
             outrsp.put("response.data.cuNum", cuPoolRes.cuNum);
-//        for (i = 0; i < cuPoolRes.cuNum; i++) {
+        //        for (i = 0; i < cuPoolRes.cuNum; i++) {
         for (i = 0; (i < cuPoolRes.cuNum) && (i < 16); i++) {
             outrsp.put("response.data.xclbinFileName" + std::to_string(i), cuPoolRes.cuResources[i].xclbinFileName);
             outrsp.put("response.data.uuidStr" + std::to_string(i), cuPoolRes.cuResources[i].uuidStr);
@@ -919,7 +946,8 @@ void xrm::cuAllocWithLoadCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp
     auto kernelName = incmd.get<std::string>("request.parameters.kernelName");
     auto kernelAlias = incmd.get<std::string>("request.parameters.kernelAlias");
     auto devExcl = incmd.get<int32_t>("request.parameters.devExcl");
-    auto requestLoad = incmd.get<int32_t>("request.parameters.requestLoad");
+    auto requestLoadUnified = incmd.get<int32_t>("request.parameters.requestLoadUnified");
+    auto requestLoadOriginal = incmd.get<int32_t>("request.parameters.requestLoadOriginal");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
     auto xclbinFileName = incmd.get<std::string>("request.parameters.xclbinFileName");
@@ -930,7 +958,8 @@ void xrm::cuAllocWithLoadCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp
         cuProp.devExcl = false;
     else
         cuProp.devExcl = true;
-    cuProp.requestLoad = requestLoad;
+    cuProp.requestLoadUnified = requestLoadUnified;
+    cuProp.requestLoadOriginal = requestLoadOriginal;
     cuProp.clientId = clientId;
     cuProp.poolId = poolId;
 
@@ -955,7 +984,7 @@ void xrm::cuAllocWithLoadCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp
         outrsp.put("response.data.membankSize", cuRes.membankSize);
         outrsp.put("response.data.membankBaseAddr", cuRes.membankBaseAddr);
         outrsp.put("response.data.allocServiceId", cuRes.allocServiceId);
-        outrsp.put("response.data.channelLoad", cuRes.channelLoad);
+        outrsp.put("response.data.channelLoadOriginal", cuRes.channelLoadOriginal);
         outrsp.put("response.data.poolId", cuRes.poolId);
     }
 }
@@ -992,7 +1021,8 @@ void xrm::loadAndAllCuAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outr
             outrsp.put("response.data.membankSize" + std::to_string(i), cuListRes.cuResources[i].membankSize);
             outrsp.put("response.data.membankBaseAddr" + std::to_string(i), cuListRes.cuResources[i].membankBaseAddr);
             outrsp.put("response.data.allocServiceId" + std::to_string(i), cuListRes.cuResources[i].allocServiceId);
-            outrsp.put("response.data.channelLoad" + std::to_string(i), cuListRes.cuResources[i].channelLoad);
+            outrsp.put("response.data.channelLoadOriginal" + std::to_string(i),
+                       cuListRes.cuResources[i].channelLoadOriginal);
             outrsp.put("response.data.poolId" + std::to_string(i), cuListRes.cuResources[i].poolId);
         }
     }

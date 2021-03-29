@@ -51,8 +51,13 @@ namespace xrm {
 /* cu status */
 typedef struct cuStatus {
     bool isBusy;
-    int32_t usedLoad;    // Percentage: 0 - 100
-    uint8_t extData[64]; // for future extension
+    int32_t usedLoadUnified;  // used load, granularity of 1,000,000
+    int32_t usedLoadOriginal; /* used load of this cu, only one type granularity at one time.
+                               * bit[31 - 28] reserved
+                               * bit[27 -  8] granularity of 1000000 (0 - 1000000)
+                               * bit[ 7 -  0] granularity of 100 (0 - 100)
+                               */
+    uint8_t extData[64];      // for future extension
 } cuStatus;
 
 /* request compute unit resource property */
@@ -61,7 +66,12 @@ typedef struct cuProperty {
     char kernelAlias[XRM_MAX_NAME_LEN]; // unique alias of kernel name
     char cuName[XRM_MAX_NAME_LEN];      // unique cu name (kernelName:instanceName)
     bool devExcl;                       // request exclusive device usage for this client
-    int32_t requestLoad;                // request load percentage of the CU: 1 - 100
+    int32_t requestLoadUnified;         // request load, granularity of 1,000,000
+    int32_t requestLoadOriginal;        /* request load, only one type granularity at one time.
+                                         * bit[31 - 28] reserved
+                                         * bit[27 -  8] granularity of 1000000 (0 - 1000000)
+                                         * bit[ 7 -  0] granularity of 100 (0 - 100)
+                                         */
     uint64_t clientId;
     uint64_t poolId;     /* request to allocate resource from specified resource pool,
                           * the system default resource pool id is 0.
@@ -71,7 +81,7 @@ typedef struct cuProperty {
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
-        ar& kernelName& kernelAlias& cuName& devExcl& requestLoad& clientId& poolId;
+        ar& kernelName& kernelAlias& cuName& devExcl& requestLoadUnified& requestLoadOriginal& clientId& poolId;
     }
 } cuProperty;
 
@@ -150,9 +160,14 @@ typedef struct cuResource {
     uint64_t membankBaseAddr; // connected memory bank base address
     uint64_t allocServiceId;  // unique service id of the allocation
     uint64_t clientId;
-    int32_t channelLoad; // load percentage of the CU for this channel: 1 - 100
-    uint64_t poolId;     // id of the cu pool this cu comes from, default pool id is 0
-    uint8_t extData[64]; // for future extension
+    int32_t channelLoadUnified;  // channel load, granularity of 1,000,000
+    int32_t channelLoadOriginal; /* channel load, only one type granularity at one time.
+                                  * bit[31 - 28] reserved
+                                  * bit[27 -  8] granularity of 1000000 (0 - 1000000)
+                                  * bit[ 7 -  0] granularity of 100 (0 - 100)
+                                  */
+    uint64_t poolId;             // id of the cu pool this cu comes from, default pool id is 0
+    uint8_t extData[64];         // for future extension
 } cuResource;
 
 /*
@@ -196,27 +211,32 @@ typedef struct channelData {
     uint64_t allocServiceId;
     uint64_t poolId;
     uint64_t clientId;
-    int32_t channelLoad; // load percentage of the CU: 0 - 100
+    int32_t channelLoadUnified;  // channel load, granularity of 1,000,000
+    int32_t channelLoadOriginal; /* channel load, only one type granularity at one time.
+                                  * bit[31 - 28] reserved
+                                  * bit[27 -  8] granularity of 1000000 (0 - 1000000)
+                                  * bit[ 7 -  0] granularity of 100 (0 - 100)
+                                  */
 
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
-        ar& channelId& allocServiceId& poolId& clientId& channelLoad;
+        ar& channelId& allocServiceId& poolId& clientId& channelLoadUnified& channelLoadOriginal;
     }
 } channelData;
 
 /* reserve related data */
 typedef struct reserveData {
     uint64_t reservePoolId;
-    int32_t reserveLoad;     // load percentage of the CU: 0 - 100
-    int32_t reserveUsedLoad; // load percentage of the CU: 0 - 100
+    int32_t reserveLoadUnified;     // load, granularity of 1,000,000
+    int32_t reserveUsedLoadUnified; // load, granularity of 1,000,000
     bool clientIsActive;
     uint64_t clientId;
 
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
-        ar& reservePoolId& reserveLoad& reserveUsedLoad& clientIsActive& clientId;
+        ar& reservePoolId& reserveLoadUnified& reserveUsedLoadUnified& clientIsActive& clientId;
     }
 } reserveData;
 
@@ -240,15 +260,17 @@ typedef struct cuData {
     uint64_t clients[XRM_MAX_KERNEL_CHANNELS]; // client id attached to cu
     int32_t numClient;                         // current number of processes attached to cu
     reserveData reserves[XRM_MAX_KERNEL_RESERVES];
-    int32_t numReserve; // number of reserves on this cu
-    int32_t totalUsedLoad;   // percentage: 0 - 100, allocated load in default pool + reserved load
-    int32_t totalReservedLoad;   // percentage: 0 - 100, reserved load
+    int32_t numReserve;                   // number of reserves on this cu
+    int32_t totalUsedLoadUnified;         // granularity of 1,000,000, allocated load in default pool + reserved load
+    int32_t totalReservedLoadUnified;     // granularity of 1,000,000, reserved load
+    int32_t totalReservedUsedLoadUnified; // granularity of 1,000,000, used load in reserved load
 
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
         ar& cuId& cuType& kernelName& kernelAlias& cuName& instanceName& kernelPluginFileName& maxCapacity& baseAddr&
-            baseAddr& channels& numChanInuse& clients& numClient& reserves& numReserve& totalUsedLoad& totalReservedLoad;
+            baseAddr& channels& numChanInuse& clients& numClient& reserves& numReserve& totalUsedLoadUnified&
+                totalReservedLoadUnified& totalReservedUsedLoadUnified;
     }
 } cuData;
 

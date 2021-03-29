@@ -39,7 +39,11 @@ extern "C" {
 /* cu stat */
 typedef struct xrmCuStat {
     bool isBusy;
-    int32_t usedLoad;    // Percentage: 0 - 100
+    int32_t usedLoad;    /* used load, only one type granularity at one time.
+                          * bit[31 - 28] reserved
+                          * bit[27 -  8] granularity of 1000000 (0 - 1000000)
+                          * bit[ 7 -  0] granularity of 100 (0 - 100)
+                          */
     uint8_t extData[64]; // for future extension
 } xrmCuStat;
 
@@ -48,7 +52,11 @@ typedef struct xrmCuProperty {
     char kernelName[XRM_MAX_NAME_LEN];  // unique kernel name, not instance name
     char kernelAlias[XRM_MAX_NAME_LEN]; // unique alias of kernel name
     bool devExcl;                       // request exclusive device usage for this client
-    int32_t requestLoad;                // request load percentage of the CU: 1 - 100
+    int32_t requestLoad;                /* request load of the CU, only one type granularity at one time.
+                                         * bit[31 - 28] reserved
+                                         * bit[27 -  8] granularity of 1000000 (0 - 1000000)
+                                         * bit[ 7 -  0] granularity of 100 (0 - 100)
+                                         */
     uint64_t poolId;                    /* request to allocate resource from specified resource pool,
                                          * 0 means to allocate resource from system default resource pool.
                                          */
@@ -76,7 +84,11 @@ typedef struct xrmCuPoolProperty {
 typedef struct xrmUdfCuProperty {
     char cuName[XRM_MAX_NAME_LEN]; // unique cu name (kernelName:instanceName)
     bool devExcl;                  // request exclusive device usage for this client
-    int32_t requestLoad;           // request load percentage of the CU: 1 - 100
+    int32_t requestLoad;           /* request load of the CU, only one type granularity at one time.
+                                    * bit[31 - 28] reserved
+                                    * bit[27 -  8] granularity of 1000000 (0 - 1000000)
+                                    * bit[ 7 -  0] granularity of 100 (0 - 100)
+                                    */
     uint8_t extData[64];           // for future extension
 } xrmUdfCuProperty;
 
@@ -130,7 +142,11 @@ typedef struct xrmCuResource {
     uint64_t membankSize;     // connected memory bank size
     uint64_t membankBaseAddr; // connected memory bank base address
     uint64_t allocServiceId;  // unique service id of the allocation
-    int32_t channelLoad;      // load percentage of the CU for this channel: 1 - 100
+    int32_t channelLoad;      /* load of the CU for this channel, only one type granularity at one time.
+                               * bit[31 - 28] reserved
+                               * bit[27 -  8] granularity of 1000000 (0 - 1000000)
+                               * bit[ 7 -  0] granularity of 100 (0 - 100)
+                               */
     uint64_t poolId;          // id of the cu pool this cu comes from, default pool id is 0
     uint8_t extData[64];      // for future extension
 } xrmCuResource;
@@ -247,7 +263,7 @@ int32_t xrmUnloadOneDevice(xrmContext context, int32_t deviceId);
 
 /**
  * \brief Allocates compute unit with a device, cu, and channel given a
- * kernel name or alias or both and request load (1 - 100). This function also
+ * kernel name or alias or both and request load. This function also
  * provides the xclbin and kernel plugin loaded on the device.
  *
  * @param context the context created through xrmCreateContext()
@@ -255,7 +271,10 @@ int32_t xrmUnloadOneDevice(xrmContext context, int32_t deviceId);
  *             kernelName: the kernel name requested.
  *             kernelAlias: the alias of kernel name requested.
  *             devExcl: request exclusive device usage for this client.
- *             requestLoad: request load (1 - 100).
+ *             requestLoad: request load, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
  *             poolId: request to allocate cu from specified resource pool
  * @param cuRes the cu resource.
  *             xclbinFileName: xclbin (path and name) attached to this device.
@@ -270,7 +289,10 @@ int32_t xrmUnloadOneDevice(xrmContext context, int32_t deviceId);
  *             channelId: channel id of this cu.
  *             cuType: type of cu, hardware kernel or soft kernel.
  *             allocServiceId: service id for this cu allocation.
- *             channelLoad: allocated load of this cu (1 - 100).
+ *             channelLoad: allocated load of this cu, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
  *             poolId: id of the cu pool this cu comes from, the system default pool id is 0.
  * @return int32_t, 0 on success or appropriate error number
  */
@@ -278,7 +300,7 @@ int32_t xrmCuAlloc(xrmContext context, xrmCuProperty* cuProp, xrmCuResource* cuR
 
 /**
  * \brief Allocates compute unit from specified device given a
- * kernel name or alias or both and request load (1 - 100). This function also
+ * kernel name or alias or both and request load. This function also
  * provides the xclbin and kernel plugin loaded on the device.
  *
  * @param context the context created through xrmCreateContext()
@@ -287,7 +309,10 @@ int32_t xrmCuAlloc(xrmContext context, xrmCuProperty* cuProp, xrmCuResource* cuR
  *             kernelName: the kernel name requested.
  *             kernelAlias: the alias of kernel name requested.
  *             devExcl: request exclusive device usage for this client.
- *             requestLoad: request load (1 - 100).
+ *             requestLoad: request load, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
  *             poolId: request to allocate cu from specified resource pool
  * @param cuRes the cu resource.
  *             xclbinFileName: xclbin (path and name) attached to this device.
@@ -302,7 +327,10 @@ int32_t xrmCuAlloc(xrmContext context, xrmCuProperty* cuProp, xrmCuResource* cuR
  *             channelId: channel id of this cu.
  *             cuType: type of cu, hardware kernel or soft kernel.
  *             allocServiceId: service id for this cu allocation.
- *             channelLoad: allocated load of this cu (1 - 100).
+ *             channelLoad: allocated load of this cu, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
  *             poolId: id of the cu pool this cu comes from, the system default pool id is 0.
  * @return int32_t, 0 on success or appropriate error number
  */
@@ -310,7 +338,7 @@ int32_t xrmCuAllocFromDev(xrmContext context, int32_t deviceId, xrmCuProperty* c
 
 /**
  * \brief Allocates a list of compute unit resource given a list of
- * kernels's property with kernel name or alias or both and request load (1 - 100).
+ * kernels's property with kernel name or alias or both and request load.
  *
  * @param context the context created through xrmCreateContext()
  * @param cuListProp the property of cu list.
@@ -341,7 +369,10 @@ int32_t xrmCuListAlloc(xrmContext context, xrmCuListProperty* cuListProp, xrmCuL
  *             channelId: channel id of this cu.
  *             cuType: type of cu, hardware kernel or soft kernel.
  *             allocServiceId: service id for this cu allocation.
- *             channelLoad: allocated load of this cu (1 - 100).
+ *             channelLoad: allocated load of this cu, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
  *             poolId: id of the cu pool this cu comes from, the system default pool id is 0.
  * @return bool, true on success or false on fail
  */
@@ -360,7 +391,7 @@ bool xrmCuListRelease(xrmContext context, xrmCuListResource* cuListRes);
 
 /**
  * \brief Declares user defined cu group type given the specified
- * kernels's property with cu name (kernelName:instanceName) and request load (1 - 100).
+ * kernels's property with cu name (kernelName:instanceName) and request load.
  *
  * @param context the context created through xrmCreateContext()
  * @param udfCuGroupProp the property of user defined cu group.
@@ -383,7 +414,7 @@ int32_t xrmUdfCuGroupUndeclare(xrmContext context, char* udfCuGroupName);
 
 /**
  * \brief Allocates a group of compute unit resource given a user defined group of
- * kernels's property with cu name (kernelName:instanceName) and request load (1 - 100).
+ * kernels's property with cu name (kernelName:instanceName) and request load.
  *
  * @param context the context created through xrmCreateContext()
  * @param cuGroupProp the property of cu group.
@@ -431,7 +462,10 @@ uint64_t xrmCuGetMaxCapacity(xrmContext context, xrmCuProperty* cuProp);
  *             allocServiceId: service id for this cu allocation.
  * @param cuStat the status of cu.
  *             isBusy: the cu is busy or not.
- *             usedLoad: allocated load on this cu.
+ *             usedLoad: allocated load on this cu, only one type granularity at one time.
+ *                       bit[31 - 28] reserved
+ *                       bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                       bit[ 7 -  0] granularity of 100 (0 - 100)
  * @return int32_t, 0 on success or appropriate error number
  */
 int32_t xrmCuCheckStatus(xrmContext context, xrmCuResource* cuRes, xrmCuStat* cuStat);
@@ -454,14 +488,17 @@ int32_t xrmAllocationQuery(xrmContext context, xrmAllocationQueryInfo* allocQuer
 /**
  * \brief To check the available cu num on the system given
  * the kernels's property with kernel name or alias or both and request
- * load (1 - 100).
+ * load.
  *
  * @param context the context created through xrmCreateContext()
  * @param cuProp the property of cu.
  *             kernelName: the kernel name requested.
  *             kernelAlias: the alias of kernel name requested.
  *             devExcl: request exclusive device usage for this client.
- *             requestLoad: request load (1 - 100).
+ *             requestLoad: request load, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
  *             poolId: request to allocate cu from specified resource pool.
  * @return int32_t, available cu num (>= 0) on success or appropriate error number (< 0), if available
  *          cu number is >= XRM_MAX_AVAILABLE_CU_NUM, will only return XRM_MAX_AVAILABLE_CU_NUM.
@@ -471,7 +508,7 @@ int32_t xrmCheckCuAvailableNum(xrmContext context, xrmCuProperty* cuProp);
 /**
  * \brief To check the available cu list num on the system given
  * a list of kernels's property with kernel name or alias or both and request
- * load (1 - 100).
+ * load.
  *
  * @param context the context created through xrmCreateContext()
  * @param cuListProp the property of cu list.
@@ -485,7 +522,7 @@ int32_t xrmCheckCuListAvailableNum(xrmContext context, xrmCuListProperty* cuList
 
 /**
  * \brief To check the available group number of compute unit resource given a user
- * defined group of kernels's property with cu name (kernelName:instanceName) and request load (1 - 100).
+ * defined group of kernels's property with cu name (kernelName:instanceName) and request load.
  *
  * @param context the context created through xrmCreateContext()
  * @param cuGroupProp the property of cu group.
@@ -498,7 +535,7 @@ int32_t xrmCheckCuGroupAvailableNum(xrmContext context, xrmCuGroupProperty* cuGr
 /**
  * \brief To check the available cu pool num on the system given
  * a pool of kernels's property with kernel name or alias or both and request
- * load (1 - 100).
+ * load.
  *
  * @param context the context created through xrmCreateContext()
  * @param cuPoolProp the property of cu pool.
@@ -513,7 +550,7 @@ int32_t xrmCheckCuPoolAvailableNum(xrmContext context, xrmCuPoolProperty* cuPool
 
 /**
  * \brief Reserves a pool of compute unit resource given a pool of
- * kernels's property with kernel name or alias or both and request load (1 - 100).
+ * kernels's property with kernel name or alias or both and request load.
  *
  * @param context the context created through xrmCreateContext()
  * @param cuPoolProp the property of cu pool.
@@ -564,7 +601,7 @@ int32_t xrmExecPluginFunc(xrmContext context, char* xrmPluginName, uint32_t func
 
 /**
  * \brief Allocates compute unit with a device, cu, and channel given a
- * kernel name or alias or both and request load (1 - 100). This function also
+ * kernel name or alias or both and request load. This function also
  * provides the xclbin and kernel plugin loaded on the device. If required CU is not
  * available, this function will try to load the xclbin to one device and do the
  * allocation again.
@@ -574,7 +611,10 @@ int32_t xrmExecPluginFunc(xrmContext context, char* xrmPluginName, uint32_t func
  *             kernelName: the kernel name requested.
  *             kernelAlias: the alias of kernel name requested.
  *             devExcl: request exclusive device usage for this client.
- *             requestLoad: request load (1 - 100).
+ *             requestLoad: request load, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
  *             poolId: request to allocate cu from specified resource pool.
  * @param xclbinFileName xclbin file (full path and name)
  * @param cuRes cu resource.
@@ -590,7 +630,10 @@ int32_t xrmExecPluginFunc(xrmContext context, char* xrmPluginName, uint32_t func
  *             channelId: channel id of this cu.
  *             cuType: type of cu, hardware kernel or soft kernel.
  *             allocServiceId: service id for this cu allocation.
- *             channelLoad: allocated load of this cu (1 - 100).
+ *             channelLoad: allocated load of this cu, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
  *             poolId: id of the cu pool this cu comes from, the default pool id is 0.
  * @return int32_t, 0 on success or appropriate error number
  */
@@ -617,7 +660,10 @@ int32_t xrmLoadAndAllCuAlloc(xrmContext context, char* xclbinFileName, xrmCuList
  *             kernelName: the kernel name requested.
  *             kernelAlias: the alias of kernel name requested.
  *             devExcl: request exclusive device usage for this client.
- *             requestLoad: request load (1 - 100).
+ *             requestLoad: request load, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
  *             poolId: request to allocate cu from specified resource pool.
  * @param interval the interval time (useconds) before re-trying, [0 - 1000000], other value is invalid.
  * @param cuRes cu resource.
@@ -633,7 +679,10 @@ int32_t xrmLoadAndAllCuAlloc(xrmContext context, char* xclbinFileName, xrmCuList
  *             channelId: channel id of this cu.
  *             cuType: type of cu, hardware kernel or soft kernel.
  *             allocServiceId: service id for this cu allocation.
- *             channelLoad: allocated load of this cu (1 - 100).
+ *             channelLoad: allocated load of this cu, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
  *             poolId: id of the cu pool this cu comes from, the default pool id is 0.
  * @return int32_t, 0 on success or appropriate error number
  */
