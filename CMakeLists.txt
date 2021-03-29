@@ -59,6 +59,7 @@ target_link_libraries(${PROJECT_NAME}
   ${XRT_CORE_LIBRARIES}
   ${UUID_LIBRARIES}
   ${CMAKE_DL_LIBS}
+  ${CMAKE_THREAD_LIBS_INIT}
 )
 
 file(GLOB SOURCE_LIBS "src/lib/*.cpp")

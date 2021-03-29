@@ -2,6 +2,7 @@
 
 FLAVOR=`grep '^ID=' /etc/os-release | awk -F= '{print $2}' | tr -d '"'`
 VERSION=`grep '^VERSION_ID=' /etc/os-release | awk -F= '{print $2}' | tr -d '"'`
+MAJOR=${VERSION%.*}
 ARCH=`uname -m`
 
 usage()
@@ -90,12 +91,36 @@ ub_package_list()
     )
 }
 
+fd_package_list()
+{
+    FD_LIST=(\
+     make \
+     cmake \
+     gcc \
+     gcc-c++ \
+     git \
+     glibc-static \
+     libstdc++-static \
+     libuuid-devel \
+     boost-system \
+     boost-serialization \
+     boost-filesystem \
+     boost-thread \
+     pkgconfig \
+     redhat-lsb \
+     rpm-build \
+     xrt \
+    )
+}
+
 update_package_list()
 {
     if [ $FLAVOR == "ubuntu" ] || [ $FLAVOR == "debian" ]; then
         ub_package_list
     elif [ $FLAVOR == "centos" ] || [ $FLAVOR == "rhel" ] || [ $FLAVOR == "amzn" ]; then
         rh_package_list
+    elif [ $FLAVOR == "fedora" ]; then
+        fd_package_list
     else
         echo "unknown OS flavor $FLAVOR"
         exit 1
@@ -121,6 +146,14 @@ prep_ubuntu()
 
 prep_centos7()
 {
+    echo "Enabling EPEL repository..."
+    rpm -q --quiet epel-release
+    if [ $? != 0 ]; then
+        yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+        yum check-update
+    fi
+    echo "Installing cmake3 from EPEL repository..."
+    yum install -y cmake3
     if [ $docker == 0 ]; then 
         echo "Enabling CentOS SCL repository..."
         yum --enablerepo=extras install -y centos-release-scl
@@ -129,26 +162,55 @@ prep_centos7()
 
 prep_rhel7()
 {
+    echo "Enabling EPEL repository..."
+    rpm -q --quiet epel-release
+    if [ $? != 0 ]; then
+        yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+        yum check-update
+    fi
+
     echo "Enabling RHEL SCL repository..."
     yum-config-manager --enable rhel-server-rhscl-7-rpms
+
+    echo "Enabling repository 'rhel-7-server-e4s-optional-rpms"
+    subscription-manager repos --enable "rhel-7-server-e4s-optional-rpms"
+
+    echo "Enabling repository 'rhel-7-server-optional-rpms'"
+    subscription-manager repos --enable "rhel-7-server-optional-rpms"
 }
 
 prep_centos8()
 {
+    echo "Enabling EPEL repository..."
+    rpm -q --quiet epel-release
+    if [ $? != 0 ]; then
+        yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+        yum check-update
+    fi
+    echo "Installing cmake3 from EPEL repository..."
+    yum install -y cmake3
     echo "Enabling PowerTools repo for CentOS8 ..."
     yum install -y dnf-plugins-core
     yum config-manager --set-enabled PowerTools
     yum config-manager --set-enabled AppStream
 }
 
-prep_centos()
+prep_rhel8()
 {
     echo "Enabling EPEL repository..."
-    yum install -y epel-release
-    echo "Installing cmake3 from EPEL repository..."
-    yum install -y cmake3
+    rpm -q --quiet epel-release
+    if [ $? != 0 ]; then
+        yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+     yum check-update
+    fi
 
-    if [ $VERSION == 8 ]; then
+    echo "Enabling CodeReady-Builder repository..."
+    subscription-manager repos --enable "codeready-builder-for-rhel-8-x86_64-rpms"
+}
+
+prep_centos()
+{
+    if [ $MAJOR == 8 ]; then
         prep_centos8
     else
         prep_centos7
@@ -157,19 +219,14 @@ prep_centos()
 
 prep_rhel()
 {
-    echo "Enabling EPEL repository..."
-    rpm -q --quiet epel-release
-    if [ $? != 0 ]; then
-	yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-	yum check-update
-    fi
-
-    if [ $VERSION == 8 ]; then
-        echo "RHEL8 not implemented yet"
-        exit 1;
+    if [ $MAJOR == 8 ]; then
+        prep_rhel8
     else
         prep_rhel7
     fi
+
+    echo "Installing cmake3 from EPEL repository..."
+    yum install -y cmake3
 }
 
 prep_amzn()
@@ -206,6 +263,11 @@ install()
                 yum install -y devtoolset-6
             fi
         fi
+    fi
+
+    if [ $FLAVOR == "fedora" ]; then
+        echo "Installing Fedora packages..."
+        yum install -y "${FD_LIST[@]}"
     fi
 }
 
