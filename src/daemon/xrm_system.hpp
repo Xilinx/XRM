@@ -467,7 +467,7 @@ class system {
     void initUdfCuGroups();
     int32_t loadDevices(pt::ptree& loadTree, std::string& errmsg);
     int32_t loadOneDevice(pt::ptree& loadTree, std::string& errmsg);
-    bool unloadOneDevice(const int32_t& devId, std::string& errmsg);
+    int32_t unloadOneDevice(const int32_t& devId, std::string& errmsg);
     void* listDevice(int32_t devId);
     int32_t getDeviceNumber();
     int32_t getLogLevel();

@@ -28,6 +28,9 @@
  *  @def @XRM_ERROR_NO_DEV - No free device.
  *  @def @XRM_ERROR_NO_CHAN - No channels remain to be allocated on the kernel.
  *  @def @XRM_ERROR_CONNECT_FAIL - Connect to xrm daemon fail.
+ *  @def @XRM_ERROR_DEVICE_IS_NOT_LOADED - Device is not loaded with xclbin file.
+ *  @def @XRM_ERROR_DEVICE_IS_BUSY - Device is busy.
+ *  @def @XRM_ERROR_DEVICE_IS_LOCKED - Device is locked.
  **/
 
 #define XRM_SUCCESS (0)
@@ -38,5 +41,8 @@
 #define XRM_ERROR_NO_KERNEL (-4)
 #define XRM_ERROR_NO_CHAN (-5)
 #define XRM_ERROR_CONNECT_FAIL (-21)
+#define XRM_ERROR_DEVICE_IS_NOT_LOADED (-31)
+#define XRM_ERROR_DEVICE_IS_BUSY (-32)
+#define XRM_ERROR_DEVICE_IS_LOCKED (-33)
 
 #endif // _XRM_ERROR_H_

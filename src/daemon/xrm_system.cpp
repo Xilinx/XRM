@@ -383,7 +383,7 @@ int32_t xrm::system::loadAnyDevice(int32_t* devId, std::string& xclbin, std::str
         /* load xclbin to one device not in use */
         for (int32_t i = 0; i < m_numDevice; i++) {
             if (!isDeviceBusy(i)) {
-                if (!unloadOneDevice(i, loadErrmsg)) continue;
+                if (unloadOneDevice(i, loadErrmsg) != XRM_SUCCESS) continue;
                 ret = deviceLoadXclbin(i, xclbin, loadErrmsg);
                 if (ret == XRM_SUCCESS) {
                     *devId = i;
@@ -1355,7 +1355,7 @@ bool xrm::system::isDeviceBusy(int32_t devId) {
 /*
  * the unload process should be protected by system lock
  */
-bool xrm::system::unloadOneDevice(const int32_t& devId, std::string& errmsg) {
+int32_t xrm::system::unloadOneDevice(const int32_t& devId, std::string& errmsg) {
     enterLock();
     if (devId >= 0 && devId < m_numDevice) {
         deviceData* dev = &m_devList[devId];
@@ -1363,30 +1363,30 @@ bool xrm::system::unloadOneDevice(const int32_t& devId, std::string& errmsg) {
         if (!dev->isLoaded) {
             errmsg = "Device " + std::to_string(devId) + " is not loaded with xclbin";
             exitLock();
-            return (false);
+            return (XRM_ERROR_DEVICE_IS_NOT_LOADED);
         }
 
         // device is busy
         if (isDeviceBusy(devId)) {
             errmsg = "Device  " + std::to_string(devId) + " is busy";
             exitLock();
-            return (false);
+            return (XRM_ERROR_DEVICE_IS_BUSY);
         }
 
         // unlock loaded xclbin from device
         if (deviceUnlockXclbin(devId)) {
             errmsg = "Fail to unlock xclbin from device  " + std::to_string(devId);
             exitLock();
-            return (false);
+            return (XRM_ERROR_DEVICE_IS_LOCKED);
         }
 
         deviceClearInfo(devId);
         exitLock();
-        return (true);
+        return (XRM_SUCCESS);
     }
     errmsg = "Invalid device id [" + std::to_string(devId) + "] passed in";
     exitLock();
-    return (false);
+    return (XRM_ERROR_INVALID);
 }
 
 /*

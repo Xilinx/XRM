@@ -470,7 +470,7 @@ int32_t xrmUnloadOneDevice(xrmContext context, int32_t deviceId) {
     boost::property_tree::read_json(rspstr, rspTree);
 
     auto ret = rspTree.get<int32_t>("response.status.value");
-    if (ret == XRM_SUCCESS) {
+    if (ret != XRM_SUCCESS) {
         xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "%s(): fail to unload from device %d", __func__, deviceId);
     } else {
         xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "%s(): success to unload xclbin", __func__);
