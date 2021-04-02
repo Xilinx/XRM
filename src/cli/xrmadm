@@ -3,6 +3,8 @@
 import sys
 import platform
 import socket
+import json
+from collections import OrderedDict
 
 class XRMClient:
     def __init__(self, host, port):
@@ -40,5 +42,6 @@ if __name__ == "__main__":
     jsonFile = sys.argv[1]
     cli = XRMClient("localhost", 9763)
     cli.send(jsonFile)
-    print(cli.receive())
+    parsedOutput = json.loads(cli.receive(), object_pairs_hook = OrderedDict)
+    print(json.dumps(parsedOutput, indent = 4, sort_keys = False))
     cli.close()

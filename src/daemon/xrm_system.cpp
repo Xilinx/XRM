@@ -299,6 +299,7 @@ int32_t xrm::system::openDevice(int32_t devId) {
 
 /*
  * the load process need to be protected by lock
+ * device id: 0 - (numDevice -1): the target device; -2: all devices on the system.
  */
 int32_t xrm::system::loadDevices(pt::ptree& loadTree, std::string& errmsg) {
     int32_t ret = XRM_ERROR;
@@ -322,7 +323,7 @@ int32_t xrm::system::loadDevices(pt::ptree& loadTree, std::string& errmsg) {
             break;
         }
         devId = std::stoi(strDevId, nullptr, 0);
-        if (devId < 0 || devId >= m_numDevice) {
+        if (devId < -2 || devId == -1 || devId >= m_numDevice) {
             errmsg += "device " + std::to_string(devId) + " not found";
             ret = XRM_ERROR_INVALID;
             break;
@@ -335,10 +336,20 @@ int32_t xrm::system::loadDevices(pt::ptree& loadTree, std::string& errmsg) {
             break;
         }
 
-        ret = deviceLoadXclbin(devId, xclbin, loadErrmsg);
-        if (ret != XRM_SUCCESS) {
-            errmsg += loadErrmsg;
-            break;
+        if (devId == -2) {
+            for (int32_t i = 0; i < m_numDevice; i++) {
+                ret = deviceLoadXclbin(i, xclbin, loadErrmsg);
+                if (ret != XRM_SUCCESS) {
+                    errmsg += loadErrmsg;
+                    break;
+                }
+            }
+        } else {
+            ret = deviceLoadXclbin(devId, xclbin, loadErrmsg);
+            if (ret != XRM_SUCCESS) {
+                errmsg += loadErrmsg;
+                break;
+            }
         }
     }
     exitLock();
@@ -459,7 +470,7 @@ int32_t xrm::system::deviceLoadXclbin(int32_t devId, std::string& xclbin, std::s
         return (XRM_ERROR_INVALID);
     }
     if (m_devList[devId].isLoaded) {
-        errmsg = "device " + std::to_string(devId) + " is already loaded xclbin";
+        errmsg = "device " + std::to_string(devId) + " is already loaded with xclbin (" + m_devList[devId].xclbinName + ")";
         return (XRM_ERROR);
     }
     logMsg(XRM_LOG_NOTICE, "%s load xclbin file %s to device %d", __func__, xclbin.c_str(), devId);
