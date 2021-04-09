@@ -68,6 +68,7 @@ set(CPACK_PACKAGE_DESCRIPTION "The XRM is used to provide Xilinx FPGA Resource M
 
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_SOURCE_DIR}/CMake/config/prerm;${CMAKE_SOURCE_DIR}/CMake/config/postinst")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "xrt (>= 2.1.0),
+                                  python3,
                                   libboost-serialization-dev (>= 1.58.0),
                                   libboost-system-dev (>= 1.58.0),
                                   libboost-filesystem-dev (>= 1.58.0),
@@ -76,6 +77,7 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "xrt (>= 2.1.0),
 SET(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/CMake/config/postinst")
 SET(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/CMake/config/prerm")
 set(CPACK_RPM_PACKAGE_DEPENDS "xrt >= 2.1.0,
+                               python3,
                                boost-serialization >= 1.58.0,
                                boost-system >= 1.58.0,
                                boost-filesystem >= 1.58.0,
