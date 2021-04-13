@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2019-2020, Xilinx Inc - All rights reserved
- * Xilinx Resouce Management
+ * Copyright (C) 2019-2021, Xilinx Inc - All rights reserved
+ * Xilinx Resource Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may
  * not use this file except in compliance with the License. A copy of the
@@ -138,6 +138,9 @@ void xrm::commandRegistry::registerAll(system& sys) {
 
     auto cuAllocWithLoad = new xrm::cuAllocWithLoadCommand(sys);
     registerCmd(*cuAllocWithLoad);
+
+    auto cuAllocLeastUsedWithLoad = new xrm::cuAllocLeastUsedWithLoadCommand(sys);
+    registerCmd(*cuAllocLeastUsedWithLoad);
 
     auto loadAndAllCuAlloc = new xrm::loadAndAllCuAllocCommand(sys);
     registerCmd(*loadAndAllCuAlloc);

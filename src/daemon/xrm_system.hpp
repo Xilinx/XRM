@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2019-2020, Xilinx Inc - All rights reserved
- * Xilinx Resouce Management
+ * Copyright (C) 2019-2021, Xilinx Inc - All rights reserved
+ * Xilinx Resource Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may
  * not use this file except in compliance with the License. A copy of the
@@ -522,6 +522,7 @@ class system {
     int32_t resReservationQuery(uint64_t reservePoolId, cuPoolResource* cuPoolRes);
 
     int32_t resAllocCuWithLoad(cuProperty* cuProp, std::string xclbin, cuResource* cuRes, bool updateId);
+    int32_t resAllocCuLeastUsedWithLoad(cuProperty* cuProp, std::string xclbin, cuResource* cuRes, bool updateId);
     int32_t resLoadAndAllocAllCu(std::string xclbin, uint64_t clientId, cuListResource* cuListRes);
 
     /* xrm plugin related functions */

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2019-2020, Xilinx Inc - All rights reserved
- * Xilinx Resouce Management
+ * Copyright (C) 2019-2021, Xilinx Inc - All rights reserved
+ * Xilinx Resource Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may
  * not use this file except in compliance with the License. A copy of the
@@ -206,6 +206,13 @@ class reservationQueryCommand : public command {
 class cuAllocWithLoadCommand : public command {
    public:
     cuAllocWithLoadCommand(xrm::system& sys) : command("cuAllocWithLoad", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class cuAllocLeastUsedWithLoadCommand : public command {
+public:
+    cuAllocLeastUsedWithLoadCommand(xrm::system& sys) : command("cuAllocLeastUsedWithLoad", sys) {}
 
     void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
 };
