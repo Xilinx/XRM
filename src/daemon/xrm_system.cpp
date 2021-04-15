@@ -1982,6 +1982,8 @@ cu_acquire_exit:
  * if an unused cu cannot be allocated, then try
  * to load the xclbin to one device and allocate cu from that device.
  * if there are no available devices, try to share the least used cu.
+ * Additionally, it strictly enforces that the allocated CU comes
+ * from a device that was loaded with the user specified xclbinFileName.
  * XRM_SUCCESS: allocated resouce is recorded by cuRes
  * Otherwise: failed to allocate the cu resource
  *
@@ -2017,6 +2019,9 @@ int32_t xrm::system::resAllocCuLeastUsedWithLoad(cuProperty* cuProp, std::string
         if (devId < 0) {
             break;
         }
+
+        // If user's requested xclbin does not match, keep searching
+        if (m_devList[devId].xclbinName != xclbin) continue;
 
         ret = allocClientFromDev(devId, cuProp);
         if (ret < 0) {
@@ -2149,6 +2154,9 @@ cu_acquire_least_used_loop:
         if (devId < 0) {
             break;
         }
+
+        // If user's requested xclbin does not match, keep searching
+        if (m_devList[devId].xclbinName != xclbin) continue;
 
         ret = allocClientFromDev(devId, cuProp);
         if (ret < 0) {

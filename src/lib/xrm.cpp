@@ -2494,6 +2494,8 @@ int32_t xrmCuAllocWithLoad(xrmContext context, xrmCuProperty* cuProp, char* xclb
  * This function will first try to acquire an unused CU, else 
  * try to load the xclbin to one device and do the
  * allocation again, else it will try to share the least used CU.
+ * Additionally, it strictly enforces that the allocated CU comes
+ * from a device that was loaded with the user specified xclbinFileName.
  *
  * @param context the context created through xrmCreateContext()
  * @param cuProp the property of cu.

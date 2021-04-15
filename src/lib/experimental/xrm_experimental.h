@@ -37,6 +37,8 @@ extern "C" {
  * available, this function will try to load the xclbin to one device and do the
  * allocation again. If there are no free CUs remaining, the CU with the
  * minimum load which supports the requested capacity will be acquired.
+ * Additionally, it strictly enforces that the allocated CU comes
+ * from a device that was loaded with the user specified xclbinFileName.
  *
  * @param context the context created through xrmCreateContext()
  * @param cuProp the property of cu.
