@@ -21,10 +21,12 @@ void xrm::createContextCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
     auto context = incmd.get<std::string>("request.parameters.context");
     int32_t logLevel = m_system->getLogLevel();
     uint64_t clientId;
+    m_system->enterLock();
     if (m_system->incNumConcurrentClient())
         clientId = m_system->getNewClientId();
     else
         clientId = 0; // reach the limit of concurrent client, fail to create new context
+    m_system->exitLock();
     outrsp.put("response.status.value", logLevel);
     outrsp.put("response.data.clientId", clientId);
 }
@@ -36,6 +38,7 @@ void xrm::echoContextCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
 
 void xrm::destroyContextCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     auto context = incmd.get<std::string>("request.parameters.context");
+    m_system->enterLock();
 #if 0
     m_system->decNumConcurrentClient();
     /* the save() function is time cost operation, so not do it here */
@@ -49,6 +52,7 @@ void xrm::destroyContextCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp)
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
     if (clientId) m_system->recycleResource(clientId);
 #endif
+    m_system->exitLock();
     outrsp.put("response.status.value", XRM_SUCCESS);
 }
 
@@ -86,7 +90,9 @@ void xrm::cuAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuProp.poolId = poolId;
 
     bool update_id = true;
+    m_system->enterLock();
     int32_t ret = m_system->resAllocCu(&cuProp, &cuRes, update_id);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret == XRM_SUCCESS) {
         outrsp.put("response.data.xclbinFileName", cuRes.xclbinFileName);
@@ -137,7 +143,9 @@ void xrm::cuAllocFromDevCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp)
     cuProp.poolId = poolId;
 
     bool update_id = true;
+    m_system->enterLock();
     int32_t ret = m_system->resAllocCuFromDev(deviceId, &cuProp, &cuRes, update_id);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret == XRM_SUCCESS) {
         outrsp.put("response.data.xclbinFileName", cuRes.xclbinFileName);
@@ -198,7 +206,9 @@ void xrm::cuListAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     }
 
     memset(&cuListRes, 0, sizeof(cuListResource));
+    m_system->enterLock();
     int32_t ret = m_system->resAllocCuList(&cuListProp, &cuListRes);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret == XRM_SUCCESS) {
         outrsp.put("response.data.cuNum", cuListRes.cuNum);
@@ -242,7 +252,9 @@ void xrm::cuGroupAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuGroupProp.poolId = poolId;
 
     memset(&cuGroupRes, 0, sizeof(cuGroupResource));
+    m_system->enterLock();
     int32_t ret = m_system->resAllocCuGroup(&cuGroupProp, &cuGroupRes);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret == XRM_SUCCESS) {
         outrsp.put("response.data.cuNum", cuGroupRes.cuNum);
@@ -295,7 +307,9 @@ void xrm::cuReleaseCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuRes.channelLoadOriginal = channelLoadOriginal;
     cuRes.poolId = poolId;
 
+    m_system->enterLock();
     int32_t ret = m_system->resReleaseCu(&cuRes);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
 }
 
@@ -328,7 +342,9 @@ void xrm::cuListReleaseCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
         cuListRes.cuResources[i].poolId = poolId;
     }
 
+    m_system->enterLock();
     int32_t ret = m_system->resReleaseCuList(&cuListRes);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
 }
 
@@ -361,7 +377,9 @@ void xrm::cuGroupReleaseCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp)
         cuGroupRes.cuResources[i].poolId = poolId;
     }
 
+    m_system->enterLock();
     int32_t ret = m_system->resReleaseCuGroup(&cuGroupRes);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
 }
 
@@ -403,7 +421,9 @@ void xrm::udfCuGroupDeclareCommand::processCmd(pt::ptree& incmd, pt::ptree& outr
         }
     }
 
+    m_system->enterLock();
     int32_t ret = m_system->resUdfCuGroupDeclare(&udfCuGroupInfo);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret != XRM_SUCCESS) {
         outrsp.put("response.data.failed", "failed to declare user defined cu group");
@@ -417,7 +437,9 @@ void xrm::udfCuGroupUndeclareCommand::processCmd(pt::ptree& incmd, pt::ptree& ou
     auto udfCuGroupName = incmd.get<std::string>("request.parameters.udfCuGroupName");
     udfCuGroupInfo.udfCuGroupName = udfCuGroupName;
 
+    m_system->enterLock();
     int32_t ret = m_system->resUdfCuGroupUndeclare(&udfCuGroupInfo);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret != XRM_SUCCESS) {
         outrsp.put("response.data.failed", "failed to undeclare user defined cu group");
@@ -433,7 +455,9 @@ void xrm::cuGetMaxCapacityCommand::processCmd(pt::ptree& incmd, pt::ptree& outrs
     strncpy(cuProp.kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
     strncpy(cuProp.kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
 
+    m_system->enterLock();
     uint64_t maxCapacity = m_system->getCuMaxCapacity(&cuProp);
+    m_system->exitLock();
     outrsp.put("response.status.value", maxCapacity);
 }
 
@@ -453,7 +477,9 @@ void xrm::cuCheckStatusCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
     cuRes.cuType = (cuTypes)cuType;
     cuRes.allocServiceId = allocServiceId;
 
+    m_system->enterLock();
     int32_t ret = m_system->checkCuStat(&cuRes, &cuStat);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret == XRM_SUCCESS) {
         if (cuStat.isBusy)
@@ -481,7 +507,9 @@ void xrm::allocationQueryCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp
     allocQuery.allocServiceId = allocServiceId;
     strncpy(allocQuery.kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
     strncpy(allocQuery.kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
+    m_system->enterLock();
     int32_t ret = m_system->resAllocationQuery(&allocQuery, &cuListRes);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret == XRM_SUCCESS) {
         outrsp.put("response.data.cuNum", cuListRes.cuNum);
@@ -522,7 +550,9 @@ void xrm::isCuExistingCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     strncpy(cuProp.kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
     strcpy(cuProp.cuName, "");
 
+    m_system->enterLock();
     isCuExisting = m_system->resIsCuExisting(&cuProp);
+    m_system->exitLock();
     if (isCuExisting) {
         outrsp.put("response.status.value", XRM_SUCCESS);
         outrsp.put("response.data.isCuExisting", 1);
@@ -554,7 +584,9 @@ void xrm::isCuListExistingCommand::processCmd(pt::ptree& incmd, pt::ptree& outrs
         strcpy(cuListProp.cuProps[i].cuName, "");
     }
 
+    m_system->enterLock();
     isCuListExisting = m_system->resIsCuListExisting(&cuListProp);
+    m_system->exitLock();
     if (isCuListExisting) {
         outrsp.put("response.status.value", XRM_SUCCESS);
         outrsp.put("response.data.isCuListExisting", 1);
@@ -571,7 +603,9 @@ void xrm::isCuGroupExistingCommand::processCmd(pt::ptree& incmd, pt::ptree& outr
     auto udfCuGroupName = incmd.get<std::string>("request.parameters.udfCuGroupName");
     cuGroupProp.udfCuGroupName = udfCuGroupName;
 
+    m_system->enterLock();
     isCuGroupExisting = m_system->resIsCuGroupExisting(&cuGroupProp);
+    m_system->exitLock();
     if (isCuGroupExisting) {
         outrsp.put("response.status.value", XRM_SUCCESS);
         outrsp.put("response.data.isCuGroupExisting", 1);
@@ -609,6 +643,7 @@ void xrm::checkCuAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& ou
     cuProp.poolId = poolId;
 
     bool update_id = true;
+    m_system->enterLock();
     while (availableCuNum < XRM_MAX_AVAILABLE_CU_NUM) {
         tmpCuRes = (cuResource*)malloc(sizeof(cuResource));
         memset(tmpCuRes, 0, sizeof(cuResource));
@@ -644,6 +679,7 @@ void xrm::checkCuAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& ou
             outrsp.put("response.data.availableCuNum", availableCuNum);
         }
     }
+    m_system->exitLock();
 }
 
 void xrm::checkCuListAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
@@ -683,6 +719,7 @@ void xrm::checkCuListAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
         cuListProp.cuProps[i].poolId = poolId;
     }
 
+    m_system->enterLock();
     while (availableListNum < XRM_MAX_AVAILABLE_LIST_NUM) {
         tmpCuListRes = (cuListResource*)malloc(sizeof(cuListResource));
         memset(tmpCuListRes, 0, sizeof(cuListResource));
@@ -718,6 +755,7 @@ void xrm::checkCuListAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
             outrsp.put("response.data.availableListNum", availableListNum);
         }
     }
+    m_system->exitLock();
 }
 
 void xrm::checkCuGroupAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
@@ -735,6 +773,7 @@ void xrm::checkCuGroupAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptre
     cuGroupProp.clientId = clientId;
     cuGroupProp.poolId = poolId;
 
+    m_system->enterLock();
     while (availableGroupNum < XRM_MAX_AVAILABLE_GROUP_NUM) {
         tmpCuGroupRes = (cuGroupResource*)malloc(sizeof(cuGroupResource));
         memset(tmpCuGroupRes, 0, sizeof(cuGroupResource));
@@ -770,6 +809,7 @@ void xrm::checkCuGroupAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptre
             outrsp.put("response.data.availableGroupNum", availableGroupNum);
         }
     }
+    m_system->exitLock();
 }
 
 void xrm::checkCuPoolAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
@@ -816,6 +856,7 @@ void xrm::checkCuPoolAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
     auto xclbinNum = incmd.get<int32_t>("request.parameters.xclbinNum");
     cuPoolProp.xclbinNum = xclbinNum;
 
+    m_system->enterLock();
     while (availablePoolNum < XRM_MAX_AVAILABLE_POOL_NUM) {
         poolId = m_system->resReserveCuPool(&cuPoolProp);
         if (poolId != 0) {
@@ -837,6 +878,7 @@ void xrm::checkCuPoolAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
         outrsp.put("response.status.value", XRM_SUCCESS);
         outrsp.put("response.data.availablePoolNum", 0);
     }
+    m_system->exitLock();
 }
 
 void xrm::cuPoolReserveCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
@@ -883,7 +925,9 @@ void xrm::cuPoolReserveCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
     cuPoolProp.xclbinNum = xclbinNum;
     cuPoolProp.clientId = clientId;
 
+    m_system->enterLock();
     uint64_t poolId = m_system->resReserveCuPool(&cuPoolProp);
+    m_system->exitLock();
     if (poolId > 0) {
         outrsp.put("response.status.value", XRM_SUCCESS);
         outrsp.put("response.data.poolId", poolId);
@@ -896,7 +940,9 @@ void xrm::cuPoolRelinquishCommand::processCmd(pt::ptree& incmd, pt::ptree& outrs
     std::string errmsg;
 
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
+    m_system->enterLock();
     int32_t ret = m_system->resRelinquishCuPool(poolId);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
 }
 
@@ -908,7 +954,9 @@ void xrm::reservationQueryCommand::processCmd(pt::ptree& incmd, pt::ptree& outrs
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
 
     memset(&cuPoolRes, 0, sizeof(cuPoolResource));
+    m_system->enterLock();
     int32_t ret = m_system->resReservationQuery(poolId, &cuPoolRes);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret == XRM_SUCCESS) {
         if (cuPoolRes.cuNum > 16)
@@ -964,7 +1012,9 @@ void xrm::cuAllocWithLoadCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp
     cuProp.poolId = poolId;
 
     bool update_id = true;
+    m_system->enterLock();
     int32_t ret = m_system->resAllocCuWithLoad(&cuProp, xclbinFileName, &cuRes, update_id);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret == XRM_SUCCESS) {
         outrsp.put("response.data.xclbinFileName", cuRes.xclbinFileName);
@@ -1015,7 +1065,9 @@ void xrm::cuAllocLeastUsedWithLoadCommand::processCmd(pt::ptree& incmd, pt::ptre
     cuProp.poolId = poolId;
 
     bool update_id = true;
+    m_system->enterLock();
     int32_t ret = m_system->resAllocCuLeastUsedWithLoad(&cuProp, xclbinFileName, &cuRes, update_id);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret == XRM_SUCCESS) {
         outrsp.put("response.data.xclbinFileName", cuRes.xclbinFileName);
@@ -1049,7 +1101,9 @@ void xrm::loadAndAllCuAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outr
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
 
     memset(&cuListRes, 0, sizeof(cuListResource));
+    m_system->enterLock();
     int32_t ret = m_system->resLoadAndAllocAllCu(xclbinFileName, clientId, &cuListRes);
+    m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret == XRM_SUCCESS) {
         outrsp.put("response.data.cuNum", cuListRes.cuNum);

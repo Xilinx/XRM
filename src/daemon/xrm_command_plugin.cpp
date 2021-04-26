@@ -32,12 +32,14 @@ void xrm::loadXrmPluginsCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp)
         return;
     }
     std::string errmsg;
+    m_system->enterLock();
     if (m_system->loadXrmPlugins((pt::ptree&)*loadPluginsTree, errmsg) == XRM_SUCCESS) {
         outrsp.put("response.status", "ok");
     } else {
         outrsp.put("response.status", "failed");
         outrsp.put("response.data.failed", errmsg);
     }
+    m_system->exitLock();
 }
 
 /*
@@ -55,12 +57,14 @@ void xrm::unloadXrmPluginsCommand::processCmd(pt::ptree& incmd, pt::ptree& outrs
         return;
     }
     std::string errmsg;
+    m_system->enterLock();
     if (m_system->unloadXrmPlugins((pt::ptree&)*unloadPluginsTree, errmsg) == XRM_SUCCESS) {
         outrsp.put("response.status", "ok");
     } else {
         outrsp.put("response.status", "failed");
         outrsp.put("response.data.failed", errmsg);
     }
+    m_system->exitLock();
 }
 
 /*

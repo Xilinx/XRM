@@ -32,12 +32,14 @@ void xrm::loadCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
         return;
     }
     std::string errmsg;
+    m_system->enterLock();
     if (m_system->loadDevices((pt::ptree&)*loadTree, errmsg) == XRM_SUCCESS) {
         outrsp.put("response.status", "ok");
     } else {
         outrsp.put("response.status", "failed");
         outrsp.put("response.data.failed", errmsg);
     }
+    m_system->exitLock();
 }
 
 /*
@@ -56,6 +58,7 @@ void xrm::loadOneDeviceCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
         return;
     }
     std::string errmsg;
+    m_system->enterLock();
     ret = m_system->loadOneDevice((pt::ptree&)*loadTree, errmsg);
     if (ret >= 0) {
         outrsp.put("response.status.value", XRM_SUCCESS);
@@ -64,4 +67,5 @@ void xrm::loadOneDeviceCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
         outrsp.put("response.status.value", XRM_ERROR);
         outrsp.put("response.data.failed", errmsg);
     }
+    m_system->exitLock();
 }

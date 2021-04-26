@@ -18,6 +18,7 @@
 #include "xrm_command_list.hpp"
 
 void xrm::listCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
+    m_system->enterLock();
     int32_t numDev = m_system->getDeviceNumber();
     int32_t numPlugin = m_system->getXrmPluginNumber();
     int32_t devId, cuId, pluginId;
@@ -35,6 +36,7 @@ void xrm::listCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
             outrsp.put("response.requestId", requestId);
             outrsp.put("response.status", "failed");
             outrsp.put("response.data.failed", errmsg);
+            m_system->exitLock();
             return;
         } else {
             listEndDevId = listStartDevId + 1;
@@ -110,4 +112,5 @@ void xrm::listCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
         outrsp.add(pluginNode + ".xrmPluginName    ", pluginInfo->xrmPluginName);
         outrsp.add(pluginNode + ".xrmPluginFileName", pluginInfo->xrmPluginFileName);
     }
+    m_system->exitLock();
 }

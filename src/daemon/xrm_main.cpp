@@ -26,18 +26,42 @@
 #include "xrm_system.hpp"
 
 #include <syslog.h>
+#include <signal.h>
+#include <fstream>
 
 using boost::asio::ip::tcp;
+
+xrm::system* sys = NULL;
+xrm::commandRegistry* registry = NULL;
+boost::asio::io_service* ioService = NULL;
+xrm::server* serv = NULL;
+const uint16_t xrmPort = 9763;
+
+/*
+ * need to be protected by lock
+ */
+void static sigbusHandler(int signNum, siginfo_t *siginfo, void *ptr) {
+    std::ignore = siginfo;
+    std::ignore = ptr;
+    int32_t status;
+    /* handle the SIGBUS signal */
+    sys->enterLock();
+    if (signNum == SIGBUS) {
+        int32_t numDevice = sys->getDeviceNumber();
+        for (int32_t devId = 0; devId < numDevice; devId++) {
+            status = sys->isDeviceOffline(devId);
+            if (status == 1) {
+                sys->resetDevice(devId);
+            }
+        }
+    }
+    sys->exitLock();
+}
 
 int main(int argc, char* argv[]) {
     std::ignore = argc;
     std::ignore = argv;
-
-    xrm::system* sys = NULL;
-    xrm::commandRegistry* registry = NULL;
-    boost::asio::io_service* ioService = NULL;
-    xrm::server* serv = NULL;
-    const uint16_t xrmPort = 9763;
+    struct sigaction act;
 
     try {
         setlogmask(LOG_UPTO(LOG_DEBUG));
@@ -61,6 +85,13 @@ int main(int argc, char* argv[]) {
         serv = new xrm::server(*ioService, xrmPort);
         serv->setSystem(sys);
         serv->setRegistry(registry);
+
+        memset (&act, 0, sizeof(act));
+        act.sa_sigaction = sigbusHandler;
+        sigfillset(&act.sa_mask);
+        act.sa_flags = SA_SIGINFO;
+        if (sigaction(SIGBUS, &act, 0))
+            syslog(LOG_NOTICE, "Failed to setup SIGBUS handler");
 
         ioService->run();
     } catch (std::exception& e) {

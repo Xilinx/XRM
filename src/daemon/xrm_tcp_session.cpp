@@ -29,8 +29,10 @@ void xrm::session::doRead() {
                                  if ((boost::asio::error::eof == ec) || (boost::asio::error::connection_reset == ec)) {
                                      uint64_t clientId = this->getClientId();
                                     /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
-                                     m_system->logMsg(XRM_LOG_DEBUG, "doRead(): clintId = %lu", clientId);
+                                    m_system->logMsg(XRM_LOG_DEBUG, "doRead(): clintId = %lu", clientId);
+                                    m_system->enterLock();
                                      if (clientId) m_system->recycleResource(clientId);
+                                    m_system->exitLock();
                                  }
                                  if (length == 0) {
                                      m_system->logMsg(XRM_LOG_DEBUG, "doRead(): receive 0 length on read, ignored");
@@ -47,9 +49,11 @@ void xrm::session::doWrite(std::size_t length) {
                                  if (ec) {
                                      uint64_t clientId = this->getClientId();
                                     /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
-                                     m_system->logMsg(XRM_LOG_DEBUG, "doWrite(): ec %s = %d, clientId = %lu",
-                                                      ec.category().name(), ec.value(), clientId);
+                                    m_system->logMsg(XRM_LOG_DEBUG, "doWrite(): ec %s = %d, clientId = %lu",
+                                                     ec.category().name(), ec.value(), clientId);
+                                    m_system->enterLock();
                                      if (clientId) m_system->recycleResource(clientId);
+                                    m_system->exitLock();
                                  } else {
                                      doRead();
                                  }

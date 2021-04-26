@@ -38,6 +38,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <syslog.h>
+#include <signal.h>
 #include <xrt.h>
 
 #include "xrm_limits.h"
@@ -465,6 +466,9 @@ class system {
     void initDevices();
     void initXrmPlugins();
     void initUdfCuGroups();
+    int32_t closeDevice(int32_t devId);
+    int32_t resetDevice(int32_t devId);
+    int32_t isDeviceOffline(int32_t devId);
     int32_t loadDevices(pt::ptree& loadTree, std::string& errmsg);
     int32_t loadOneDevice(pt::ptree& loadTree, std::string& errmsg);
     int32_t unloadOneDevice(const int32_t& devId, std::string& errmsg);
@@ -482,8 +486,8 @@ class system {
     void hexstrToBin(std::string& inStr, int32_t insz, unsigned char* out);
 
     void initLock();
-    inline void enterLock();
-    inline void exitLock();
+    void enterLock();
+    void exitLock();
     void logMsg(xrmLogLevelType logLevel, const char* format, ...);
 
     void save();

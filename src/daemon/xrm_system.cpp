@@ -16,6 +16,8 @@
  */
 
 #include <iostream>
+#include <iomanip>
+#include <vector>
 #include <fstream>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -24,6 +26,15 @@
 
 #include "xrm_system.hpp"
 #include "xrm_config.hpp"
+
+/*
+ * All system / resource related operation should be protected by the system lock.
+ *
+ * The initSystem() lock enter/exit is called inside.
+ *
+ * All other operations will be called from command line / sigbus handler / socket close,
+ * so the lock enter/exit is called from corresponding entry.
+ */
 
 /*
  * init operation should be protected by lock
@@ -243,17 +254,18 @@ void xrm::system::initUdfCuGroups() {
  */
 uint64_t xrm::system::getNewClientId() {
     uint64_t clientId;
-    enterLock();
     if (m_clientId == 0xFFFFFFFFFFFFFFFF)
         m_clientId = 1;
     else
         m_clientId++;
     clientId = m_clientId;
-    exitLock();
     return (clientId);
 }
 
 void* xrm::system::listDevice(int32_t devId) {
+    /* if the device is not opened yet, then need to open it at first */
+    if (m_devList[devId].deviceHandle == 0)
+        openDevice(devId);
 #if 1
     /* For test and debug */
     deviceDumpResource(devId);
@@ -297,6 +309,123 @@ int32_t xrm::system::openDevice(int32_t devId) {
     return (ret);
 }
 
+bool static isFileExist(const std::string &fileName)
+{
+    struct stat buf;
+    return (stat(fileName.c_str(), &buf) == 0);
+}
+
+/*
+ * call while holding lock
+ */
+int32_t xrm::system::isDeviceOffline(int32_t devId) {
+    int32_t status = XRM_ERROR_INVALID;
+    if (devId < 0 || devId >= m_numDevice) {
+        logMsg(XRM_LOG_ERROR, "%s : device id %d out of range, device num = %d\n", __func__, devId, m_numDevice);
+        return (status);
+    }
+    deviceData* dev = &m_devList[devId];
+    if (m_devList[devId].deviceHandle == 0) {
+        logMsg(XRM_LOG_ERROR, "%s : device %d is not opened\n", __func__, devId);
+        return (status);
+    }
+
+    /* mPciSlot is "(mDev->domain<<16) + (mDev->bus<<8) + (mDev->dev<<3) + mDev->func" */
+    int32_t pciSlot = dev->deviceInfo.mPciSlot;
+    int32_t domain, bus, device, func;
+    std::string domainStr, busStr, deviceStr, funcStr, offlineFileName;
+    std::stringstream domainSs, busSs, deviceSs, funcSs;
+    func = pciSlot & 0x7;
+    funcSs << std::setw(1) << std::setfill('0') << std::hex << func;
+    funcStr = funcSs.str();
+    device = (pciSlot >> 3) & 0x1F;
+    deviceSs << std::setw(2) << std::setfill('0') << std::hex << device;
+    deviceStr = deviceSs.str();
+    bus = (pciSlot >> 8) & 0xFF;
+    busSs << std::setw(2) << std::setfill('0') << std::hex << bus;
+    busStr = busSs.str();
+    domain = (pciSlot >> 16) & 0xFFFF;
+    domainSs << std::setw(4) << std::setfill('0') << std::hex << domain;
+    domainStr = domainSs.str();
+
+    offlineFileName = "/sys/bus/pci/devices/" + domainStr + ":" + busStr + ":" + deviceStr + "."
+                      + funcStr + "/dev_offline";
+    if (!isFileExist(offlineFileName)) {
+        logMsg(XRM_LOG_ERROR, "%s : %s is not existing\n", __func__, offlineFileName.c_str());
+        return (status);
+    }
+    std::string offlineResultStr;
+    std::ifstream offlineIfs(offlineFileName);
+    if (offlineIfs.is_open()) {
+        std::getline(offlineIfs, offlineResultStr);
+        offlineIfs.close();
+        status = std::stoi(offlineResultStr, nullptr, 0);
+        logMsg(XRM_LOG_DEBUG, "%s : device [%d] offline status is %d\n", __func__, devId, status);
+    }
+    return (status);
+}
+
+/*
+ * Should be called while holding lock
+ *
+ * To close the device, clean device handler
+ */
+int32_t xrm::system::closeDevice(int32_t devId) {
+    int32_t ret = XRM_SUCCESS;
+    if (m_devList[devId].deviceHandle) {
+        logMsg(XRM_LOG_DEBUG, "%s : close device %d\n", __func__, devId);
+        xclClose(m_devList[devId].deviceHandle);
+        memset(&(m_devList[devId].deviceHandle), 0, sizeof(xclDeviceHandle));
+        memset(&(m_devList[devId].deviceInfo), 0, sizeof(xclDeviceInfo2));
+    } else {
+        logMsg(XRM_LOG_ERROR, "%s : device handle is not valid\n", __func__);
+        ret = XRM_ERROR;
+    }
+    return (ret);
+}
+
+/*
+ * Should be called while holding lock
+ *
+ * To reset device: 
+ *    1) recycle all the resource used by all clients on this device.
+ *    2) unload xclbin from this device.
+ *    3) close this device.
+ */
+int32_t xrm::system::resetDevice(int32_t devId) {
+    int32_t ret = XRM_SUCCESS;
+    uint32_t i;
+    if (m_devList[devId].deviceHandle) {
+        logMsg(XRM_LOG_DEBUG, "%s : reset device %d\n", __func__, devId);
+
+        /* clean all the clients which are using the device */
+        std::vector<uint64_t> clientIdVect;
+        if (m_devList[devId].isExcl) {
+            if (m_devList[devId].clientProcs[0].clientId != 0)
+                clientIdVect.push_back(m_devList[devId].clientProcs[0].clientId);
+        } else {
+            for (i = 0; i < XRM_MAX_DEV_CLIENTS; i++) {
+                if (m_devList[devId].clientProcs[i].clientId != 0)
+                    clientIdVect.push_back(m_devList[devId].clientProcs[i].clientId);
+            }
+        }
+        for (i = 0; i < clientIdVect.size(); i++) {
+            recycleResource(clientIdVect[i]);
+        }
+
+        /* unload xclbin from the device */
+        std::string unloadErrmsg;
+        unloadOneDevice(devId, unloadErrmsg);
+
+        /* close the device, clean device handler */
+        closeDevice(devId);
+    } else {
+        logMsg(XRM_LOG_ERROR, "%s : device handle is not valid\n", __func__);
+        ret = XRM_ERROR;
+    }
+    return (ret);
+}
+
 /*
  * the load process need to be protected by lock
  * device id: 0 - (numDevice -1): the target device; -2: all devices on the system.
@@ -307,7 +436,6 @@ int32_t xrm::system::loadDevices(pt::ptree& loadTree, std::string& errmsg) {
     int32_t devId;
     std::string loadErrmsg;
 
-    enterLock();
     /*
      * XRM daemon may start before FPGA device ready during boot,
      * so try to init devices at the first time using devices.
@@ -352,7 +480,6 @@ int32_t xrm::system::loadDevices(pt::ptree& loadTree, std::string& errmsg) {
             }
         }
     }
-    exitLock();
     return (ret);
 }
 
@@ -421,7 +548,6 @@ int32_t xrm::system::loadOneDevice(pt::ptree& loadTree, std::string& errmsg) {
     int32_t ret = XRM_ERROR;
     std::string loadErrmsg;
 
-    enterLock();
     /*
      * XRM daemon may start before FPGA device ready during boot,
      * so try to init devices at the first time using devices.
@@ -456,7 +582,6 @@ int32_t xrm::system::loadOneDevice(pt::ptree& loadTree, std::string& errmsg) {
     }
 
 load_exit:
-    exitLock();
     if (ret == XRM_SUCCESS) /* return the device id if load is successful */
         return (devId);
     else
@@ -473,7 +598,14 @@ int32_t xrm::system::deviceLoadXclbin(int32_t devId, std::string& xclbin, std::s
         errmsg = "device " + std::to_string(devId) + " is already loaded with xclbin (" + m_devList[devId].xclbinName + ")";
         return (XRM_ERROR);
     }
+
     logMsg(XRM_LOG_NOTICE, "%s load xclbin file %s to device %d", __func__, xclbin.c_str(), devId);
+
+    /* if the device is not opened yet, then need to open it at first */
+    if (m_devList[devId].deviceHandle == 0) {
+        openDevice(devId);
+    }
+
     /* Read xclbin file */
     if (xclbinReadFile(devId, xclbin, errmsg) != XRM_SUCCESS) {
         deviceClearInfo(devId);
@@ -1272,14 +1404,14 @@ void xrm::system::initLock() {
  * So the daemon is running as a single process there is no need to use lock in xrmd
  * daemon to protect the resource pool data.
  */
-inline void xrm::system::enterLock() {
-#if 0
+void xrm::system::enterLock() {
+#if 1
     pthread_mutex_lock(&m_lock);
 #endif
 }
 
-inline void xrm::system::exitLock() {
-#if 0
+void xrm::system::exitLock() {
+#if 1
     pthread_mutex_unlock(&m_lock);
 #endif
 }
@@ -1367,36 +1499,30 @@ bool xrm::system::isDeviceBusy(int32_t devId) {
  * the unload process should be protected by system lock
  */
 int32_t xrm::system::unloadOneDevice(const int32_t& devId, std::string& errmsg) {
-    enterLock();
     if (devId >= 0 && devId < m_numDevice) {
         deviceData* dev = &m_devList[devId];
 
         if (!dev->isLoaded) {
             errmsg = "Device " + std::to_string(devId) + " is not loaded with xclbin";
-            exitLock();
             return (XRM_ERROR_DEVICE_IS_NOT_LOADED);
         }
 
         // device is busy
         if (isDeviceBusy(devId)) {
             errmsg = "Device  " + std::to_string(devId) + " is busy";
-            exitLock();
             return (XRM_ERROR_DEVICE_IS_BUSY);
         }
 
         // unlock loaded xclbin from device
         if (deviceUnlockXclbin(devId)) {
             errmsg = "Fail to unlock xclbin from device  " + std::to_string(devId);
-            exitLock();
             return (XRM_ERROR_DEVICE_IS_LOCKED);
         }
 
         deviceClearInfo(devId);
-        exitLock();
         return (XRM_SUCCESS);
     }
     errmsg = "Invalid device id [" + std::to_string(devId) + "] passed in";
-    exitLock();
     return (XRM_ERROR_INVALID);
 }
 
@@ -1471,13 +1597,11 @@ bool xrm::system::resIsCuExisting(cuProperty* cuProp) {
         return (cuFound);
     }
 
-    enterLock();
     for (devId = 0; !cuFound && (devId < m_numDevice); devId++) {
         dev = &m_devList[devId];
         if (!dev->isLoaded) continue;
         cuFound = resIsCuExistingOnDev(devId, cuProp);
     }
-    exitLock();
     return (cuFound);
 }
 
@@ -1505,7 +1629,6 @@ bool xrm::system::resIsCuListExisting(cuListProperty* cuListProp) {
         /*
          * To find the cu list from same device
          */
-        enterLock();
         for (devId = 0; (devId < m_numDevice) && !cuListFound; devId++) {
             dev = &m_devList[devId];
             if (!dev->isLoaded) continue;
@@ -1520,12 +1643,10 @@ bool xrm::system::resIsCuListExisting(cuListProperty* cuListProp) {
             }
             cuListFound = allCuFound;
         }
-        exitLock();
     } else {
         /*
          * To find the cu list from any device
          */
-        enterLock();
         for (i = 0; i < cuListProp->cuNum; i++) {
             cuProp = &cuListProp->cuProps[i];
             /* find the cu from all device */
@@ -1541,7 +1662,6 @@ bool xrm::system::resIsCuListExisting(cuListProperty* cuListProp) {
             if (!cuFound) break;
             if (i == (cuListProp->cuNum - 1)) cuListFound = true;
         }
-        exitLock();
     }
     return (cuListFound);
 }
@@ -1620,7 +1740,6 @@ int32_t xrm::system::resAllocCu(cuProperty* cuProp, cuResource* cuRes, bool upda
         return (XRM_ERROR_INVALID);
     }
 
-    enterLock();
 cu_alloc_loop:
     for (devId = -1; !cuAcquired && (devId < m_numDevice);) {
         devId = allocDevForClient(&devId, cuProp);
@@ -1687,11 +1806,9 @@ cu_alloc_loop:
 
     if (cuAcquired) {
         if (updateId) updateAllocServiceId();
-        exitLock();
         return (XRM_SUCCESS);
     }
 
-    exitLock();
     return (XRM_ERROR_NO_KERNEL);
 }
 
@@ -1727,20 +1844,16 @@ int32_t xrm::system::resAllocCuFromDev(int32_t deviceId, cuProperty* cuProp, cuR
         return (XRM_ERROR_INVALID);
     }
 
-    enterLock();
     dev = &m_devList[deviceId];
     if (!dev->isLoaded) {
-        exitLock();
         return (XRM_ERROR_NO_DEV);
     }
     if ((dev->isExcl) && (dev->clientProcs[0].clientId != clientId)) {
         /* the device is used by other client exclusively */
-        exitLock();
         return (XRM_ERROR_NO_DEV);
     }
     ret = allocClientFromDev(deviceId, cuProp);
     if (ret < 0) {
-        exitLock();
         return (XRM_ERROR_NO_DEV);
     }
 
@@ -1794,11 +1907,9 @@ cu_alloc_from_dev_loop:
 
     if (cuAcquired) {
         if (updateId) updateAllocServiceId();
-        exitLock();
         return (XRM_SUCCESS);
     } else {
         releaseClientOnDev(deviceId, clientId);
-        exitLock();
         return (XRM_ERROR_NO_KERNEL);
     }
 }
@@ -1832,7 +1943,6 @@ int32_t xrm::system::resAllocCuWithLoad(cuProperty* cuProp, std::string xclbin, 
         return (XRM_ERROR_INVALID);
     }
 
-    enterLock();
     /*
      * try to allocate the cu from existing resource pool
      */
@@ -1902,7 +2012,6 @@ cu_acquire_loop:
 
     if (cuAcquired) {
         if (updateId) updateAllocServiceId();
-        exitLock();
         return (XRM_SUCCESS);
     }
 
@@ -1973,7 +2082,6 @@ cu_acquire_loop:
     }
 
 cu_acquire_exit:
-    exitLock();
     return (ret);
 }
 
@@ -2010,7 +2118,6 @@ int32_t xrm::system::resAllocCuLeastUsedWithLoad(cuProperty* cuProp, std::string
         return (XRM_ERROR_INVALID);
     }
 
-    enterLock();
     /*
      * try to allocate the cu from existing resource pool
      */
@@ -2077,7 +2184,6 @@ int32_t xrm::system::resAllocCuLeastUsedWithLoad(cuProperty* cuProp, std::string
 
     if (cuAcquired) {
         if (updateId) updateAllocServiceId();
-        exitLock();
         return (XRM_SUCCESS);
     }
 
@@ -2232,13 +2338,11 @@ cu_acquire_least_used_loop:
         strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
         cuAcquired = true;
         if (updateId) updateAllocServiceId();
-        exitLock();
         return (XRM_SUCCESS);
 
     }
 
 cu_acquire_exit:
-    exitLock();
     return (ret);
 }
 
@@ -2268,13 +2372,11 @@ int32_t xrm::system::resAllocCuList(cuListProperty* cuListProp, cuListResource* 
         /*
          * To alloc the cu list from same device
          */
-        enterLock();
         for (devId = -1; devId < m_numDevice;) {
             /* find one available device for first cu*/
             cuProp = &cuListProp->cuProps[0];
             devId = allocDevForClient(&devId, cuProp);
             if (devId < 0) {
-                exitLock();
                 return (XRM_ERROR_NO_KERNEL);
             }
             /* alloc the cu list from this device */
@@ -2283,18 +2385,14 @@ int32_t xrm::system::resAllocCuList(cuListProperty* cuListProp, cuListResource* 
                 cuRes = &cuListRes->cuResources[i];
                 ret = allocClientFromDev(devId, cuProp);
                 if (ret != XRM_SUCCESS) {
-                    exitLock();
                     resReleaseCuList(cuListRes);
-                    enterLock();
                     memset(cuListRes, 0, sizeof(cuListResource));
                     break;
                 }
                 ret = allocCuFromDev(devId, cuProp, cuRes);
                 if (ret != XRM_SUCCESS) {
                     releaseClientOnDev(devId, cuProp->clientId);
-                    exitLock();
                     resReleaseCuList(cuListRes);
-                    enterLock();
                     memset(cuListRes, 0, sizeof(cuListResource));
                     break;
                 }
@@ -2302,11 +2400,9 @@ int32_t xrm::system::resAllocCuList(cuListProperty* cuListProp, cuListResource* 
             }
             if (ret == XRM_SUCCESS) {
                 updateAllocServiceId();
-                exitLock();
                 return (XRM_SUCCESS);
             }
         }
-        exitLock();
         if (ret == XRM_SUCCESS)
             return (XRM_SUCCESS);
         else
@@ -2315,24 +2411,19 @@ int32_t xrm::system::resAllocCuList(cuListProperty* cuListProp, cuListResource* 
         /*
          * To alloc the cu list from any device
          */
-        enterLock();
         for (i = 0; i < cuListProp->cuNum; i++) {
             cuProp = &cuListProp->cuProps[i];
             cuRes = &cuListRes->cuResources[i];
             bool updateId = false;
             ret = resAllocCu(cuProp, cuRes, updateId);
             if (ret != XRM_SUCCESS) {
-                exitLock();
                 resReleaseCuList(cuListRes);
-                enterLock();
-                exitLock();
                 memset(cuListRes, 0, sizeof(cuListResource));
                 return (XRM_ERROR_NO_KERNEL);
             }
             cuListRes->cuNum++;
         }
         updateAllocServiceId();
-        exitLock();
         return (XRM_SUCCESS);
     }
 }
@@ -2352,7 +2443,6 @@ int32_t xrm::system::resLoadAndAllocAllCu(std::string xclbin, uint64_t clientId,
         return (XRM_ERROR_INVALID);
     }
 
-    enterLock();
     /*
      * try to load the xclbin to one possible device
      */
@@ -2360,7 +2450,6 @@ int32_t xrm::system::resLoadAndAllocAllCu(std::string xclbin, uint64_t clientId,
     std::string loadErrmsg;
     ret = loadAnyDevice(&devId, xclbin, loadErrmsg);
     if (ret != XRM_SUCCESS) {
-        exitLock();
         return (ret);
     }
 
@@ -2416,7 +2505,6 @@ int32_t xrm::system::resLoadAndAllocAllCu(std::string xclbin, uint64_t clientId,
     }
 
     updateAllocServiceId();
-    exitLock();
     return (XRM_SUCCESS);
 }
 
@@ -2447,7 +2535,6 @@ int32_t xrm::system::resUdfCuGroupDeclare(udfCuGroupInformation* udfCuGroupInfo)
     if (udfCuGroupInfo == NULL) {
         return (XRM_ERROR_INVALID);
     }
-    enterLock();
     for (uint32_t cuGroupIdx = 0; cuGroupIdx < m_numUdfCuGroup; cuGroupIdx++) {
         /* compare, 0: equal */
         if (!m_udfCuGroups[cuGroupIdx].udfCuGroupName.compare(udfCuGroupInfo->udfCuGroupName.c_str())) {
@@ -2457,7 +2544,6 @@ int32_t xrm::system::resUdfCuGroupDeclare(udfCuGroupInformation* udfCuGroupInfo)
     }
     if (udfCuGroupIdx != -1) {
         logMsg(XRM_LOG_ERROR, "%s : user defined cu group is already existing\n", __func__);
-        exitLock();
         return (XRM_ERROR_INVALID);
     }
 
@@ -2477,7 +2563,6 @@ int32_t xrm::system::resUdfCuGroupDeclare(udfCuGroupInformation* udfCuGroupInfo)
         }
     }
     m_numUdfCuGroup++;
-    exitLock();
     return (XRM_SUCCESS);
 }
 
@@ -2498,7 +2583,6 @@ int32_t xrm::system::resUdfCuGroupUndeclare(udfCuGroupInformation* udfCuGroupInf
     if (udfCuGroupInfo == NULL) {
         return (XRM_ERROR_INVALID);
     }
-    enterLock();
     for (udfCuGroupIdx = 0; udfCuGroupIdx < m_numUdfCuGroup; udfCuGroupIdx++) {
         /* compare, 0: equal */
         if (!m_udfCuGroups[udfCuGroupIdx].udfCuGroupName.compare(udfCuGroupInfo->udfCuGroupName.c_str())) {
@@ -2508,7 +2592,6 @@ int32_t xrm::system::resUdfCuGroupUndeclare(udfCuGroupInformation* udfCuGroupInf
     }
     if (!udfCuGroupFound) {
         logMsg(XRM_LOG_ERROR, "%s : user defined cu group is NOT existing\n", __func__);
-        exitLock();
         return (XRM_ERROR_INVALID);
     }
 
@@ -2535,7 +2618,6 @@ int32_t xrm::system::resUdfCuGroupUndeclare(udfCuGroupInformation* udfCuGroupInf
     flushUdfCuGroupInfo(udfCuGroupIdx);
     m_numUdfCuGroup--;
 
-    exitLock();
     return (XRM_SUCCESS);
 }
 
@@ -2558,7 +2640,6 @@ int32_t xrm::system::resAllocCuGroup(cuGroupProperty* cuGroupProp, cuGroupResour
     if (cuGroupProp == NULL || cuGroupRes == NULL) {
         return (XRM_ERROR_INVALID);
     }
-    enterLock();
     for (uint32_t cuGroupIdx = 0; cuGroupIdx < m_numUdfCuGroup; cuGroupIdx++) {
         /* compare, 0: equal */
         if (!m_udfCuGroups[cuGroupIdx].udfCuGroupName.compare(cuGroupProp->udfCuGroupName.c_str())) {
@@ -2568,7 +2649,6 @@ int32_t xrm::system::resAllocCuGroup(cuGroupProperty* cuGroupProp, cuGroupResour
     }
     if (udfCuGroupIdx == -1) {
         logMsg(XRM_LOG_ERROR, "%s : user defined cu group is not declared\n", __func__);
-        exitLock();
         return (XRM_ERROR_INVALID);
     }
     for (int32_t cuListIdx = 0; cuListIdx < m_udfCuGroups[udfCuGroupIdx].optionUdfCuListNum; cuListIdx++) {
@@ -2594,7 +2674,6 @@ int32_t xrm::system::resAllocCuGroup(cuGroupProperty* cuGroupProp, cuGroupResour
         ret = resAllocCuList(&cuListProp, (cuListResource*)cuGroupRes);
         if (ret == XRM_SUCCESS) break;
     }
-    exitLock();
     return (ret);
 }
 
@@ -2623,14 +2702,11 @@ int32_t xrm::system::resReleaseCu(cuResource* cuRes) {
     allocServiceId = cuRes->allocServiceId;
 
     ret = XRM_ERROR;
-    enterLock();
     dev = &m_devList[devId];
     if (!dev->isLoaded) {
-        exitLock();
         return (ret);
     }
     if (cuId >= dev->xclbinInfo.numCu) {
-        exitLock();
         return (ret);
     }
     cu = &dev->xclbinInfo.cuList[cuId];
@@ -2687,7 +2763,6 @@ int32_t xrm::system::resReleaseCu(cuResource* cuRes) {
         removeClientOnCu(cu, clientId);
     }
 
-    exitLock();
     return (ret);
 }
 
@@ -2904,7 +2979,6 @@ int32_t xrm::system::allocCuFromDev(int32_t devId, cuProperty* cuProp, cuResourc
         return (XRM_ERROR_INVALID);
     }
 
-    enterLock();
     dev = &m_devList[devId];
 cu_alloc_again:
     if (!cuAcquired) {
@@ -2955,11 +3029,9 @@ cu_alloc_again:
     }
 
     if (cuAcquired) {
-        exitLock();
         return (XRM_SUCCESS);
     }
 
-    exitLock();
     return (XRM_ERROR_NO_KERNEL);
 }
 
@@ -3305,7 +3377,6 @@ int32_t xrm::system::checkCuStat(cuResource* cuRes, cuStatus* cuStat) {
  * increase number of concurrent client
  */
 bool xrm::system::incNumConcurrentClient() {
-    enterLock();
     if (m_numConcurrentClient < m_limitConcurrentClient) {
         m_numConcurrentClient++;
         return (true);
@@ -3313,21 +3384,18 @@ bool xrm::system::incNumConcurrentClient() {
         logMsg(XRM_LOG_DEBUG, "Reach limit of concurrent client (%d)\n", m_limitConcurrentClient);
         return (false);
     }
-    exitLock();
 }
 
 /*
  * decrease number of concurrent client
  */
 bool xrm::system::decNumConcurrentClient() {
-    enterLock();
     if (m_numConcurrentClient > 0) {
         m_numConcurrentClient--;
         return (true);
     } else {
         return (false);
     }
-    exitLock();
 }
 
 /*
@@ -3337,9 +3405,7 @@ bool xrm::system::decNumConcurrentClient() {
  */
 uint32_t xrm::system::getNumConcurrentClient() {
     uint32_t numConcurrentClient;
-    enterLock();
     numConcurrentClient = m_numConcurrentClient;
-    exitLock();
     return (numConcurrentClient);
 }
 
@@ -3394,7 +3460,6 @@ int32_t xrm::system::resAllocationQuery(allocationQueryInfo* allocQuery, cuListR
 
     cuNum = 0;
     memset(cuListRes, 0, sizeof(cuListResource));
-    enterLock();
     /* Check all the devices */
     for (devId = 0; devId < m_numDevice; devId++) {
         dev = &m_devList[devId];
@@ -3448,7 +3513,6 @@ int32_t xrm::system::resAllocationQuery(allocationQueryInfo* allocQuery, cuListR
             }
         }
     }
-    exitLock();
     cuListRes->cuNum = cuNum;
     return (XRM_SUCCESS);
 }
@@ -3461,7 +3525,6 @@ void xrm::system::recycleResource(uint64_t clientId) {
     cuData* cu = NULL;
     int32_t devId;
 
-    enterLock();
     /* Check all the devices */
     for (devId = 0; devId < m_numDevice; devId++) {
         dev = &m_devList[devId];
@@ -3545,7 +3608,6 @@ void xrm::system::recycleResource(uint64_t clientId) {
     decNumConcurrentClient();
     /* The save() function is time cost operation, so decide to not it here. */
     // save();
-    exitLock();
 }
 
 /* the implementation of resource reserve and relinquish */
@@ -3992,7 +4054,6 @@ uint64_t xrm::system::resReserveCuPool(cuPoolProperty* cuPoolProp) {
     }
 
     ret = XRM_ERROR;
-    enterLock();
     reservePoolId = getNextReservePoolId();
     while (reserveCuListNum < cuPoolProp->cuListNum) {
         /*
@@ -4018,7 +4079,6 @@ uint64_t xrm::system::resReserveCuPool(cuPoolProperty* cuPoolProp) {
     }
 
     updateReservePoolId();
-    exitLock();
     return (reservePoolId);
 }
 
@@ -4034,7 +4094,6 @@ int32_t xrm::system::resRelinquishCuPool(uint64_t reservePoolId) {
     cuData* cu;
     int32_t devId, cuId;
 
-    enterLock();
     for (devId = 0; devId < m_numDevice; devId++) {
         dev = &m_devList[devId];
         if (!dev->isLoaded) continue;
@@ -4043,7 +4102,6 @@ int32_t xrm::system::resRelinquishCuPool(uint64_t reservePoolId) {
             for (int32_t i = 0; i < cu->numReserve; i++) {
                 if (cu->reserves[i].reservePoolId == reservePoolId) {
                     if (cu->reserves[i].reserveUsedLoadUnified) {
-                        exitLock();
                         return (XRM_ERROR);
                     }
                     cu->totalUsedLoadUnified -= cu->reserves[i].reserveLoadUnified;
@@ -4068,7 +4126,6 @@ int32_t xrm::system::resRelinquishCuPool(uint64_t reservePoolId) {
             }
         }
     }
-    exitLock();
     return (XRM_SUCCESS);
 }
 
@@ -4097,7 +4154,6 @@ int32_t xrm::system::resReservationQuery(uint64_t reservePoolId, cuPoolResource*
 
     cuNum = 0;
     memset(cuPoolRes, 0, sizeof(cuPoolResource));
-    enterLock();
     /* Check all the devices */
     for (devId = 0; devId < m_numDevice; devId++) {
         dev = &m_devList[devId];
@@ -4135,7 +4191,6 @@ int32_t xrm::system::resReservationQuery(uint64_t reservePoolId, cuPoolResource*
             }
         }
     }
-    exitLock();
     cuPoolRes->cuNum = cuNum;
     return (XRM_SUCCESS);
 }
@@ -4238,7 +4293,6 @@ int32_t xrm::system::loadXrmPlugins(pt::ptree& loadPluginsTree, std::string& err
     std::string xrmPluginFileName, xrmPluginName;
     std::string loadErrmsg;
 
-    enterLock();
     for (auto it : loadPluginsTree) {
         auto kv = it.second;
         xrmPluginFileName = kv.get<std::string>("xrmPluginFileName", "");
@@ -4261,7 +4315,6 @@ int32_t xrm::system::loadXrmPlugins(pt::ptree& loadPluginsTree, std::string& err
             break;
         }
     }
-    exitLock();
     return (ret);
 }
 
@@ -4318,7 +4371,6 @@ int32_t xrm::system::unloadXrmPlugins(pt::ptree& unloadPluginsTree, std::string&
     std::string xrmPluginName;
     std::string unloadErrmsg;
 
-    enterLock();
     for (auto it : unloadPluginsTree) {
         auto kv = it.second;
         xrmPluginName = kv.get<std::string>("xrmPluginName", "");
@@ -4334,7 +4386,6 @@ int32_t xrm::system::unloadXrmPlugins(pt::ptree& unloadPluginsTree, std::string&
             break;
         }
     }
-    exitLock();
     return (ret);
 }
 
@@ -4373,7 +4424,6 @@ int32_t xrm::system::execXrmPluginFunc(const char* xrmPluginName,
     }
 
     bool foundPlugin = false;
-    enterLock();
     for (pluginId = 0; pluginId < m_numXrmPlugin; pluginId++) {
         if (m_xrmPluginList[pluginId].xrmPluginName.compare(xrmPluginName) == 0) {
             foundPlugin = true;
@@ -4383,7 +4433,6 @@ int32_t xrm::system::execXrmPluginFunc(const char* xrmPluginName,
     if (!foundPlugin) {
         logMsg(XRM_LOG_ERROR, "%s: Plugin %s is not loaded\n", __func__, xrmPluginName);
         errmsg += "Plugin is not loaded";
-        exitLock();
         return (ret);
     }
     if (m_xrmPluginList[pluginId].pluginData.pluginFunc[funcId] == NULL) {
@@ -4392,7 +4441,6 @@ int32_t xrm::system::execXrmPluginFunc(const char* xrmPluginName,
         return (ret);
     }
     ret = m_xrmPluginList[pluginId].pluginData.pluginFunc[funcId](param);
-    exitLock();
 
     return (ret);
 }
