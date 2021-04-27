@@ -47,6 +47,12 @@ void xrm::listCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
         listEndDevId = numDev; // this id will NOT be listed
         listNumDev = numDev;
     }
+    /* if there are too many device then try to list less cu */
+    int32_t listCuLimit;
+    if (listNumDev > 10)
+        listCuLimit = 4;
+    else
+        listCuLimit = 7;
 
     outrsp.put("response.name", "list");
     outrsp.put("response.requestId", requestId);
@@ -63,7 +69,7 @@ void xrm::listCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
             outrsp.add(devNode + ".isExclusive", devData->isExcl);
             outrsp.add(devNode + ".cuNumber   ", devData->xclbinInfo.numCu);
             for (cuId = 0; cuId < devData->xclbinInfo.numCu; cuId++) {
-                if ((listNumDev > 1) && (cuId > 7)) {
+                if ((listNumDev > 1) && (cuId > listCuLimit)) {
                     std::string cuNode = "response.data.device_" + std::to_string(devId) + ".cu_others";
                     outrsp.add(cuNode + ".other cu     ", "details are omitted due to large number of cu");
                     break;
