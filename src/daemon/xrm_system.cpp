@@ -592,11 +592,19 @@ load_exit:
 int32_t xrm::system::deviceLoadXclbin(int32_t devId, std::string& xclbin, std::string& errmsg) {
     if (devId < 0 || devId >= m_numDevice) {
         errmsg = "device id " + std::to_string(devId) + " is not found";
+        errmsg += ", failed to load " + xclbin + " to device " + std::to_string(devId);
         return (XRM_ERROR_INVALID);
     }
     if (m_devList[devId].isLoaded) {
-        errmsg = "device " + std::to_string(devId) + " is already loaded with xclbin (" + m_devList[devId].xclbinName + ")";
-        return (XRM_ERROR);
+        if (xclbin.compare(m_devList[devId].xclbinName) == 0) {
+            /* target xclbin file is same as the name of loaded device (should check uuid) */
+            return (XRM_SUCCESS);
+        }
+        else {
+            errmsg = "device " + std::to_string(devId) + " is already loaded with xclbin (" + m_devList[devId].xclbinName + ")";
+            errmsg += ", failed to load " + xclbin + " to device " + std::to_string(devId);
+            return (XRM_ERROR);
+        }
     }
 
     logMsg(XRM_LOG_NOTICE, "%s load xclbin file %s to device %d", __func__, xclbin.c_str(), devId);
@@ -608,12 +616,14 @@ int32_t xrm::system::deviceLoadXclbin(int32_t devId, std::string& xclbin, std::s
 
     /* Read xclbin file */
     if (xclbinReadFile(devId, xclbin, errmsg) != XRM_SUCCESS) {
+        errmsg += ", failed to load " + xclbin + " to device " + std::to_string(devId);
         deviceClearInfo(devId);
         return (XRM_ERROR);
     }
 
     /* Load xclbin to device */
     if (xclbinLoadToDevice(devId, errmsg) != XRM_SUCCESS) {
+        errmsg += ", failed to load " + xclbin + " to device " + std::to_string(devId);
         deviceClearInfo(devId);
         return (XRM_ERROR);
     }
@@ -624,6 +634,7 @@ int32_t xrm::system::deviceLoadXclbin(int32_t devId, std::string& xclbin, std::s
      * depends on xclbin loading sucessful.
      */
     if (xclbinGetInfo(devId, errmsg) != XRM_SUCCESS) {
+        errmsg += ", failed to load " + xclbin + " to device " + std::to_string(devId);
         deviceClearInfo(devId);
         return (XRM_ERROR);
     }
@@ -632,6 +643,7 @@ int32_t xrm::system::deviceLoadXclbin(int32_t devId, std::string& xclbin, std::s
      * replaced by other xclbin download process.
      */
     if (deviceLockXclbin(devId) != XRM_SUCCESS) {
+        errmsg += "Unable to lock device, failed to load " + xclbin + " to device " + std::to_string(devId);
         deviceClearInfo(devId);
         return (XRM_ERROR);
     }
