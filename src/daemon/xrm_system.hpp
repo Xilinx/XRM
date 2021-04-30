@@ -548,6 +548,7 @@ class system {
    private:
     int32_t xclbinLoadToDevice(int32_t devId, std::string& errmsg);
     int32_t openDevice(int32_t devId);
+    int32_t xclbinFileReadUuid(std::string& name, std::string& uuidStr, std::string& errmsg);
     int32_t xclbinReadFile(int32_t devId, std::string& name, std::string& errmsg);
     int32_t deviceLoadXclbin(int32_t devId, std::string& xclbin, std::string& errmsg);
     int32_t loadAnyDevice(int32_t* devId, std::string& xclbin, std::string& errmsg);

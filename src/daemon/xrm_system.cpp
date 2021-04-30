@@ -264,8 +264,7 @@ uint64_t xrm::system::getNewClientId() {
 
 void* xrm::system::listDevice(int32_t devId) {
     /* if the device is not opened yet, then need to open it at first */
-    if (m_devList[devId].deviceHandle == 0)
-        openDevice(devId);
+    if (m_devList[devId].deviceHandle == 0) openDevice(devId);
 #if 1
     /* For test and debug */
     deviceDumpResource(devId);
@@ -309,8 +308,7 @@ int32_t xrm::system::openDevice(int32_t devId) {
     return (ret);
 }
 
-bool static isFileExist(const std::string &fileName)
-{
+bool static isFileExist(const std::string& fileName) {
     struct stat buf;
     return (stat(fileName.c_str(), &buf) == 0);
 }
@@ -348,8 +346,8 @@ int32_t xrm::system::isDeviceOffline(int32_t devId) {
     domainSs << std::setw(4) << std::setfill('0') << std::hex << domain;
     domainStr = domainSs.str();
 
-    offlineFileName = "/sys/bus/pci/devices/" + domainStr + ":" + busStr + ":" + deviceStr + "."
-                      + funcStr + "/dev_offline";
+    offlineFileName =
+        "/sys/bus/pci/devices/" + domainStr + ":" + busStr + ":" + deviceStr + "." + funcStr + "/dev_offline";
     if (!isFileExist(offlineFileName)) {
         logMsg(XRM_LOG_ERROR, "%s : %s is not existing\n", __func__, offlineFileName.c_str());
         return (status);
@@ -387,7 +385,7 @@ int32_t xrm::system::closeDevice(int32_t devId) {
 /*
  * Should be called while holding lock
  *
- * To reset device: 
+ * To reset device:
  *    1) recycle all the resource used by all clients on this device.
  *    2) unload xclbin from this device.
  *    3) close this device.
@@ -589,6 +587,35 @@ load_exit:
         return (ret);
 }
 
+int32_t xrm::system::xclbinFileReadUuid(std::string& name, std::string& uuidStr, std::string& errmsg) {
+    std::ifstream file(name.c_str(), std::ios::binary | std::ios::ate);
+    if (!file.good()) {
+        errmsg = "Failed to open xclbin file " + name;
+        return (XRM_ERROR);
+    }
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    char* memBuffer = (char*)malloc(size);
+    if (memBuffer == NULL) {
+        errmsg = "Failed to alloce buffer for xclbin file " + name;
+        return (XRM_ERROR);
+    }
+    if (!file.read(memBuffer, size)) {
+        errmsg = "Failed to read xclbin file " + name;
+        free(memBuffer);
+        return (XRM_ERROR);
+    }
+
+    axlf* xclbin = reinterpret_cast<axlf*>(memBuffer);
+    uuid_t uuid;
+    uuid_copy(uuid, xclbin->m_header.uuid);
+    free(memBuffer);
+    /* convert uuid to string */
+    binToHexstr((unsigned char*)&uuid, sizeof(uuid_t), uuidStr);
+    return (XRM_SUCCESS);
+}
+
 int32_t xrm::system::deviceLoadXclbin(int32_t devId, std::string& xclbin, std::string& errmsg) {
     if (devId < 0 || devId >= m_numDevice) {
         errmsg = "device id " + std::to_string(devId) + " is not found";
@@ -596,13 +623,18 @@ int32_t xrm::system::deviceLoadXclbin(int32_t devId, std::string& xclbin, std::s
         return (XRM_ERROR_INVALID);
     }
     if (m_devList[devId].isLoaded) {
-        if (xclbin.compare(m_devList[devId].xclbinName) == 0) {
-            /* target xclbin file is same as the name of loaded device (should check uuid) */
-            return (XRM_SUCCESS);
-        }
-        else {
-            errmsg = "device " + std::to_string(devId) + " is already loaded with xclbin (" + m_devList[devId].xclbinName + ")";
+        std::string uuidStr;
+        if (xclbinFileReadUuid(xclbin, uuidStr, errmsg) != XRM_SUCCESS) {
             errmsg += ", failed to load " + xclbin + " to device " + std::to_string(devId);
+            return (XRM_ERROR);
+        }
+        if (uuidStr.compare(m_devList[devId].xclbinInfo.uuidStr) == 0) {
+            /* target xclbin file has same uuid as the one already loaded to device */
+            return (XRM_SUCCESS);
+        } else {
+            errmsg = "device " + std::to_string(devId) + " is already loaded with xclbin (" +
+                     m_devList[devId].xclbinName + " uuid: " + m_devList[devId].xclbinInfo.uuidStr + ")";
+            errmsg += ", failed to load " + xclbin + " (uuid: " + uuidStr + ") to device " + std::to_string(devId);
             return (XRM_ERROR);
         }
     }
@@ -2098,7 +2130,7 @@ cu_acquire_exit:
 }
 
 /*
- * Allocate the least used cu (compute unit) based on the request property. 
+ * Allocate the least used cu (compute unit) based on the request property.
  * if an unused cu cannot be allocated, then try
  * to load the xclbin to one device and allocate cu from that device.
  * if there are no available devices, try to share the least used cu.
@@ -2109,7 +2141,10 @@ cu_acquire_exit:
  *
  * Lock: should enter lock during the cu acquiration
  */
-int32_t xrm::system::resAllocCuLeastUsedWithLoad(cuProperty* cuProp, std::string xclbin, cuResource* cuRes, bool updateId) {
+int32_t xrm::system::resAllocCuLeastUsedWithLoad(cuProperty* cuProp,
+                                                 std::string xclbin,
+                                                 cuResource* cuRes,
+                                                 bool updateId) {
     deviceData* dev;
     cuData* cu;
     int32_t ret = 0;
@@ -2119,7 +2154,7 @@ int32_t xrm::system::resAllocCuLeastUsedWithLoad(cuProperty* cuProp, std::string
     bool cuAcquired = false;
 
     // Vector of tuples (cuData::totalUsedLoadUnified, devId, cuId)
-    std::vector<std::tuple<int32_t,int32_t,int32_t>> leastUsedCus;
+    std::vector<std::tuple<int32_t, int32_t, int32_t> > leastUsedCus;
 
     if ((cuProp == NULL) || (cuRes == NULL)) {
         logMsg(XRM_LOG_ERROR, "cuProp or cuRes is NULL\n");
@@ -2310,8 +2345,8 @@ cu_acquire_least_used_loop:
             }
             if (!(kernelNameEqual && kernelAliasEqual && cuNameEqual)) continue;
 
-            int64_t resultLoad =  cuProp->requestLoadUnified + cu->totalUsedLoadUnified;
-            if ( resultLoad <= XRM_MAX_CHAN_LOAD_GRANULARITY_1000000) {
+            int64_t resultLoad = cuProp->requestLoadUnified + cu->totalUsedLoadUnified;
+            if (resultLoad <= XRM_MAX_CHAN_LOAD_GRANULARITY_1000000) {
                 // We've found a potential CU, lets note down its load, devId, and cuId
                 leastUsedCus.emplace_back(cu->totalUsedLoadUnified, devId, cuId);
             }
@@ -2319,14 +2354,13 @@ cu_acquire_least_used_loop:
 
         // Release this device
         releaseClientOnDev(devId, clientId);
-
     }
 
-    std::sort(leastUsedCus.begin(),leastUsedCus.end());
+    std::sort(leastUsedCus.begin(), leastUsedCus.end());
 
     ret = XRM_ERROR_NO_KERNEL; // If no candidates, we fail
 
-    for(const auto& candidate : leastUsedCus) {
+    for (const auto& candidate : leastUsedCus) {
         devId = std::get<1>(candidate);
         cuId = std::get<2>(candidate);
 
@@ -2351,7 +2385,6 @@ cu_acquire_least_used_loop:
         cuAcquired = true;
         if (updateId) updateAllocServiceId();
         return (XRM_SUCCESS);
-
     }
 
 cu_acquire_exit:
