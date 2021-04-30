@@ -617,7 +617,7 @@ void xrm::isCuGroupExistingCommand::processCmd(pt::ptree& incmd, pt::ptree& outr
 
 void xrm::checkCuAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuProperty cuProp;
-    cuResource* cuRes[XRM_MAX_AVAILABLE_CU_NUM];
+    std::vector<cuResource*> cuRes;
     std::string errmsg;
     cuResource* tmpCuRes;
     int32_t i, ret;
@@ -644,18 +644,18 @@ void xrm::checkCuAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& ou
 
     bool update_id = true;
     m_system->enterLock();
-    while (availableCuNum < XRM_MAX_AVAILABLE_CU_NUM) {
+    do {
         tmpCuRes = (cuResource*)malloc(sizeof(cuResource));
         memset(tmpCuRes, 0, sizeof(cuResource));
         ret = m_system->resAllocCu(&cuProp, tmpCuRes, update_id);
         if (ret == XRM_SUCCESS) {
-            cuRes[availableCuNum] = tmpCuRes;
+            cuRes.push_back(tmpCuRes);
             availableCuNum++;
         } else {
             free(tmpCuRes);
             break;
         }
-    }
+    } while (ret == XRM_SUCCESS);
     if (availableCuNum > 0) {
         /* get the available cu number */
         for (i = 0; i < availableCuNum; i++) {
@@ -684,7 +684,7 @@ void xrm::checkCuAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& ou
 
 void xrm::checkCuListAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuListProperty cuListProp;
-    cuListResource* cuListRes[XRM_MAX_AVAILABLE_LIST_NUM];
+    std::vector<cuListResource*> cuListRes;
     cuListResource* tmpCuListRes;
     std::string errmsg;
     int32_t i, ret;
@@ -720,18 +720,18 @@ void xrm::checkCuListAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
     }
 
     m_system->enterLock();
-    while (availableListNum < XRM_MAX_AVAILABLE_LIST_NUM) {
+    do {
         tmpCuListRes = (cuListResource*)malloc(sizeof(cuListResource));
         memset(tmpCuListRes, 0, sizeof(cuListResource));
         ret = m_system->resAllocCuList(&cuListProp, tmpCuListRes);
         if (ret == XRM_SUCCESS) {
-            cuListRes[availableListNum] = tmpCuListRes;
+            cuListRes.push_back(tmpCuListRes);
             availableListNum++;
         } else {
             free(tmpCuListRes);
             break;
         }
-    }
+    } while (ret == XRM_SUCCESS);
     if (availableListNum > 0) {
         /* get the available cu list number */
         for (i = 0; i < availableListNum; i++) {
@@ -760,7 +760,7 @@ void xrm::checkCuListAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
 
 void xrm::checkCuGroupAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuGroupProperty cuGroupProp;
-    cuGroupResource* cuGroupRes[XRM_MAX_AVAILABLE_GROUP_NUM];
+    std::vector<cuGroupResource*> cuGroupRes;
     cuGroupResource* tmpCuGroupRes;
     std::string errmsg;
     int32_t i, ret;
@@ -774,18 +774,18 @@ void xrm::checkCuGroupAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptre
     cuGroupProp.poolId = poolId;
 
     m_system->enterLock();
-    while (availableGroupNum < XRM_MAX_AVAILABLE_GROUP_NUM) {
+    do {
         tmpCuGroupRes = (cuGroupResource*)malloc(sizeof(cuGroupResource));
         memset(tmpCuGroupRes, 0, sizeof(cuGroupResource));
         ret = m_system->resAllocCuGroup(&cuGroupProp, tmpCuGroupRes);
         if (ret == XRM_SUCCESS) {
-            cuGroupRes[availableGroupNum] = tmpCuGroupRes;
+            cuGroupRes.push_back(tmpCuGroupRes);
             availableGroupNum++;
         } else {
             free(tmpCuGroupRes);
             break;
         }
-    }
+    } while (ret == XRM_SUCCESS);
     if (availableGroupNum > 0) {
         /* get the available cu group number */
         for (i = 0; i < availableGroupNum; i++) {
@@ -815,7 +815,7 @@ void xrm::checkCuGroupAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptre
 void xrm::checkCuPoolAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuPoolProperty cuPoolProp;
     cuListProperty* cuListProp = NULL;
-    uint64_t cuPoolId[XRM_MAX_AVAILABLE_POOL_NUM];
+    std::vector<uint64_t> cuPoolId;
     std::string errmsg;
     int32_t i;
     uint64_t poolId;
@@ -857,15 +857,15 @@ void xrm::checkCuPoolAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
     cuPoolProp.xclbinNum = xclbinNum;
 
     m_system->enterLock();
-    while (availablePoolNum < XRM_MAX_AVAILABLE_POOL_NUM) {
+    do {
         poolId = m_system->resReserveCuPool(&cuPoolProp);
         if (poolId != 0) {
-            cuPoolId[availablePoolNum] = poolId;
+            cuPoolId.push_back(poolId);
             availablePoolNum++;
         } else {
             break;
         }
-    }
+    }  while (poolId != 0);
     if (availablePoolNum > 0) {
         /* get the available cu pool id */
         for (i = 0; i < availablePoolNum; i++) m_system->resRelinquishCuPool(cuPoolId[i]);

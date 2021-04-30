@@ -1758,8 +1758,7 @@ bool xrmIsCuGroupExisting(xrmContext context, xrmCuGroupProperty* cuGroupProp) {
  *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
  *                          bit[ 7 -  0] granularity of 100 (0 - 100)
  *             poolId: request to allocate cu from specified resource pool.
- * @return int32_t, available cu num (>= 0) on success or appropriate error number (< 0), if available
- *          cu number is >= XRM_MAX_AVAILABLE_CU_NUM, will only return XRM_MAX_AVAILABLE_CU_NUM.
+ * @return int32_t, available cu num (>= 0) on success or appropriate error number (< 0).
  */
 int32_t xrmCheckCuAvailableNum(xrmContext context, xrmCuProperty* cuProp) {
     int32_t ret = XRM_ERROR;
@@ -1828,8 +1827,7 @@ int32_t xrmCheckCuAvailableNum(xrmContext context, xrmCuProperty* cuProp) {
  *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole
  *             cuNum: request number of cu in this list.
  *             sameDevice: request this list of cu from same device.
- * @return int32_t, available cu list num (>= 0) on success or appropriate error number (< 0), if available
- *          cu list number is >= XRM_MAX_AVAILABLE_LIST_NUM, will only return XRM_MAX_AVAILABLE_LIST_NUM.
+ * @return int32_t, available cu list num (>= 0) on success or appropriate error number (< 0).
  */
 int32_t xrmCheckCuListAvailableNum(xrmContext context, xrmCuListProperty* cuListProp) {
     int32_t ret = XRM_ERROR;
@@ -1914,7 +1912,7 @@ int32_t xrmCheckCuListAvailableNum(xrmContext context, xrmCuListProperty* cuList
  * @param cuGroupProp the property of cu group.
  *             udfCuGroupName: user defined cu group type name.
  *             poolId: id of the cu pool this group CUs come from, the system default pool id is 0.
- * @return int32_t, 0 on success or appropriate error number
+ * @return int32_t, available cu group num (>= 0) on success or appropriate error number (< 0).
  */
 int32_t xrmCheckCuGroupAvailableNum(xrmContext context, xrmCuGroupProperty* cuGroupProp) {
     int32_t ret = XRM_ERROR;
@@ -1972,8 +1970,7 @@ int32_t xrmCheckCuGroupAvailableNum(xrmContext context, xrmCuGroupProperty* cuGr
  *             cuListNum: number of cu list in this pool.
  *             xclbinUuid: uuid of xclbin.
  *             xclbinNum: number of xclbin in this pool.
- * @return int32_t, available cu pool num (>= 0) on success or appropriate error number (< 0), if available
- *          cu pool number is >= XRM_MAX_AVAILABLE_POOL_NUM, will only return XRM_MAX_AVAILABLE_POOL_NUM.
+ * @return int32_t, available cu pool num (>= 0) on success or appropriate error number (< 0).
  */
 int32_t xrmCheckCuPoolAvailableNum(xrmContext context, xrmCuPoolProperty* cuPoolProp) {
     int32_t ret = XRM_ERROR;
