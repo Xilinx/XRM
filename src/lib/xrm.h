@@ -243,6 +243,24 @@ int32_t xrmDestroyContext(xrmContext context);
 bool xrmIsDaemonRunning(xrmContext context);
 
 /**
+ * \brief Enable one device
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param deviceId the device id to enable
+ * @return 0 on success or appropriate error number
+ */
+int32_t xrmEnableOneDevice(xrmContext context, int32_t deviceId);
+
+/**
+ * \brief Disable one device
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param deviceId the device id to disable
+ * @return int32_t, 0 on success or appropriate error number
+ */
+int32_t xrmDisableOneDevice(xrmContext context, int32_t deviceId);
+
+/**
  * \brief Loads xclbin to one device
  *
  * @param context the context created through xrmCreateContext()

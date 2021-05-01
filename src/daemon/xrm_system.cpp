@@ -221,6 +221,7 @@ void xrm::system::initDevices() {
     for (int32_t devId = 0; devId < numDevice; devId++) {
         flushDevData(devId);
         m_devList[devId].devId = devId;
+        m_devList[devId].isDisabled = false;
         openDevice(devId);
     }
 }
@@ -621,6 +622,11 @@ int32_t xrm::system::deviceLoadXclbin(int32_t devId, std::string& xclbin, std::s
         errmsg = "device id " + std::to_string(devId) + " is not found";
         errmsg += ", failed to load " + xclbin + " to device " + std::to_string(devId);
         return (XRM_ERROR_INVALID);
+    }
+    if (m_devList[devId].isDisabled) {
+        errmsg = "device " + std::to_string(devId) + " is disabled";
+        errmsg += ", failed to load " + xclbin + " to device " + std::to_string(devId);
+        return (XRM_ERROR);
     }
     if (m_devList[devId].isLoaded) {
         std::string uuidStr;
@@ -1273,6 +1279,7 @@ void xrm::system::deviceDumpResource(int32_t devId) {
     xclbinInformation* xclbinInfo = &m_devList[devId].xclbinInfo;
 
     logMsg(XRM_LOG_NOTICE, "%s(): deviceId : %d", __func__, devId);
+    logMsg(XRM_LOG_NOTICE, "%s(): isDisabled : %d", __func__, dev->isDisabled);
     logMsg(XRM_LOG_NOTICE, "%s(): isLoaded : %d", __func__, dev->isLoaded);
     if (!dev->isLoaded) return;
     logMsg(XRM_LOG_NOTICE, "%s(): uuid : %s", __func__, xclbinInfo->uuidStr.c_str());
@@ -1486,7 +1493,8 @@ bool xrm::system::restore() {
         initConfig();
         initLibVersionDepFunctions();
         for (int32_t devId = 0; devId < m_numDevice; devId++) {
-            openDevice(devId);
+            if (!m_devList[devId].isDisabled)
+                openDevice(devId);
         }
         rc = true;
     } else
@@ -1543,6 +1551,12 @@ bool xrm::system::isDeviceBusy(int32_t devId) {
  * the unload process should be protected by system lock
  */
 int32_t xrm::system::unloadOneDevice(const int32_t& devId, std::string& errmsg) {
+    /*
+     * XRM daemon may start before FPGA device ready during boot,
+     * so try to init devices at the first time using devices.
+     */
+    if (!m_devicesInited) initDevices();
+
     if (devId >= 0 && devId < m_numDevice) {
         deviceData* dev = &m_devList[devId];
 
@@ -1564,6 +1578,67 @@ int32_t xrm::system::unloadOneDevice(const int32_t& devId, std::string& errmsg) 
         }
 
         deviceClearInfo(devId);
+        return (XRM_SUCCESS);
+    }
+    errmsg = "Invalid device id [" + std::to_string(devId) + "] passed in";
+    return (XRM_ERROR_INVALID);
+}
+
+/*
+ * the device enable process should be protected by system lock
+ */
+int32_t xrm::system::enableOneDevice(const int32_t& devId, std::string& errmsg) {
+    /*
+     * XRM daemon may start before FPGA device ready during boot,
+     * so try to init devices at the first time using devices.
+     */
+    if (!m_devicesInited) initDevices();
+
+    if (devId >= 0 && devId < m_numDevice) {
+        deviceData* dev = &m_devList[devId];
+
+        dev->isDisabled = false;
+        return (XRM_SUCCESS);
+    }
+    errmsg = "Invalid device id [" + std::to_string(devId) + "] passed in";
+    return (XRM_ERROR_INVALID);
+}
+
+/*
+ * the device disable process should be protected by system lock
+ */
+int32_t xrm::system::disableOneDevice(const int32_t& devId, std::string& errmsg) {
+    /*
+     * XRM daemon may start before FPGA device ready during boot,
+     * so try to init devices at the first time using devices.
+     */
+    if (!m_devicesInited) initDevices();
+
+    if (devId >= 0 && devId < m_numDevice) {
+        deviceData* dev = &m_devList[devId];
+
+        if (dev->isDisabled) {
+            return (XRM_SUCCESS);
+        }
+        if (!dev->isLoaded) {
+            dev->isDisabled = true;
+            return (XRM_SUCCESS);
+        }
+
+        // device is busy
+        if (isDeviceBusy(devId)) {
+            errmsg = "Device  " + std::to_string(devId) + " is busy";
+            return (XRM_ERROR_DEVICE_IS_BUSY);
+        }
+
+        // unlock loaded xclbin from device
+        if (deviceUnlockXclbin(devId)) {
+            errmsg = "Fail to unlock xclbin from device  " + std::to_string(devId);
+            return (XRM_ERROR_DEVICE_IS_LOCKED);
+        }
+
+        deviceClearInfo(devId);
+        dev->isDisabled = true;
         return (XRM_SUCCESS);
     }
     errmsg = "Invalid device id [" + std::to_string(devId) + "] passed in";

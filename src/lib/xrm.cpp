@@ -383,6 +383,98 @@ bool xrmIsDaemonRunning(xrmContext context) {
 }
 
 /**
+ * \brief Enable one device
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param deviceId the device id to enable
+ * @return 0 on success or appropriate error number
+ */
+int32_t xrmEnableOneDevice(xrmContext context, int32_t deviceId) {
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+
+    if (ctx == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context pointer is NULL\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree enableOneDeviceTree;
+    enableOneDeviceTree.put("request.name", "enableOneDevice");
+    enableOneDeviceTree.put("request.requestId", 1);
+    enableOneDeviceTree.put("request.parameters.deviceId", deviceId);
+    enableOneDeviceTree.put("request.parameters.echoClientId", "echo");
+    enableOneDeviceTree.put("request.parameters.clientId", ctx->xrmClientId);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, enableOneDeviceTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    auto ret = rspTree.get<int32_t>("response.status.value");
+    if (ret != XRM_SUCCESS) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "%s(): fail to enable device %d", __func__, deviceId);
+    } else {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "%s(): success to enable device %d", __func__, deviceId);
+    }
+    return (ret);
+}
+
+/**
+ * \brief Disable one device
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param deviceId the device id to disable
+ * @return int32_t, 0 on success or appropriate error number
+ */
+int32_t xrmDisableOneDevice(xrmContext context, int32_t deviceId) {
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+
+    if (ctx == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context pointer is NULL\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree disableOneDeviceTree;
+    disableOneDeviceTree.put("request.name", "disableOneDevice");
+    disableOneDeviceTree.put("request.requestId", 1);
+    disableOneDeviceTree.put("request.parameters.deviceId", deviceId);
+    disableOneDeviceTree.put("request.parameters.echoClientId", "echo");
+    disableOneDeviceTree.put("request.parameters.clientId", ctx->xrmClientId);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, disableOneDeviceTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    auto ret = rspTree.get<int32_t>("response.status.value");
+    if (ret != XRM_SUCCESS) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "%s(): fail to disable device %d", __func__, deviceId);
+    } else {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "%s(): success to disable device %d", __func__, deviceId);
+    }
+    return (ret);
+}
+
+/**
  * \brief Loads xclbin to one device
  *
  * @param context the context created through xrmCreateContext()

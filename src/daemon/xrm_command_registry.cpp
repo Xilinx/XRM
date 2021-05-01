@@ -17,6 +17,7 @@
 
 #include "xrm_command.hpp"
 #include "xrm_command_registry.hpp"
+#include "xrm_command_control.hpp"
 #include "xrm_command_load.hpp"
 #include "xrm_command_list.hpp"
 #include "xrm_command_unload.hpp"
@@ -48,6 +49,18 @@ void xrm::commandRegistry::registerAll(system& sys) {
 
     auto unloadOneDevice = new xrm::unloadOneDeviceCommand(sys);
     registerCmd(*unloadOneDevice);
+
+    auto enableDevices = new xrm::enableDevicesCommand(sys);
+    registerCmd(*enableDevices);
+
+    auto disableDevices = new xrm::disableDevicesCommand(sys);
+    registerCmd(*disableDevices);
+
+    auto enableOneDevice = new xrm::enableOneDeviceCommand(sys);
+    registerCmd(*enableOneDevice);
+
+    auto disableOneDevice = new xrm::disableOneDeviceCommand(sys);
+    registerCmd(*disableOneDevice);
 
     auto createContext = new xrm::createContextCommand(sys);
     registerCmd(*createContext);

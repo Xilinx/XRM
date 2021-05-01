@@ -107,7 +107,10 @@ void xrm::listCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
                            std::to_string(cuData->totalReservedUsedLoadUnified) + " of 1000000");
             }
         } else {
-            outrsp.add(devNode + ".xclbin     ", "is NOT loaded");
+            if (devData->isDisabled)
+                outrsp.add(devNode + ".xclbin     ", "device is disabled, xclbin can't be loaded");
+            else
+                outrsp.add(devNode + ".xclbin     ", "is NOT loaded");
         }
     }
     outrsp.put("response.data.xrmPluginNumber", numPlugin);

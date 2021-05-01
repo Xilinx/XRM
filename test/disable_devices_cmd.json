@@ -1,0 +1,9 @@
+{
+    "request": {
+        "name": "disableDevices",
+        "requestId": 1,
+        "parameters": {
+            "device": [0,1]
+        }
+    }
+}

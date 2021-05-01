@@ -1074,7 +1074,7 @@ void xrmLoadUnloadXclbinTest(xrmContext* ctx) {
     if (ret >= 0)
         printf("success to load xclbin to device %d\n", ret);
     else
-        printf("fail to load xclbin to device\n");
+        printf("fail to load xclbin to device %d\n", devId);
 
     devId = -1;
     printf("Test 10-3: load xclbin file to any device\n");
@@ -1084,7 +1084,42 @@ void xrmLoadUnloadXclbinTest(xrmContext* ctx) {
     if (ret >= 0)
         printf("success to load xclbin to device %d\n", ret);
     else
-        printf("fail to load xclbin to device\n");
+        printf("fail to load xclbin to device %d\n", devId);
+
+    devId = 1;
+    printf("Test 10-4: disable device\n");
+    printf("  devId is %d\n", devId);
+    ret = xrmDisableOneDevice(ctx, devId);
+    if (ret == 0)
+        printf("success to disable device %d\n", devId);
+    else
+        printf("fail to disable device %d\n", devId);
+
+    printf("Test 10-5: load xclbin file to specified device\n");
+    printf("  xclbin file name is %s\n", xclbinFileName);
+    printf("  devId is %d\n", devId);
+    ret = xrmLoadOneDevice(ctx, devId, xclbinFileName);
+    if (ret >= 0)
+        printf("success to load xclbin to device %d\n", ret);
+    else
+        printf("fail to load xclbin to device %d\n", devId);
+
+    printf("Test 10-6: enable device\n");
+    printf("  devId is %d\n", devId);
+    ret = xrmEnableOneDevice(ctx, devId);
+    if (ret == 0)
+        printf("success to enable device %d\n", devId);
+    else
+        printf("fail to enable device %d\n", devId);
+
+    printf("Test 10-7: load xclbin file to specified device\n");
+    printf("  xclbin file name is %s\n", xclbinFileName);
+    printf("  devId is %d\n", devId);
+    ret = xrmLoadOneDevice(ctx, devId, xclbinFileName);
+    if (ret >= 0)
+        printf("success to load xclbin to device %d\n", ret);
+    else
+        printf("fail to load xclbin to device %d\n", devId);
 }
 
 void xrmCheckDaemonTest(xrmContext* ctx) {

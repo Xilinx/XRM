@@ -1,0 +1,12 @@
+{
+    "request": {
+        "name": "load",
+        "requestId": 1,
+        "parameters": [
+            {
+            "device": -2,
+            "xclbin": "/tmp/xclbins/test_xrm.xclbin"
+            }
+        ]
+    }
+}

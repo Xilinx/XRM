@@ -339,6 +339,7 @@ typedef struct deviceData {
     std::string dsaName;
     std::string xclbinName;
     int32_t devId;
+    bool isDisabled; // device is disabled or not
     bool isLoaded; // xclbin loaded or not
     bool isExcl;   // exclusive access to the device
     char* memBuffer;
@@ -350,7 +351,7 @@ typedef struct deviceData {
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
-        ar& dsaName& xclbinName& devId& isLoaded& isExcl& xclbinInfo& clientProcs;
+        ar& dsaName& xclbinName& devId& isDisabled& isLoaded& isExcl& xclbinInfo& clientProcs;
     }
 } deviceData;
 
@@ -469,6 +470,8 @@ class system {
     int32_t closeDevice(int32_t devId);
     int32_t resetDevice(int32_t devId);
     int32_t isDeviceOffline(int32_t devId);
+    int32_t enableOneDevice(const int32_t& devId, std::string& errmsg);
+    int32_t disableOneDevice(const int32_t& devId, std::string& errmsg);
     int32_t loadDevices(pt::ptree& loadTree, std::string& errmsg);
     int32_t loadOneDevice(pt::ptree& loadTree, std::string& errmsg);
     int32_t unloadOneDevice(const int32_t& devId, std::string& errmsg);

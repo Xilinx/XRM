@@ -27,7 +27,6 @@
             "device": 5,
             "xclbin": "/tmp/xclbins/test_xrm.xclbin"
             }
-            
         ]
     }
 }
