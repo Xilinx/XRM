@@ -399,17 +399,27 @@ int32_t xrm::system::resetDevice(int32_t devId) {
 
         /* clean all the clients which are using the device */
         std::vector<uint64_t> clientIdVect;
+        std::vector<pid_t> clientProcessIdVect;
         if (m_devList[devId].isExcl) {
-            if (m_devList[devId].clientProcs[0].clientId != 0)
+            if (m_devList[devId].clientProcs[0].clientId != 0) {
                 clientIdVect.push_back(m_devList[devId].clientProcs[0].clientId);
+                clientProcessIdVect.push_back(m_devList[devId].clientProcs[0].clientProcessId);
+            }
         } else {
             for (i = 0; i < XRM_MAX_DEV_CLIENTS; i++) {
-                if (m_devList[devId].clientProcs[i].clientId != 0)
+                if (m_devList[devId].clientProcs[i].clientId != 0) {
                     clientIdVect.push_back(m_devList[devId].clientProcs[i].clientId);
+                    clientProcessIdVect.push_back(m_devList[devId].clientProcs[i].clientProcessId);
+                }
             }
         }
+        /* recycle all the resource used by the clients */
         for (i = 0; i < clientIdVect.size(); i++) {
             recycleResource(clientIdVect[i]);
+        }
+        /* send SIGBUS to kill the client processes */
+        for (i = 0; i < clientProcessIdVect.size(); i++) {
+            kill(clientProcessIdVect[i], SIGBUS);
         }
 
         /* unload xclbin from the device */
@@ -998,6 +1008,7 @@ void xrm::system::cuInitChannels(cuData* cu) {
         cu->channels[i].allocServiceId = 0;
         cu->channels[i].poolId = 0;
         cu->channels[i].clientId = 0;
+        cu->channels[i].clientProcessId = 0;
         cu->channels[i].channelLoadUnified = 0;
         cu->channels[i].channelLoadOriginal = 0;
     }
@@ -1320,6 +1331,7 @@ void xrm::system::deviceDumpResource(int32_t devId) {
             logMsg(XRM_LOG_NOTICE, "%s() cu : channels[%d] allocServiceId: %lu", __func__, j, chan->allocServiceId);
             logMsg(XRM_LOG_NOTICE, "%s() cu : channels[%d] poolId: %lu", __func__, j, chan->poolId);
             logMsg(XRM_LOG_NOTICE, "%s() cu : channels[%d] clientId: %lu", __func__, j, chan->clientId);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : channels[%d] clientProcessId: %lu", __func__, j, chan->clientProcessId);
             logMsg(XRM_LOG_NOTICE, "%s() cu : channels[%d] channelLoadUnified: %d", __func__, j,
                    chan->channelLoadUnified);
             logMsg(XRM_LOG_NOTICE, "%s() cu : channels[%d] channelLoadOriginal: %d", __func__, j,
@@ -1336,6 +1348,8 @@ void xrm::system::deviceDumpResource(int32_t devId) {
             cu->totalReservedUsedLoadUnified += reserve->reserveUsedLoadUnified;
             logMsg(XRM_LOG_NOTICE, "%s() cu : reserves[%d] clientIsActive: %d", __func__, j, reserve->clientIsActive);
             logMsg(XRM_LOG_NOTICE, "%s() cu : reserves[%d] clientId: %lu", __func__, j, reserve->clientId);
+            logMsg(XRM_LOG_NOTICE, "%s() cu : reserves[%d] clientProcessId: %lu", __func__, j,
+                   reserve->clientProcessId);
         }
         logMsg(XRM_LOG_NOTICE, "%s() cu : totalReservedUsedLoadUnified :%d", __func__,
                cu->totalReservedUsedLoadUnified);
@@ -1493,8 +1507,7 @@ bool xrm::system::restore() {
         initConfig();
         initLibVersionDepFunctions();
         for (int32_t devId = 0; devId < m_numDevice; devId++) {
-            if (!m_devList[devId].isDisabled)
-                openDevice(devId);
+            if (!m_devList[devId].isDisabled) openDevice(devId);
         }
         rc = true;
     } else
@@ -2556,7 +2569,10 @@ int32_t xrm::system::resAllocCuList(cuListProperty* cuListProp, cuListResource* 
  *
  * Lock: should enter lock during the operation
  */
-int32_t xrm::system::resLoadAndAllocAllCu(std::string xclbin, uint64_t clientId, cuListResource* cuListRes) {
+int32_t xrm::system::resLoadAndAllocAllCu(std::string xclbin,
+                                          uint64_t clientId,
+                                          pid_t clientProcessId,
+                                          cuListResource* cuListRes) {
     int32_t i, devId, ret;
 
     if (cuListRes == NULL) {
@@ -2578,6 +2594,7 @@ int32_t xrm::system::resLoadAndAllocAllCu(std::string xclbin, uint64_t clientId,
      */
     deviceData* dev = &m_devList[devId];
     dev->clientProcs[0].clientId = clientId;
+    dev->clientProcs[0].clientProcessId = clientProcessId;
     dev->clientProcs[0].ref = 1;
     if (dev->xclbinInfo.numCu < XRM_MAX_LIST_CU_NUM)
         cuListRes->cuNum = dev->xclbinInfo.numCu;
@@ -2622,6 +2639,7 @@ int32_t xrm::system::resLoadAndAllocAllCu(std::string xclbin, uint64_t clientId,
         channel->channelLoadOriginal = XRM_MAX_CHAN_LOAD_GRANULARITY_100;
         channel->allocServiceId = allocServiceId;
         channel->clientId = clientId;
+        channel->clientProcessId = clientProcessId;
     }
 
     updateAllocServiceId();
@@ -2784,6 +2802,7 @@ int32_t xrm::system::resAllocCuGroup(cuGroupProperty* cuGroupProp, cuGroupResour
             cuProp->requestLoadUnified = udfCuProp->requestLoadUnified;
             cuProp->requestLoadOriginal = udfCuProp->requestLoadOriginal;
             cuProp->clientId = cuGroupProp->clientId;
+            cuProp->clientProcessId = cuGroupProp->clientProcessId;
             cuProp->poolId = cuGroupProp->poolId;
         }
         memset(cuGroupRes, 0, sizeof(cuGroupResource));
@@ -2868,6 +2887,7 @@ int32_t xrm::system::resReleaseCu(cuResource* cuRes) {
         cu->channels[i].allocServiceId = 0;
         cu->channels[i].poolId = 0;
         cu->channels[i].clientId = 0;
+        cu->channels[i].clientProcessId = 0;
         cu->channels[i].channelLoadUnified = 0;
         cu->channels[i].channelLoadOriginal = 0;
 
@@ -2992,6 +3012,7 @@ int32_t xrm::system::allocClientFromDev(int32_t devId, cuProperty* cuProp) {
 
     deviceData* deviceList = m_devList;
     uint64_t clientId = cuProp->clientId;
+    pid_t clientProcessId = cuProp->clientProcessId;
     bool excl = cuProp->devExcl;
     int32_t pidIdx;
     int32_t ref;
@@ -3024,6 +3045,7 @@ int32_t xrm::system::allocClientFromDev(int32_t devId, cuProperty* cuProp) {
         deviceList[devId].isExcl = true;
         memset(deviceList[devId].clientProcs, 0, sizeof(clientData) * XRM_MAX_DEV_CLIENTS);
         deviceList[devId].clientProcs[0].clientId = clientId;
+        deviceList[devId].clientProcs[0].clientProcessId = clientProcessId;
         deviceList[devId].clientProcs[0].ref = ref + 1;
         return (XRM_SUCCESS);
     }
@@ -3041,6 +3063,7 @@ int32_t xrm::system::allocClientFromDev(int32_t devId, cuProperty* cuProp) {
     for (pidIdx = 0; pidIdx < XRM_MAX_DEV_CLIENTS; pidIdx++)
         if (!deviceList[devId].clientProcs[pidIdx].clientId) {
             deviceList[devId].clientProcs[pidIdx].clientId = clientId;
+            deviceList[devId].clientProcs[pidIdx].clientProcessId = clientProcessId;
             deviceList[devId].clientProcs[pidIdx].ref = 1;
             return (XRM_SUCCESS);
         }
@@ -3164,6 +3187,7 @@ cu_alloc_again:
  */
 int32_t xrm::system::allocChanClientFromCu(cuData* cu, cuProperty* cuProp, cuResource* cuRes) {
     uint64_t clientId = cuProp->clientId;
+    pid_t clientProcessId = cuProp->clientProcessId;
     int32_t requestLoadUnified = cuProp->requestLoadUnified;
     int32_t requestLoadOriginal = cuProp->requestLoadOriginal;
     int32_t reserveIdx = 0;
@@ -3194,6 +3218,7 @@ int32_t xrm::system::allocChanClientFromCu(cuData* cu, cuProperty* cuProp, cuRes
     if (cu->numChanInuse == 0) { /* unused kernel */
         chanId = 0;
         cu->channels[chanId].clientId = clientId;
+        cu->channels[chanId].clientProcessId = clientProcessId;
         cu->channels[chanId].channelLoadUnified = requestLoadUnified;
         cu->channels[chanId].channelLoadOriginal = requestLoadOriginal;
         uint64_t allocServiceId = getNextAllocServiceId();
@@ -3235,6 +3260,7 @@ int32_t xrm::system::allocChanClientFromCu(cuData* cu, cuProperty* cuProp, cuRes
         }
 
         cu->channels[chanId].clientId = clientId;
+        cu->channels[chanId].clientProcessId = clientProcessId;
         cu->channels[chanId].channelLoadUnified = requestLoadUnified;
         cu->channels[chanId].channelLoadOriginal = requestLoadOriginal;
         uint64_t allocServiceId = getNextAllocServiceId();
@@ -3337,13 +3363,17 @@ int32_t xrm::system::releaseClientOnDev(int32_t devId, uint64_t clientId) {
         if (deviceList[devId].clientProcs[0].ref == 0) {
             deviceList[devId].isExcl = false;
             deviceList[devId].clientProcs[0].clientId = 0;
+            deviceList[devId].clientProcs[0].clientProcessId = 0;
         }
         return (XRM_SUCCESS);
     } else {
         for (int32_t pidIdx = 0; pidIdx < XRM_MAX_DEV_CLIENTS; pidIdx++)
             if (deviceList[devId].clientProcs[pidIdx].clientId == clientId) {
                 deviceList[devId].clientProcs[pidIdx].ref--;
-                if (deviceList[devId].clientProcs[pidIdx].ref == 0) deviceList[devId].clientProcs[pidIdx].clientId = 0;
+                if (deviceList[devId].clientProcs[pidIdx].ref == 0) {
+                    deviceList[devId].clientProcs[pidIdx].clientId = 0;
+                    deviceList[devId].clientProcs[pidIdx].clientProcessId = 0;
+                }
                 return (XRM_SUCCESS);
             }
     }
@@ -3393,6 +3423,7 @@ void xrm::system::releaseAllCuChanClientOnDev(deviceData* dev, uint64_t clientId
                 cu->totalUsedLoadUnified -= cu->channels[j].channelLoadUnified;
                 cu->numChanInuse--;
                 cu->channels[j].clientId = 0;
+                cu->channels[j].clientProcessId = 0;
                 cu->channels[j].channelLoadUnified = 0;
                 cu->channels[j].channelLoadOriginal = 0;
                 cu->channels[j].allocServiceId = 0;
@@ -3413,6 +3444,7 @@ void xrm::system::releaseAllCuChanClientOnDev(deviceData* dev, uint64_t clientId
                     cu->reserves[reservePoolIdx].reserveUsedLoadUnified -= cu->channels[j].channelLoadUnified;
                     cu->numChanInuse--;
                     cu->channels[j].clientId = 0;
+                    cu->channels[j].clientProcessId = 0;
                     cu->channels[j].channelLoadUnified = 0;
                     cu->channels[j].channelLoadOriginal = 0;
                     cu->channels[j].allocServiceId = 0;
@@ -3422,6 +3454,7 @@ void xrm::system::releaseAllCuChanClientOnDev(deviceData* dev, uint64_t clientId
                     cu->totalUsedLoadUnified -= cu->channels[j].channelLoadUnified;
                     cu->numChanInuse--;
                     cu->channels[j].clientId = 0;
+                    cu->channels[j].clientProcessId = 0;
                     cu->channels[j].channelLoadUnified = 0;
                     cu->channels[j].channelLoadOriginal = 0;
                     cu->channels[j].allocServiceId = 0;
@@ -3682,6 +3715,7 @@ void xrm::system::recycleResource(uint64_t clientId) {
                         cu->reserves[i].reservePoolId = cu->reserves[i + 1].reservePoolId;
                         cu->reserves[i].clientIsActive = cu->reserves[i + 1].clientIsActive;
                         cu->reserves[i].clientId = cu->reserves[i + 1].clientId;
+                        cu->reserves[i].clientProcessId = cu->reserves[i + 1].clientProcessId;
                     }
                     /* empty the last slot */
                     cu->reserves[i].reserveLoadUnified = 0;
@@ -3689,6 +3723,7 @@ void xrm::system::recycleResource(uint64_t clientId) {
                     cu->reserves[i].reservePoolId = 0;
                     cu->reserves[i].clientIsActive = false;
                     cu->reserves[i].clientId = 0;
+                    cu->reserves[i].clientProcessId = 0;
                     cu->numReserve--;
                     /* removed one slot, so set the reserveIdx to the right one */
                     reserveIdx--;
@@ -3719,6 +3754,7 @@ void xrm::system::recycleResource(uint64_t clientId) {
                 if (dev->clientProcs[i].clientId == clientId) {
                     releaseAllCuChanClientOnDev(dev, clientId);
                     dev->clientProcs[i].clientId = 0;
+                    dev->clientProcs[i].clientProcessId = 0;
                     dev->clientProcs[i].ref = 0;
                 }
             }
@@ -3809,6 +3845,7 @@ int32_t xrm::system::reserveLoadFromCu(uint64_t reservePoolId, cuData* cu, cuPro
             cu->reserves[cu->numReserve].reservePoolId = reservePoolId;
             cu->reserves[cu->numReserve].clientIsActive = true;
             cu->reserves[cu->numReserve].clientId = cuProp->clientId;
+            cu->reserves[cu->numReserve].clientProcessId = cuProp->clientProcessId;
             cu->numReserve++;
             return (XRM_SUCCESS);
         }
@@ -4081,6 +4118,7 @@ int32_t xrm::system::resRelinquishCuList(uint64_t reservePoolId) {
                         cu->reserves[i].reservePoolId = cu->reserves[i + 1].reservePoolId;
                         cu->reserves[i].clientIsActive = cu->reserves[i + 1].clientIsActive;
                         cu->reserves[i].clientId = cu->reserves[i + 1].clientId;
+                        cu->reserves[i].clientProcessId = cu->reserves[i + 1].clientProcessId;
                     }
                     /* empty the last slot */
                     cu->reserves[i].reserveLoadUnified = 0;
@@ -4088,6 +4126,7 @@ int32_t xrm::system::resRelinquishCuList(uint64_t reservePoolId) {
                     cu->reserves[i].reservePoolId = 0;
                     cu->reserves[i].clientIsActive = false;
                     cu->reserves[i].clientId = 0;
+                    cu->reserves[i].clientProcessId = 0;
                     cu->numReserve--;
                     break;
                 }
@@ -4109,7 +4148,10 @@ int32_t xrm::system::resRelinquishCuList(uint64_t reservePoolId) {
  *
  * Lock: should already in lock protection during the cu reservation
  */
-int32_t xrm::system::resReserveCuOfXclbin(uint64_t reservePoolId, uuid_t uuid, uint64_t clientId) {
+int32_t xrm::system::resReserveCuOfXclbin(uint64_t reservePoolId,
+                                          uuid_t uuid,
+                                          uint64_t clientId,
+                                          pid_t clientProcessId) {
     deviceData* dev;
     cuData* cu;
     int32_t cuId;
@@ -4136,6 +4178,7 @@ int32_t xrm::system::resReserveCuOfXclbin(uint64_t reservePoolId, uuid_t uuid, u
             cu->reserves[0].reservePoolId = reservePoolId;
             cu->reserves[0].clientIsActive = true;
             cu->reserves[0].clientId = clientId;
+            cu->reserves[0].clientProcessId = clientProcessId;
             cu->numReserve = 1;
         }
         return (XRM_SUCCESS);
@@ -4190,7 +4233,8 @@ uint64_t xrm::system::resReserveCuPool(cuPoolProperty* cuPoolProp) {
         /*
          * To reserve all the cu resources of one xclbin
          */
-        ret = resReserveCuOfXclbin(reservePoolId, cuPoolProp->xclbinUuid, cuPoolProp->clientId);
+        ret = resReserveCuOfXclbin(reservePoolId, cuPoolProp->xclbinUuid, cuPoolProp->clientId,
+                                   cuPoolProp->clientProcessId);
         if (ret != XRM_SUCCESS) {
             resRelinquishCuList(reservePoolId);
             return (0);
@@ -4233,6 +4277,7 @@ int32_t xrm::system::resRelinquishCuPool(uint64_t reservePoolId) {
                         cu->reserves[i].reservePoolId = cu->reserves[i + 1].reservePoolId;
                         cu->reserves[i].clientIsActive = cu->reserves[i + 1].clientIsActive;
                         cu->reserves[i].clientId = cu->reserves[i + 1].clientId;
+                        cu->reserves[i].clientProcessId = cu->reserves[i + 1].clientProcessId;
                     }
                     /* empty the last slot */
                     cu->reserves[i].reserveLoadUnified = 0;
@@ -4240,6 +4285,7 @@ int32_t xrm::system::resRelinquishCuPool(uint64_t reservePoolId) {
                     cu->reserves[i].reservePoolId = 0;
                     cu->reserves[i].clientIsActive = false;
                     cu->reserves[i].clientId = 0;
+                    cu->reserves[i].clientProcessId = 0;
                     cu->numReserve--;
                     break;
                 }

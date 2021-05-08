@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020, Xilinx Inc - All rights reserved
+ * Copyright (C) 2019-2021, Xilinx Inc - All rights reserved
  * Xilinx Resouce Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may
@@ -22,17 +22,17 @@ void xrm::session::doRead() {
     m_socket.async_read_some(boost::asio::buffer(m_indata, max_length),
                              [this, self](boost::system::error_code const& ec, std::size_t length) {
                                  if (ec) {
-                                    /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
+                                     /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
                                      m_system->logMsg(XRM_LOG_DEBUG, "doRead(): ec %s = %d", ec.category().name(),
                                                       ec.value());
                                  }
                                  if ((boost::asio::error::eof == ec) || (boost::asio::error::connection_reset == ec)) {
                                      uint64_t clientId = this->getClientId();
-                                    /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
-                                    m_system->logMsg(XRM_LOG_DEBUG, "doRead(): clintId = %lu", clientId);
-                                    m_system->enterLock();
+                                     /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
+                                     m_system->logMsg(XRM_LOG_DEBUG, "doRead(): clintId = %lu", clientId);
+                                     m_system->enterLock();
                                      if (clientId) m_system->recycleResource(clientId);
-                                    m_system->exitLock();
+                                     m_system->exitLock();
                                  }
                                  if (length == 0) {
                                      m_system->logMsg(XRM_LOG_DEBUG, "doRead(): receive 0 length on read, ignored");
@@ -48,12 +48,12 @@ void xrm::session::doWrite(std::size_t length) {
                              [this, self](boost::system::error_code const& ec, std::size_t /*length*/) {
                                  if (ec) {
                                      uint64_t clientId = this->getClientId();
-                                    /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
-                                    m_system->logMsg(XRM_LOG_DEBUG, "doWrite(): ec %s = %d, clientId = %lu",
-                                                     ec.category().name(), ec.value(), clientId);
-                                    m_system->enterLock();
+                                     /* please note that XRM_LOG_DEBUG may NOT be print out on CentOS */
+                                     m_system->logMsg(XRM_LOG_DEBUG, "doWrite(): ec %s = %d, clientId = %lu",
+                                                      ec.category().name(), ec.value(), clientId);
+                                     m_system->enterLock();
                                      if (clientId) m_system->recycleResource(clientId);
-                                    m_system->exitLock();
+                                     m_system->exitLock();
                                  } else {
                                      doRead();
                                  }
@@ -101,12 +101,14 @@ void xrm::session::handleCmd(std::size_t length) {
      * for resource automatic recycle when host application closes connection to XRM daemon.
      */
     recordClientId = m_cmdtree.get<std::string>("request.parameters.recordClientId", "");
-    if (recordClientId.c_str()[0] != '\0')
+    if (recordClientId.c_str()[0] != '\0') {
         m_clientId = m_cmdtree.get<uint64_t>("request.parameters.clientId");
+        m_clientProcessId = m_cmdtree.get<pid_t>("request.parameters.clientProcessId");
+    }
     m_registry->dispatch(name, m_cmdtree, outrsp);
 
 end_of_cmd:
     boost::property_tree::write_json(outstr, outrsp);
-    std::strncpy(m_outdata, outstr.str().c_str(), max_length-1);
+    std::strncpy(m_outdata, outstr.str().c_str(), max_length - 1);
     doWrite(outstr.str().length());
 }

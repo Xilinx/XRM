@@ -136,12 +136,14 @@ xrmContext xrmCreateContext(uint32_t xrmApiVersion) {
 
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree echoContextTree;
+    pid_t clientProcessId = getpid();
     echoContextTree.put("request.name", "echoContext");
     echoContextTree.put("request.requestId", 1);
     echoContextTree.put("request.parameters.context", "echoContext");
     echoContextTree.put("request.parameters.echo", "echo");
     echoContextTree.put("request.parameters.recordClientId", "recordClientId");
     echoContextTree.put("request.parameters.clientId", ctx->xrmClientId);
+    echoContextTree.put("request.parameters.clientProcessId", clientProcessId);
     std::stringstream echoReqstr;
     boost::property_tree::write_json(echoReqstr, echoContextTree);
     if (xrmJsonRequest((xrmContext)ctx, echoReqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) {
@@ -169,11 +171,13 @@ int32_t xrmDestroyContext(xrmContext context) {
         char jsonRsp[maxLength];
         memset(jsonRsp, 0, maxLength * sizeof(char));
         pt::ptree destroyContextTree;
+        pid_t clientProcessId = getpid();
         destroyContextTree.put("request.name", "destroyContext");
         destroyContextTree.put("request.requestId", 1);
         destroyContextTree.put("request.parameters.context", "removeContext");
         destroyContextTree.put("request.parameters.echo", "echo");
         destroyContextTree.put("request.parameters.clientId", ctx->xrmClientId);
+        destroyContextTree.put("request.parameters.clientProcessId", clientProcessId);
         std::stringstream reqstr;
         boost::property_tree::write_json(reqstr, destroyContextTree);
         xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp);
@@ -677,10 +681,12 @@ int32_t xrmCuAlloc(xrmContext context, xrmCuProperty* cuProp, xrmCuResource* cuR
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree cuAllocTree;
+    pid_t clientProcessId = getpid();
     cuAllocTree.put("request.name", "cuAlloc");
     cuAllocTree.put("request.requestId", 1);
     cuAllocTree.put("request.parameters.echoClientId", "echo");
     cuAllocTree.put("request.parameters.clientId", ctx->xrmClientId);
+    cuAllocTree.put("request.parameters.clientProcessId", clientProcessId);
     /* use either kernel name or alias or both to identity the kernel */
     cuAllocTree.put("request.parameters.kernelName", cuProp->kernelName);
     cuAllocTree.put("request.parameters.kernelAlias", cuProp->kernelAlias);
@@ -801,10 +807,12 @@ int32_t xrmCuAllocFromDev(xrmContext context, int32_t deviceId, xrmCuProperty* c
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree cuAllocTree;
+    pid_t clientProcessId = getpid();
     cuAllocTree.put("request.name", "cuAllocFromDev");
     cuAllocTree.put("request.requestId", 1);
     cuAllocTree.put("request.parameters.echoClientId", "echo");
     cuAllocTree.put("request.parameters.clientId", ctx->xrmClientId);
+    cuAllocTree.put("request.parameters.clientProcessId", clientProcessId);
     cuAllocTree.put("request.parameters.deviceId", deviceId);
     /* use either kernel name or alias or both to identity the kernel */
     cuAllocTree.put("request.parameters.kernelName", cuProp->kernelName);
@@ -900,11 +908,13 @@ int32_t xrmCuListAlloc(xrmContext context, xrmCuListProperty* cuListProp, xrmCuL
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree cuListAllocTree;
+    pid_t clientProcessId = getpid();
     cuListAllocTree.put("request.name", "cuListAlloc");
     cuListAllocTree.put("request.requestId", 1);
     cuListAllocTree.put("request.parameters.cuNum", cuListProp->cuNum);
     cuListAllocTree.put("request.parameters.echoClientId", "echo");
     cuListAllocTree.put("request.parameters.clientId", ctx->xrmClientId);
+    cuListAllocTree.put("request.parameters.clientProcessId", clientProcessId);
     if (cuListProp->sameDevice == false)
         cuListAllocTree.put("request.parameters.sameDevice", 0);
     else
@@ -1162,12 +1172,14 @@ int32_t xrmCuGroupAlloc(xrmContext context, xrmCuGroupProperty* cuGroupProp, xrm
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree cuGroupAllocTree;
+    pid_t clientProcessId = getpid();
     cuGroupAllocTree.put("request.name", "cuGroupAlloc");
     cuGroupAllocTree.put("request.requestId", 1);
     cuGroupAllocTree.put("request.parameters.udfCuGroupName", cuGroupProp->udfCuGroupName);
     cuGroupAllocTree.put("request.parameters.poolId", cuGroupProp->poolId);
     cuGroupAllocTree.put("request.parameters.echoClientId", "echo");
     cuGroupAllocTree.put("request.parameters.clientId", ctx->xrmClientId);
+    cuGroupAllocTree.put("request.parameters.clientProcessId", clientProcessId);
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, cuGroupAllocTree);
@@ -1878,6 +1890,7 @@ int32_t xrmCheckCuAvailableNum(xrmContext context, xrmCuProperty* cuProp) {
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree checkCuAvailableTree;
+    pid_t clientProcessId = getpid();
     checkCuAvailableTree.put("request.name", "checkCuAvailableNum");
     checkCuAvailableTree.put("request.requestId", 1);
     /* use either kernel name or alias or both to identity the kernel */
@@ -1891,6 +1904,7 @@ int32_t xrmCheckCuAvailableNum(xrmContext context, xrmCuProperty* cuProp) {
     checkCuAvailableTree.put("request.parameters.requestLoadOriginal", cuProp->requestLoad);
     checkCuAvailableTree.put("request.parameters.echoClientId", "echo");
     checkCuAvailableTree.put("request.parameters.clientId", ctx->xrmClientId);
+    checkCuAvailableTree.put("request.parameters.clientProcessId", clientProcessId);
     checkCuAvailableTree.put("request.parameters.poolId", cuProp->poolId);
 
     std::stringstream reqstr;
@@ -1945,11 +1959,13 @@ int32_t xrmCheckCuListAvailableNum(xrmContext context, xrmCuListProperty* cuList
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree checkCuListAvailableNumTree;
+    pid_t clientProcessId = getpid();
     checkCuListAvailableNumTree.put("request.name", "checkCuListAvailableNum");
     checkCuListAvailableNumTree.put("request.requestId", 1);
     checkCuListAvailableNumTree.put("request.parameters.cuNum", cuListProp->cuNum);
     checkCuListAvailableNumTree.put("request.parameters.echoClientId", "echo");
     checkCuListAvailableNumTree.put("request.parameters.clientId", ctx->xrmClientId);
+    checkCuListAvailableNumTree.put("request.parameters.clientProcessId", clientProcessId);
     if (cuListProp->sameDevice == false)
         checkCuListAvailableNumTree.put("request.parameters.sameDevice", 0);
     else
@@ -2028,12 +2044,14 @@ int32_t xrmCheckCuGroupAvailableNum(xrmContext context, xrmCuGroupProperty* cuGr
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree checkCuGroupTree;
+    pid_t clientProcessId = getpid();
     checkCuGroupTree.put("request.name", "checkCuGroupAvailableNum");
     checkCuGroupTree.put("request.requestId", 1);
     checkCuGroupTree.put("request.parameters.udfCuGroupName", cuGroupProp->udfCuGroupName);
     checkCuGroupTree.put("request.parameters.poolId", cuGroupProp->poolId);
     checkCuGroupTree.put("request.parameters.echoClientId", "echo");
     checkCuGroupTree.put("request.parameters.clientId", ctx->xrmClientId);
+    checkCuGroupTree.put("request.parameters.clientProcessId", clientProcessId);
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, checkCuGroupTree);
@@ -2099,12 +2117,14 @@ int32_t xrmCheckCuPoolAvailableNum(xrmContext context, xrmCuPoolProperty* cuPool
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree checkCuPoolTree;
+    pid_t clientProcessId = getpid();
     checkCuPoolTree.put("request.name", "checkCuPoolAvailableNum");
     checkCuPoolTree.put("request.requestId", 1);
     checkCuPoolTree.put("request.parameters.cuListNum", cuPoolProp->cuListNum);
     checkCuPoolTree.put("request.parameters.cuNum", cuPoolProp->cuListProp.cuNum);
     checkCuPoolTree.put("request.parameters.echoClientId", "echo");
     checkCuPoolTree.put("request.parameters.clientId", ctx->xrmClientId);
+    checkCuPoolTree.put("request.parameters.clientProcessId", clientProcessId);
     if (cuPoolProp->cuListProp.sameDevice == false)
         checkCuPoolTree.put("request.parameters.sameDevice", 0);
     else
@@ -2201,10 +2221,12 @@ uint64_t xrmCuPoolReserve(xrmContext context, xrmCuPoolProperty* cuPoolProp) {
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree cuPoolReserveTree;
+    pid_t clientProcessId = getpid();
     cuPoolReserveTree.put("request.name", "cuPoolReserve");
     cuPoolReserveTree.put("request.requestId", 1);
     cuPoolReserveTree.put("request.parameters.echoClientId", "echo");
     cuPoolReserveTree.put("request.parameters.clientId", ctx->xrmClientId);
+    cuPoolReserveTree.put("request.parameters.clientProcessId", clientProcessId);
     cuPoolReserveTree.put("request.parameters.cuListNum", cuPoolProp->cuListNum);
     cuPoolReserveTree.put("request.parameters.cuList.cuNum", cuPoolProp->cuListProp.cuNum);
     if (cuPoolProp->cuListProp.sameDevice == false)
@@ -2517,10 +2539,12 @@ int32_t xrmCuAllocWithLoad(xrmContext context, xrmCuProperty* cuProp, char* xclb
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree cuAllocWithLoadTree;
+    pid_t clientProcessId = getpid();
     cuAllocWithLoadTree.put("request.name", "cuAllocWithLoad");
     cuAllocWithLoadTree.put("request.requestId", 1);
     cuAllocWithLoadTree.put("request.parameters.echoClientId", "echo");
     cuAllocWithLoadTree.put("request.parameters.clientId", ctx->xrmClientId);
+    cuAllocWithLoadTree.put("request.parameters.clientProcessId", clientProcessId);
     /* use either kernel name or alias or both to identity the kernel */
     cuAllocWithLoadTree.put("request.parameters.kernelName", cuProp->kernelName);
     cuAllocWithLoadTree.put("request.parameters.kernelAlias", cuProp->kernelAlias);
@@ -2580,7 +2604,7 @@ int32_t xrmCuAllocWithLoad(xrmContext context, xrmCuProperty* cuProp, char* xclb
  * \brief Allocates compute unit with a device, cu, and channel given a
  * kernel name or alias or both and request load. This function also
  * provides the xclbin and kernel plugin loaded on the device.
- * This function will first try to acquire an unused CU, else 
+ * This function will first try to acquire an unused CU, else
  * try to load the xclbin to one device and do the
  * allocation again, else it will try to share the least used CU.
  * Additionally, it strictly enforces that the allocated CU comes
@@ -2617,7 +2641,10 @@ int32_t xrmCuAllocWithLoad(xrmContext context, xrmCuProperty* cuProp, char* xclb
  *             poolId: id of the cu pool this cu comes from, the default pool id is 0.
  * @return int32_t, 0 on success or appropriate error number
  */
-int32_t xrmCuAllocLeastUsedWithLoad(xrmContext context, xrmCuProperty* cuProp, char* xclbinFileName, xrmCuResource* cuRes) {
+int32_t xrmCuAllocLeastUsedWithLoad(xrmContext context,
+                                    xrmCuProperty* cuProp,
+                                    char* xclbinFileName,
+                                    xrmCuResource* cuRes) {
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
     int32_t unifiedLoad; // granularity of 1,000,000
 
@@ -2649,10 +2676,12 @@ int32_t xrmCuAllocLeastUsedWithLoad(xrmContext context, xrmCuProperty* cuProp, c
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree cuAllocLeastUsedWithLoadTree;
+    pid_t clientProcessId = getpid();
     cuAllocLeastUsedWithLoadTree.put("request.name", "cuAllocLeastUsedWithLoad");
     cuAllocLeastUsedWithLoadTree.put("request.requestId", 1);
     cuAllocLeastUsedWithLoadTree.put("request.parameters.echoClientId", "echo");
     cuAllocLeastUsedWithLoadTree.put("request.parameters.clientId", ctx->xrmClientId);
+    cuAllocLeastUsedWithLoadTree.put("request.parameters.clientProcessId", clientProcessId);
     /* use either kernel name or alias or both to identity the kernel */
     cuAllocLeastUsedWithLoadTree.put("request.parameters.kernelName", cuProp->kernelName);
     cuAllocLeastUsedWithLoadTree.put("request.parameters.kernelAlias", cuProp->kernelAlias);
@@ -2739,11 +2768,13 @@ int32_t xrmLoadAndAllCuAlloc(xrmContext context, char* xclbinFileName, xrmCuList
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
     pt::ptree loadAndAllCuAllocTree;
+    pid_t clientProcessId = getpid();
     loadAndAllCuAllocTree.put("request.name", "loadAndAllCuAlloc");
     loadAndAllCuAllocTree.put("request.requestId", 1);
     loadAndAllCuAllocTree.put("request.parameters.xclbinFileName", xclbinFileName);
     loadAndAllCuAllocTree.put("request.parameters.echoClientId", "echo");
     loadAndAllCuAllocTree.put("request.parameters.clientId", ctx->xrmClientId);
+    loadAndAllCuAllocTree.put("request.parameters.clientProcessId", clientProcessId);
 
     std::stringstream reqstr;
     boost::property_tree::write_json(reqstr, loadAndAllCuAllocTree);

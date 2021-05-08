@@ -74,6 +74,7 @@ typedef struct cuProperty {
                                          * bit[ 7 -  0] granularity of 100 (0 - 100)
                                          */
     uint64_t clientId;
+    pid_t clientProcessId;
     uint64_t poolId;     /* request to allocate resource from specified resource pool,
                           * the system default resource pool id is 0.
                           */
@@ -82,7 +83,8 @@ typedef struct cuProperty {
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
-        ar& kernelName& kernelAlias& cuName& devExcl& requestLoadUnified& requestLoadOriginal& clientId& poolId;
+        ar& kernelName& kernelAlias& cuName& devExcl& requestLoadUnified& requestLoadOriginal& clientId&
+            clientProcessId& poolId;
     }
 } cuProperty;
 
@@ -118,6 +120,7 @@ typedef struct udfCuGroupInformation {
 typedef struct cuGroupProperty {
     std::string udfCuGroupName; // name of user defined cu group
     uint64_t clientId;
+    pid_t clientProcessId;
     uint64_t poolId;     /* request to allocate resource from specified resource pool,
                           * 0 means to allocate resource from system default resource pool.
                           */
@@ -129,9 +132,10 @@ typedef struct cuPoolProperty {
     cuListProperty cuListProp;
     int32_t cuListNum; // number of such cu list
     uuid_t xclbinUuid;
-    int32_t xclbinNum;   // number of such xclbin
-    uint64_t clientId;   // client ID
-    uint8_t extData[64]; // for future extension
+    int32_t xclbinNum;     // number of such xclbin
+    uint64_t clientId;     // client ID
+    pid_t clientProcessId; // client process ID
+    uint8_t extData[64];   // for future extension
 } cuPoolProperty;
 
 /* cu type */
@@ -212,6 +216,7 @@ typedef struct channelData {
     uint64_t allocServiceId;
     uint64_t poolId;
     uint64_t clientId;
+    pid_t clientProcessId;
     int32_t channelLoadUnified;  // channel load, granularity of 1,000,000
     int32_t channelLoadOriginal; /* channel load, only one type granularity at one time.
                                   * bit[31 - 28] reserved
@@ -222,7 +227,7 @@ typedef struct channelData {
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
-        ar& channelId& allocServiceId& poolId& clientId& channelLoadUnified& channelLoadOriginal;
+        ar& channelId& allocServiceId& poolId& clientId& clientProcessId& channelLoadUnified& channelLoadOriginal;
     }
 } channelData;
 
@@ -233,11 +238,12 @@ typedef struct reserveData {
     int32_t reserveUsedLoadUnified; // load, granularity of 1,000,000
     bool clientIsActive;
     uint64_t clientId;
+    pid_t clientProcessId;
 
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
-        ar& reservePoolId& reserveLoadUnified& reserveUsedLoadUnified& clientIsActive& clientId;
+        ar& reservePoolId& reserveLoadUnified& reserveUsedLoadUnified& clientIsActive& clientId& clientProcessId;
     }
 } reserveData;
 
@@ -326,12 +332,13 @@ typedef struct xclbinInformation {
 
 typedef struct clientData {
     uint64_t clientId;
+    pid_t clientProcessId;
     int32_t ref;
 
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
-        ar& clientId& ref;
+        ar& clientId& clientProcessId& ref;
     }
 } clientData;
 
@@ -340,8 +347,8 @@ typedef struct deviceData {
     std::string xclbinName;
     int32_t devId;
     bool isDisabled; // device is disabled or not
-    bool isLoaded; // xclbin loaded or not
-    bool isExcl;   // exclusive access to the device
+    bool isLoaded;   // xclbin loaded or not
+    bool isExcl;     // exclusive access to the device
     char* memBuffer;
     xclDeviceHandle deviceHandle;
     xclDeviceInfo2 deviceInfo;
@@ -522,7 +529,7 @@ class system {
 
     int32_t resReserveCu(uint64_t reservePoolId, cuProperty* cuProp);
     int32_t resReserveCuList(uint64_t reservePoolId, cuListProperty* cuListProp);
-    int32_t resReserveCuOfXclbin(uint64_t reservePoolId, uuid_t uuid, uint64_t clientId);
+    int32_t resReserveCuOfXclbin(uint64_t reservePoolId, uuid_t uuid, uint64_t clientId, pid_t clientProcessId);
     int32_t resRelinquishCuList(uint64_t reservePoolId);
     uint64_t resReserveCuPool(cuPoolProperty* cuPoolProp);
     int32_t resRelinquishCuPool(uint64_t reservePoolId);
@@ -530,7 +537,10 @@ class system {
 
     int32_t resAllocCuWithLoad(cuProperty* cuProp, std::string xclbin, cuResource* cuRes, bool updateId);
     int32_t resAllocCuLeastUsedWithLoad(cuProperty* cuProp, std::string xclbin, cuResource* cuRes, bool updateId);
-    int32_t resLoadAndAllocAllCu(std::string xclbin, uint64_t clientId, cuListResource* cuListRes);
+    int32_t resLoadAndAllocAllCu(std::string xclbin,
+                                 uint64_t clientId,
+                                 pid_t clientProcessId,
+                                 cuListResource* cuListRes);
 
     /* xrm plugin related functions */
     void flushXrmPluginInfo(uint32_t xrmPluginId);

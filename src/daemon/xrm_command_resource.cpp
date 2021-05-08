@@ -76,6 +76,7 @@ void xrm::cuAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     auto requestLoadUnified = incmd.get<int32_t>("request.parameters.requestLoadUnified");
     auto requestLoadOriginal = incmd.get<int32_t>("request.parameters.requestLoadOriginal");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto clientProcessId = incmd.get<pid_t>("request.parameters.clientProcessId");
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
     strncpy(cuProp.kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
     strncpy(cuProp.kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
@@ -87,6 +88,7 @@ void xrm::cuAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuProp.requestLoadUnified = requestLoadUnified;
     cuProp.requestLoadOriginal = requestLoadOriginal;
     cuProp.clientId = clientId;
+    cuProp.clientProcessId = clientProcessId;
     cuProp.poolId = poolId;
 
     bool update_id = true;
@@ -129,6 +131,7 @@ void xrm::cuAllocFromDevCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp)
     auto requestLoadUnified = incmd.get<int32_t>("request.parameters.requestLoadUnified");
     auto requestLoadOriginal = incmd.get<int32_t>("request.parameters.requestLoadOriginal");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto clientProcessId = incmd.get<pid_t>("request.parameters.clientProcessId");
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
     strncpy(cuProp.kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
     strncpy(cuProp.kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
@@ -140,6 +143,7 @@ void xrm::cuAllocFromDevCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp)
     cuProp.requestLoadUnified = requestLoadUnified;
     cuProp.requestLoadOriginal = requestLoadOriginal;
     cuProp.clientId = clientId;
+    cuProp.clientProcessId = clientProcessId;
     cuProp.poolId = poolId;
 
     bool update_id = true;
@@ -181,6 +185,7 @@ void xrm::cuListAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuListProp.cuNum = cuNum;
     auto sameDevice = incmd.get<int32_t>("request.parameters.sameDevice");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto clientProcessId = incmd.get<pid_t>("request.parameters.clientProcessId");
     if (sameDevice == 0)
         cuListProp.sameDevice = false;
     else
@@ -202,6 +207,7 @@ void xrm::cuListAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
         cuListProp.cuProps[i].requestLoadUnified = requestLoadUnified;
         cuListProp.cuProps[i].requestLoadOriginal = requestLoadOriginal;
         cuListProp.cuProps[i].clientId = clientId;
+        cuListProp.cuProps[i].clientProcessId = clientProcessId;
         cuListProp.cuProps[i].poolId = poolId;
     }
 
@@ -246,9 +252,11 @@ void xrm::cuGroupAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
 
     auto udfCuGroupName = incmd.get<std::string>("request.parameters.udfCuGroupName");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto clientProcessId = incmd.get<pid_t>("request.parameters.clientProcessId");
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
     cuGroupProp.udfCuGroupName = udfCuGroupName;
     cuGroupProp.clientId = clientId;
+    cuGroupProp.clientProcessId = clientProcessId;
     cuGroupProp.poolId = poolId;
 
     memset(&cuGroupRes, 0, sizeof(cuGroupResource));
@@ -629,6 +637,7 @@ void xrm::checkCuAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& ou
     auto requestLoadUnified = incmd.get<int32_t>("request.parameters.requestLoadUnified");
     auto requestLoadOriginal = incmd.get<int32_t>("request.parameters.requestLoadOriginal");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto clientProcessId = incmd.get<pid_t>("request.parameters.clientProcessId");
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
     strncpy(cuProp.kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
     strncpy(cuProp.kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
@@ -640,6 +649,7 @@ void xrm::checkCuAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree& ou
     cuProp.requestLoadUnified = requestLoadUnified;
     cuProp.requestLoadOriginal = requestLoadOriginal;
     cuProp.clientId = clientId;
+    cuProp.clientProcessId = clientProcessId;
     cuProp.poolId = poolId;
 
     bool update_id = true;
@@ -695,6 +705,7 @@ void xrm::checkCuListAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
     cuListProp.cuNum = cuNum;
     auto sameDevice = incmd.get<int32_t>("request.parameters.sameDevice");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto clientProcessId = incmd.get<pid_t>("request.parameters.clientProcessId");
     if (sameDevice == 0)
         cuListProp.sameDevice = false;
     else
@@ -716,6 +727,7 @@ void xrm::checkCuListAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
         cuListProp.cuProps[i].requestLoadUnified = requestLoadUnified;
         cuListProp.cuProps[i].requestLoadOriginal = requestLoadOriginal;
         cuListProp.cuProps[i].clientId = clientId;
+        cuListProp.cuProps[i].clientProcessId = clientProcessId;
         cuListProp.cuProps[i].poolId = poolId;
     }
 
@@ -768,9 +780,11 @@ void xrm::checkCuGroupAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptre
 
     auto udfCuGroupName = incmd.get<std::string>("request.parameters.udfCuGroupName");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto clientProcessId = incmd.get<pid_t>("request.parameters.clientProcessId");
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
     cuGroupProp.udfCuGroupName = udfCuGroupName;
     cuGroupProp.clientId = clientId;
+    cuGroupProp.clientProcessId = clientProcessId;
     cuGroupProp.poolId = poolId;
 
     m_system->enterLock();
@@ -828,6 +842,7 @@ void xrm::checkCuPoolAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
     auto cuNum = incmd.get<int32_t>("request.parameters.cuNum");
     cuListProp->cuNum = cuNum;
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto clientProcessId = incmd.get<pid_t>("request.parameters.clientProcessId");
     auto sameDevice = incmd.get<int32_t>("request.parameters.sameDevice");
     if (sameDevice == 0)
         cuListProp->sameDevice = false;
@@ -849,6 +864,7 @@ void xrm::checkCuPoolAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
         cuListProp->cuProps[i].requestLoadUnified = requestLoadUnified;
         cuListProp->cuProps[i].requestLoadOriginal = requestLoadOriginal;
         cuListProp->cuProps[i].clientId = clientId;
+        cuListProp->cuProps[i].clientProcessId = clientProcessId;
         cuListProp->cuProps[i].poolId = 0;
     }
     auto uuidStr = incmd.get<std::string>("request.parameters.xclbinUuidStr");
@@ -865,7 +881,7 @@ void xrm::checkCuPoolAvailableNumCommand::processCmd(pt::ptree& incmd, pt::ptree
         } else {
             break;
         }
-    }  while (poolId != 0);
+    } while (poolId != 0);
     if (availablePoolNum > 0) {
         /* get the available cu pool id */
         for (i = 0; i < availablePoolNum; i++) m_system->resRelinquishCuPool(cuPoolId[i]);
@@ -895,6 +911,7 @@ void xrm::cuPoolReserveCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
     cuListProp->cuNum = cuNum;
     auto sameDevice = incmd.get<int32_t>("request.parameters.cuList.sameDevice");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto clientProcessId = incmd.get<pid_t>("request.parameters.clientProcessId");
     if (sameDevice == 0)
         cuListProp->sameDevice = false;
     else
@@ -917,6 +934,7 @@ void xrm::cuPoolReserveCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
         cuListProp->cuProps[i].requestLoadUnified = requestLoadUnified;
         cuListProp->cuProps[i].requestLoadOriginal = requestLoadOriginal;
         cuListProp->cuProps[i].clientId = clientId;
+        cuListProp->cuProps[i].clientProcessId = clientProcessId;
         cuListProp->cuProps[i].poolId = 0;
     }
     auto uuidStr = incmd.get<std::string>("request.parameters.xclbinUuidStr");
@@ -924,6 +942,7 @@ void xrm::cuPoolReserveCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
     auto xclbinNum = incmd.get<int32_t>("request.parameters.xclbinNum");
     cuPoolProp.xclbinNum = xclbinNum;
     cuPoolProp.clientId = clientId;
+    cuPoolProp.clientProcessId = clientProcessId;
 
     m_system->enterLock();
     uint64_t poolId = m_system->resReserveCuPool(&cuPoolProp);
@@ -997,6 +1016,7 @@ void xrm::cuAllocWithLoadCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp
     auto requestLoadUnified = incmd.get<int32_t>("request.parameters.requestLoadUnified");
     auto requestLoadOriginal = incmd.get<int32_t>("request.parameters.requestLoadOriginal");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto clientProcessId = incmd.get<pid_t>("request.parameters.clientProcessId");
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
     auto xclbinFileName = incmd.get<std::string>("request.parameters.xclbinFileName");
     strncpy(cuProp.kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
@@ -1009,6 +1029,7 @@ void xrm::cuAllocWithLoadCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp
     cuProp.requestLoadUnified = requestLoadUnified;
     cuProp.requestLoadOriginal = requestLoadOriginal;
     cuProp.clientId = clientId;
+    cuProp.clientProcessId = clientProcessId;
     cuProp.poolId = poolId;
 
     bool update_id = true;
@@ -1050,6 +1071,7 @@ void xrm::cuAllocLeastUsedWithLoadCommand::processCmd(pt::ptree& incmd, pt::ptre
     auto requestLoadUnified = incmd.get<int32_t>("request.parameters.requestLoadUnified");
     auto requestLoadOriginal = incmd.get<int32_t>("request.parameters.requestLoadOriginal");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto clientProcessId = incmd.get<pid_t>("request.parameters.clientProcessId");
     auto poolId = incmd.get<uint64_t>("request.parameters.poolId");
     auto xclbinFileName = incmd.get<std::string>("request.parameters.xclbinFileName");
     strncpy(cuProp.kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
@@ -1062,6 +1084,7 @@ void xrm::cuAllocLeastUsedWithLoadCommand::processCmd(pt::ptree& incmd, pt::ptre
     cuProp.requestLoadUnified = requestLoadUnified;
     cuProp.requestLoadOriginal = requestLoadOriginal;
     cuProp.clientId = clientId;
+    cuProp.clientProcessId = clientProcessId;
     cuProp.poolId = poolId;
 
     bool update_id = true;
@@ -1099,10 +1122,11 @@ void xrm::loadAndAllCuAllocCommand::processCmd(pt::ptree& incmd, pt::ptree& outr
 
     auto xclbinFileName = incmd.get<std::string>("request.parameters.xclbinFileName");
     auto clientId = incmd.get<uint64_t>("request.parameters.clientId");
+    auto clientProcessId = incmd.get<pid_t>("request.parameters.clientProcessId");
 
     memset(&cuListRes, 0, sizeof(cuListResource));
     m_system->enterLock();
-    int32_t ret = m_system->resLoadAndAllocAllCu(xclbinFileName, clientId, &cuListRes);
+    int32_t ret = m_system->resLoadAndAllocAllCu(xclbinFileName, clientId, clientProcessId, &cuListRes);
     m_system->exitLock();
     outrsp.put("response.status.value", ret);
     if (ret == XRM_SUCCESS) {

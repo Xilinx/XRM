@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020, Xilinx Inc - All rights reserved
+ * Copyright (C) 2019-2021, Xilinx Inc - All rights reserved
  * Xilinx Resouce Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may
@@ -44,6 +44,7 @@ class session : public std::enable_shared_from_this<session> {
     void setRegistry(xrm::commandRegistry* registry) { m_registry = registry; }
 
     uint64_t getClientId() const { return m_clientId; }
+    pid_t getClientProcessId() const { return m_clientProcessId; }
 
    private:
     void doRead();
@@ -54,6 +55,7 @@ class session : public std::enable_shared_from_this<session> {
 
     tcp::socket m_socket;
     uint64_t m_clientId = 0;
+    pid_t m_clientProcessId = 0;
     char m_indata[max_length];
     char m_outdata[max_length];
     boost::property_tree::ptree m_cmdtree;
