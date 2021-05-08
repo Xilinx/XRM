@@ -2047,6 +2047,162 @@ cu_alloc_from_dev_loop:
 }
 
 /*
+ * Alloc one cu (compute unit) from target device based on the request property.
+ *
+ * XRM_SUCCESS: allocated resouce is recorded by cuRes
+ * Otherwise: failed to allocate the cu resource
+ *
+ * Lock: should enter lock during the cu allocation
+ */
+int32_t xrm::system::resAllocLeastUsedCuFromDev(int32_t deviceId, cuProperty* cuProp, cuResource* cuRes, bool updateId) {
+    deviceData* dev;
+    cuData* cu;
+    int32_t ret = 0;
+    bool kernelNameEqual, kernelAliasEqual, cuNameEqual;
+    uint64_t clientId = cuProp->clientId;
+    int32_t cuId;
+    std::vector<std::tuple<int32_t,int32_t>> leastUsedCus;
+    bool cuAcquired = false;
+
+    if ((deviceId < 0) || (deviceId > (m_numDevice - 1))) {
+        logMsg(XRM_LOG_ERROR, "deviceId (%d) is out of range\n", deviceId);
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuProp == NULL) || (cuRes == NULL)) {
+        logMsg(XRM_LOG_ERROR, "cuProp or cuRes is NULL\n");
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0') && (cuProp->cuName[0] == '\0')) {
+        logMsg(XRM_LOG_ERROR, "None of kernel name, kernel alias and cu name are presented\n");
+        return (XRM_ERROR_INVALID);
+    }
+
+    dev = &m_devList[deviceId];
+    if (!dev->isLoaded) {
+        return (XRM_ERROR_NO_DEV);
+    }
+    if ((dev->isExcl) && (dev->clientProcs[0].clientId != clientId)) {
+        /* the device is used by other client exclusively */
+        return (XRM_ERROR_NO_DEV);
+    }
+    ret = allocClientFromDev(deviceId, cuProp);
+    if (ret < 0) {
+        return (XRM_ERROR_NO_DEV);
+    }
+
+    /*
+     * Now check whether matching cu is on allocated device
+     * and try to allocate requested cu.
+     */
+    for (cuId = 0; cuId < XRM_MAX_XILINX_KERNELS && cuId < dev->xclbinInfo.numCu && !cuAcquired; cuId++) {
+        cu = &dev->xclbinInfo.cuList[cuId];
+
+        /* first attempt to use a new kernel */
+        if (cu->numClient > 0) continue;
+        /*
+         * compare, 0: equal
+         *
+         * kernel name is presented, compare it; otherwise no need to compare
+         */
+        kernelNameEqual = true;
+        if (cuProp->kernelName[0] != '\0') {
+            if (cu->kernelName.compare(cuProp->kernelName)) kernelNameEqual = false;
+        }
+        /* kernel alias is presented, compare it; otherwise no need to compare */
+        kernelAliasEqual = true;
+        if (cuProp->kernelAlias[0] != '\0') {
+            if (cu->kernelAlias.compare(cuProp->kernelAlias)) kernelAliasEqual = false;
+        }
+        /* cu name is presented, compare it; otherwise no need to compare */
+        cuNameEqual = true;
+        if (cuProp->cuName[0] != '\0') {
+            if (cu->cuName.compare(cuProp->cuName)) cuNameEqual = false;
+        }
+        if (!(kernelNameEqual && kernelAliasEqual && cuNameEqual)) continue;
+        /* alloc channel and register client id */
+        ret = allocChanClientFromCu(cu, cuProp, cuRes);
+        if (ret != XRM_SUCCESS) {
+            continue;
+        }
+
+        cuRes->deviceId = deviceId;
+        cuRes->cuId = cuId;
+        strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
+        strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
+        cuAcquired = true;
+    }
+
+    if (!cuAcquired) {
+        goto cu_alloc_from_dev_loop;
+    }
+
+    if (cuAcquired) {
+        if (updateId) updateAllocServiceId();
+        return (XRM_SUCCESS);
+    } else {
+        releaseClientOnDev(deviceId, clientId);
+        return (XRM_ERROR_NO_KERNEL);
+    }
+
+cu_alloc_from_dev_loop:
+   for (cuId = 0; cuId < XRM_MAX_XILINX_KERNELS && cuId < dev->xclbinInfo.numCu; cuId++) {
+       cu = &dev->xclbinInfo.cuList[cuId];
+
+       /*
+        * compare, 0: equal
+        *
+        * kernel name is presented, compare it; otherwise no need to compare
+        */
+       kernelNameEqual = true;
+       if (cuProp->kernelName[0] != '\0') {
+           if (cu->kernelName.compare(cuProp->kernelName)) kernelNameEqual = false;
+       }
+       /* kernel alias is presented, compare it; otherwise no need to compare */
+       kernelAliasEqual = true;
+       if (cuProp->kernelAlias[0] != '\0') {
+           if (cu->kernelAlias.compare(cuProp->kernelAlias)) kernelAliasEqual = false;
+       }
+       /* cu name is presented, compare it; otherwise no need to compare */
+       cuNameEqual = true;
+       if (cuProp->cuName[0] != '\0') {
+           if (cu->cuName.compare(cuProp->cuName)) cuNameEqual = false;
+       }
+       if (!(kernelNameEqual && kernelAliasEqual && cuNameEqual)) continue;
+
+       int64_t resultLoad =  cuProp->requestLoadUnified + cu->totalUsedLoadUnified;
+       if ( resultLoad <= XRM_MAX_CHAN_LOAD_GRANULARITY_1000000) {
+           // We've found a potential CU, lets note down its load, and cuId
+           leastUsedCus.emplace_back(cu->totalUsedLoadUnified, cuId);
+       }
+   }
+
+   std::sort(leastUsedCus.begin(),leastUsedCus.end());
+
+   ret = XRM_ERROR_NO_KERNEL; // If no candidates, we fail
+
+   for(const auto& candidate : leastUsedCus) {
+       cuId = std::get<1>(candidate);
+
+       cu = &dev->xclbinInfo.cuList[cuId];
+
+       ret = allocChanClientFromCu(cu, cuProp, cuRes);
+       if (ret != XRM_SUCCESS) {
+           releaseClientOnDev(deviceId, clientId);
+           continue;
+       }
+       cuRes->deviceId = deviceId;
+       cuRes->cuId = cuId;
+       strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
+       strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
+       cuAcquired = true;
+       if (updateId) updateAllocServiceId();
+       
+           return (XRM_SUCCESS);
+    }
+    return (XRM_ERROR_NO_KERNEL);
+
+}
+/*
  * Allocate one cu (compute unit) based on the request property. if fail to allocate cu, then try
  * to load the xclbin to one device and allocate cu from this device.
  *

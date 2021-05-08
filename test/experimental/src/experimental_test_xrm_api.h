@@ -36,6 +36,7 @@ extern "C" {
 
 void testXrmFunctions(void);
 void xrmCuAllocLeastUsedWithLoadTest(xrmContext* ctx);
+void xrmCuAllocLeastUsedFromDevTest(xrmContext* ctx);
 
 #ifdef __cplusplus
 }

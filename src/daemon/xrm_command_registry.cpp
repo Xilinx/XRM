@@ -88,6 +88,9 @@ void xrm::commandRegistry::registerAll(system& sys) {
 
     auto cuAllocFromDev = new xrm::cuAllocFromDevCommand(sys);
     registerCmd(*cuAllocFromDev);
+    
+    auto cuAllocLeastUsedFromDev = new xrm::cuAllocLeastUsedFromDevCommand(sys);
+    registerCmd(*cuAllocLeastUsedFromDev);
 
     auto cuRelease = new xrm::cuReleaseCommand(sys);
     registerCmd(*cuRelease);

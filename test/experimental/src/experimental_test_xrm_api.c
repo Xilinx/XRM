@@ -91,6 +91,69 @@ void xrmCuAllocLeastUsedWithLoadTest(xrmContext* ctx) {
     printf("<<<<<<<==  end the xrm allocation least used test ===>>>>>>>>\n");
 }
 
+void xrmCuAllocLeastUsedFromDevTest(xrmContext* ctx) {
+    int32_t ret;
+    printf("<<<<<<<==  start the xrm cu alloc least used from device ===>>>>>>>>\n");
+    if (ctx == NULL) {
+        printf("ctx is null, fail to alloc cu list\n");
+        return;
+    }
+
+    // alloc scaler cu
+    xrmCuProperty scalerCuProp;
+    xrmCuResource scalerCuRes;
+
+    memset(&scalerCuProp, 0, sizeof(xrmCuProperty));
+    memset(&scalerCuRes, 0, sizeof(xrmCuResource));
+    strcpy(scalerCuProp.kernelName, "dpdpuv3_wrapper");
+    strcpy(scalerCuProp.kernelAlias, "");
+    scalerCuProp.devExcl = false;
+    scalerCuProp.requestLoad = 25;
+    scalerCuProp.poolId = 0;
+    int32_t deviceId=0; 
+    printf("Test 2-1: alloc scaler least used\n");
+    printf("    scaler cu prop: kernelName is %s\n", scalerCuProp.kernelName);
+    printf("    scaler cu prop: kernelAlias is %s\n", scalerCuProp.kernelAlias);
+
+    const int niterations = 17;
+    int i;
+    for (i = 0; i < niterations; i++) {
+
+    printf("Test 2-2: Alloc scaler cu\n");
+    ret = xrmCuAllocLeastUsedFromDev(ctx,deviceId, &scalerCuProp, &scalerCuRes);
+    if (ret != 0) {
+        printf("xrmCuAllocLeastUsedFromDev: fail to alloc scaler cu\n");
+    } else {
+            printf("Allocated scaler cu least used: \n");
+            printf("   xclbinFileName is:  %s\n", scalerCuRes.xclbinFileName);
+            printf("   kernelPluginFileName is:  %s\n", scalerCuRes.kernelPluginFileName);
+            printf("   kernelName is:  %s\n", scalerCuRes.kernelName);
+            printf("   instanceName is:  %s\n", scalerCuRes.instanceName);
+            printf("   cuName is:  %s\n", scalerCuRes.cuName);
+            printf("   kernelAlias is:  %s\n", scalerCuRes.kernelAlias);
+            printf("   deviceId is:  %d\n", scalerCuRes.deviceId);
+            printf("   cuId is:  %d\n", scalerCuRes.cuId);
+            printf("   channelId is:  %d\n", scalerCuRes.channelId);
+            printf("   cuType is:  %d\n", scalerCuRes.cuType);
+            printf("   baseAddr is:  0x%lx\n", scalerCuRes.baseAddr);
+            printf("   membankId is:  %d\n", scalerCuRes.membankId);
+            printf("   membankType is:  %d\n", scalerCuRes.membankType);
+            printf("   membankSize is:  0x%lx\n", scalerCuRes.membankSize);
+            printf("   membankBaseAddr is:  0x%lx\n", scalerCuRes.membankBaseAddr);
+            printf("   allocServiceId is:  %lu\n", scalerCuRes.allocServiceId);
+            printf("   poolId is:  %lu\n", scalerCuRes.poolId);
+            printf("   channelLoad is:  %d\n", scalerCuRes.channelLoad);
+        }
+    }
+
+    printf("Test 2-3:  release scaler cu\n");
+    if (xrmCuRelease(ctx, &scalerCuRes))
+        printf("success to  release scaler cu\n");
+    else
+        printf("fail to release scaler cu\n");
+
+    printf("<<<<<<<==  end the xrm allocation least used test ===>>>>>>>>\n");
+}
 void testXrmFunctions(void) {
     printf("<<<<<<<==  Start the xrm function test ===>>>>>>>>\n\n");
     xrmContext* ctx = (xrmContext*)xrmCreateContext(XRM_API_VERSION_1);
@@ -101,6 +164,7 @@ void testXrmFunctions(void) {
     printf("Test 0-1: create context success\n");
 
     xrmCuAllocLeastUsedWithLoadTest(ctx);
+    xrmCuAllocLeastUsedFromDevTest(ctx);
     
     printf("Test 0-2: destroy context\n");
     if (xrmDestroyContext(ctx) != XRM_SUCCESS)

@@ -517,6 +517,7 @@ class system {
     /* following alloc and free function need to do lock protect */
     int32_t resAllocCu(cuProperty* cuProp, cuResource* cuRes, bool updateId);
     int32_t resAllocCuFromDev(int32_t deviceId, cuProperty* cuProp, cuResource* cuRes, bool updateId);
+    int32_t resAllocLeastUsedCuFromDev(int32_t deviceId, cuProperty* cuProp, cuResource* cuRes, bool updateId);
     int32_t resAllocCuList(cuListProperty* cuListProp, cuListResource* cuListRes);
     int32_t resAllocationQuery(allocationQueryInfo* allocQuery, cuListResource* cuListRes);
     int32_t resReleaseCu(cuResource* cuRes);
