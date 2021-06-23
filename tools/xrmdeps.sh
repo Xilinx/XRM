@@ -7,7 +7,7 @@ ARCH=`uname -m`
 
 usage()
 {
-    echo "Usage: xrtdeps.sh [options]"
+    echo "Usage: xrmdeps.sh [options]"
     echo
     echo "[-help]       List this help"
     echo "[-validate]   Validate that required packages are installed"
@@ -56,7 +56,6 @@ rh_package_list()
      boost-thread \
      pkgconfig \
      rpm-build \
-     xrt \
     )
 
     if [ $FLAVOR == "amzn" ]; then
@@ -87,7 +86,6 @@ ub_package_list()
      pkg-config \
      lsb-release \
      libsystemd-dev \
-     xrt \
     )
 }
 
@@ -109,7 +107,6 @@ fd_package_list()
      pkgconfig \
      redhat-lsb \
      rpm-build \
-     xrt \
     )
 }
 
