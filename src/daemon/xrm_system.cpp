@@ -746,6 +746,7 @@ void xrm::system::flushDevData(int32_t devId) {
         for (i = 0; i < XRM_MAX_XILINX_KERNELS; i++) {
             cu = &xclbinInfo->cuList[i];
             cu->cuType = CU_NULL;
+            cu->ipLayoutIndex = 0;
             cu->kernelName = "";
             cu->kernelAlias = "";
             cu->cuName = "";
@@ -860,9 +861,9 @@ int32_t xrm::system::xclbinGetInfo(int32_t devId, std::string& errmsg) {
     for (int32_t cuIdx = 0; cuIdx < xclbinInfo->numCu; cuIdx++) {
         for (int32_t connectIdx = 0; connectIdx < xclbinInfo->numConnect; connectIdx++) {
             connectData* conn = &xclbinInfo->connectList[connectIdx];
-            if (conn->ipLayoutIndex == cuIdx) {
+            cuData* cu = &xclbinInfo->cuList[cuIdx];
+            if (conn->ipLayoutIndex == cu->ipLayoutIndex) {
                 memTopologyData* topology = &xclbinInfo->memTopologyList[conn->memDataIndex];
-                cuData* cu = &xclbinInfo->cuList[cuIdx];
                 cu->membankId = conn->memDataIndex;
                 cu->membankType = topology->memType;
                 cu->membankSize = topology->memSize;
@@ -926,6 +927,7 @@ int32_t xrm::system::xclbinGetLayout(int32_t devId, std::string& errmsg) {
                 logMsg(XRM_LOG_NOTICE, "%s : cu id of %s is %d\n", __func__, cuName.c_str(), cuId);
                 cu->cuId = cuId;
             }
+            cu->ipLayoutIndex = xclbinInfo->numCu - 1; // the static index will be index of m_ip_data in xclbin file
 
             cu->cuType = CU_IPKERNEL;
             // cuName (m_name in m_ip_data) is "kerenlName:instanceName"
@@ -967,6 +969,7 @@ int32_t xrm::system::xclbinGetLayout(int32_t devId, std::string& errmsg) {
                 xclbinInfo->numSoftwareCu++;
                 cuData* cu = &xclbinInfo->cuList[xclbinInfo->numCu - 1];
                 cu->cuId = xclbinInfo->numCu - 1;
+                cu->ipLayoutIndex = xclbinInfo->numCu - 1; // the static index will be index of m_ip_data in xclbin file
                 cu->cuType = CU_SOFTKERNEL;
                 /*
                  * mpo_name in soft_kernel is just "kernelName", but not "kernelName:instanceName"
@@ -1308,6 +1311,7 @@ void xrm::system::deviceDumpResource(int32_t devId) {
     for (i = 0; i < xclbinInfo->numCu; i++) {
         cuData* cu = &xclbinInfo->cuList[i];
         logMsg(XRM_LOG_NOTICE, "%s() cu : cuId :%d", __func__, cu->cuId);
+        logMsg(XRM_LOG_NOTICE, "%s() cu : ipLayoutIndex :%d", __func__, cu->ipLayoutIndex);
         logMsg(XRM_LOG_NOTICE, "%s() cu : cuType :%d", __func__, cu->cuType);
         logMsg(XRM_LOG_NOTICE, "%s() cu : kernelName :%s", __func__, cu->kernelName.c_str());
         logMsg(XRM_LOG_NOTICE, "%s() cu : kernelAlias :%s", __func__, cu->kernelAlias.c_str());

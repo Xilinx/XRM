@@ -250,6 +250,7 @@ typedef struct reserveData {
 /* compute unit data */
 typedef struct cuData {
     int32_t cuId; // index on one device, start from 0
+    int32_t ipLayoutIndex;    // static index of m_ip_data in xclbin file
     cuTypes cuType;
     std::string kernelName;   // kernel name, not instance name
     std::string kernelAlias;  // alias of kernel name
