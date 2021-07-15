@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019-2020, Xilinx Inc - All rights reserved
+# Copyright (C) 2019-2021, Xilinx Inc - All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = ../src/lib/xrm.h
+INPUT                  = ../src/lib/xrm.h ../src/lib/experimental/xrm_experimental.h
 
 # The XML_OUTPUT tag is used to specify where the XML pages will be put. If a
 # relative path is entered the value of OUTPUT_DIRECTORY will be put in front of

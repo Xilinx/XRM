@@ -105,6 +105,83 @@ Output example:
     }
 
 
+Disable devices with XRM
+.........................
+
+.. code-block:: bash
+
+    source /opt/xilinx/xrm/setup.sh
+    cd /opt/xilinx/xrm/test
+    xrmadm disable_devices_cmd.json
+
+Input JSON file example ``disable_devices_cmd.json``:
+
+.. code-block:: json
+
+    {
+        "request": {
+            "name": "disableDevices",
+            "requestId": 1,
+            "parameters": {
+                "device": [0,1]
+            }
+        }
+    }
+
+Output example:
+
+.. code-block:: json
+
+    {
+        "response": {
+            "name": "disableDevices",
+            "requestId": "1",
+            "status": "ok",
+            "data": {
+                "ok": "disable devices completed"
+            }
+        }
+    }
+
+
+Enable devices with XRM
+........................
+
+.. code-block:: bash
+
+    source /opt/xilinx/xrm/setup.sh
+    cd /opt/xilinx/xrm/test
+    xrmadm enable_devices_cmd.json
+
+Input JSON file example ``enable_devices_cmd.json``:
+
+.. code-block:: json
+
+    {
+        "request": {
+            "name": "enableDevices",
+            "requestId": 1,
+            "parameters": {
+                "device": [0,1]
+            }
+        }
+    }
+
+Output example:
+
+.. code-block:: json
+
+    {
+        "response": {
+            "name": "enableDevices",
+            "requestId": "1",
+            "status": "ok",
+            "data": {
+                "ok": "enable devices completed"
+            }
+        }
+    }
+
 XRM Plugin Operation
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -219,208 +296,43 @@ Output example:
             "status": "ok",
             "data": {
                 "deviceNumber": "6",
-                "device_0": {
-                    "dsaName    ": "xilinx_twitch_dynamic_5_1",
-                    "xclbinName ": "\/tmp\/xclbins\/test_xrm.xclbin",
-                    "uuid       ": "6b7b13fbff2649048d744307dd711466",
-                    "isExclusive": "false",
-                    "cuNumber   ": "2",
-                    "cu_0": {
-                        "cuId         ": "0",
-                        "cuType       ": "IP Kernel",
-                        "kernelName   ": "krnl_ngcodec_pistachio_enc",
-                        "kernelAlias  ": "ENCODER_VP9_NGCodec",
-                        "instanceName ": "krnl_0",
-                        "cuName       ": "krnl_ngcodec_pistachio_enc:krnl_0",
-                        "kernelPlugin ": "libngcvp9.so",
-                        "maxCapacity  ": "124416000",
-                        "numChanInuse ": "0",
-                        "usedLoad     ": "0",
-                        "reservedLoad ": "0"
-                    },
-                    "cu_1": {
-                        "cuId         ": "1",
-                        "cuType       ": "IP Kernel",
-                        "kernelName   ": "v_abrscaler_top",
-                        "kernelAlias  ": "",
-                        "instanceName ": "krnl_1",
-                        "cuName       ": "v_abrscaler_top:krnl_1",
-                        "kernelPlugin ": "",
-                        "maxCapacity  ": "",
-                        "numChanInuse ": "0",
-                        "usedLoad     ": "0",
-                        "reservedLoad ": "0"
-                    }
-                },
-                "device_1": {
-                    "dsaName    ": "xilinx_twitch_dynamic_5_1",
-                    "xclbinName ": "\/tmp\/xclbins\/test_xrm.xclbin",
-                    "uuid       ": "6b7b13fbff2649048d744307dd711466",
-                    "isExclusive": "false",
-                    "cuNumber   ": "2",
-                    "cu_0": {
-                        "cuId         ": "0",
-                        "cuType       ": "IP Kernel",
-                        "kernelName   ": "krnl_ngcodec_pistachio_enc",
-                        "kernelAlias  ": "ENCODER_VP9_NGCodec",
-                        "instanceName ": "krnl_0",
-                        "cuName       ": "krnl_ngcodec_pistachio_enc:krnl_0",
-                        "kernelPlugin ": "libngcvp9.so",
-                        "maxCapacity  ": "124416000",
-                        "numChanInuse ": "0",
-                        "usedLoad     ": "0",
-                        "reservedLoad ": "0"
-                    },
-                    "cu_1": {
-                        "cuId         ": "1",
-                        "cuType       ": "IP Kernel",
-                        "kernelName   ": "v_abrscaler_top",
-                        "kernelAlias  ": "",
-                        "instanceName ": "krnl_1",
-                        "cuName       ": "v_abrscaler_top:krnl_1",
-                        "kernelPlugin ": "",
-                        "maxCapacity  ": "",
-                        "numChanInuse ": "0",
-                        "usedLoad     ": "0",
-                        "reservedLoad ": "0"
-                    }
-                },
+
+                ......
+
                 "device_2": {
-                    "dsaName    ": "xilinx_twitch_dynamic_5_1",
-                    "xclbinName ": "\/tmp\/xclbins\/test_xrm.xclbin",
-                    "uuid       ": "6b7b13fbff2649048d744307dd711466",
+                    "dsaName    ": "xilinx_u30_gen3x4_base_1",
+                    "xclbinName ": "/tmp/xclbins/test_xrm.xclbin",
+                    "uuid       ": "d1e0415e27d349a29f0fdfa92e69f8ee",
                     "isExclusive": "false",
-                    "cuNumber   ": "2",
-                    "cu_0": {
-                        "cuId         ": "0",
+                    "cuNumber   ": "70",
+
+                    ......
+
+                    "cu_2": {
+                        "cuId         ": "2",
                         "cuType       ": "IP Kernel",
-                        "kernelName   ": "krnl_ngcodec_pistachio_enc",
-                        "kernelAlias  ": "ENCODER_VP9_NGCodec",
-                        "instanceName ": "krnl_0",
-                        "cuName       ": "krnl_ngcodec_pistachio_enc:krnl_0",
-                        "kernelPlugin ": "libngcvp9.so",
-                        "maxCapacity  ": "124416000",
+                        "kernelName   ": "lookahead",
+                        "kernelAlias  ": "LOOKAHEAD_MPSOC",
+                        "instanceName ": "lookahead_2",
+                        "cuName       ": "lookahead:lookahead_2",
+                        "kernelPlugin ": "/opt/xilinx/xma_plugins/libxlookahead.so",
+                        "maxCapacity  ": "497664000",
                         "numChanInuse ": "0",
-                        "usedLoad     ": "0",
-                        "reservedLoad ": "0"
+                        "usedLoad     ": "0 of 1000000",
+                        "reservedLoad ": "0 of 1000000",
+                        "resrvUsedLoad": "0 of 1000000"
                     },
-                    "cu_1": {
-                        "cuId         ": "1",
-                        "cuType       ": "IP Kernel",
-                        "kernelName   ": "v_abrscaler_top",
-                        "kernelAlias  ": "",
-                        "instanceName ": "krnl_1",
-                        "cuName       ": "v_abrscaler_top:krnl_1",
-                        "kernelPlugin ": "",
-                        "maxCapacity  ": "",
-                        "numChanInuse ": "0",
-                        "usedLoad     ": "0",
-                        "reservedLoad ": "0"
-                    }
+
+                    ......
+
                 },
-                "device_3": {
-                    "dsaName    ": "xilinx_twitch_dynamic_5_1",
-                    "xclbinName ": "\/tmp\/xclbins\/test_xrm.xclbin",
-                    "uuid       ": "6b7b13fbff2649048d744307dd711466",
-                    "isExclusive": "false",
-                    "cuNumber   ": "2",
-                    "cu_0": {
-                        "cuId         ": "0",
-                        "cuType       ": "IP Kernel",
-                        "kernelName   ": "krnl_ngcodec_pistachio_enc",
-                        "kernelAlias  ": "ENCODER_VP9_NGCodec",
-                        "instanceName ": "krnl_0",
-                        "cuName       ": "krnl_ngcodec_pistachio_enc:krnl_0",
-                        "kernelPlugin ": "libngcvp9.so",
-                        "maxCapacity  ": "124416000",
-                        "numChanInuse ": "0",
-                        "usedLoad     ": "0",
-                        "reservedLoad ": "0"
-                    },
-                    "cu_1": {
-                        "cuId         ": "1",
-                        "cuType       ": "IP Kernel",
-                        "kernelName   ": "v_abrscaler_top",
-                        "kernelAlias  ": "",
-                        "instanceName ": "krnl_1",
-                        "cuName       ": "v_abrscaler_top:krnl_1",
-                        "kernelPlugin ": "",
-                        "maxCapacity  ": "",
-                        "numChanInuse ": "0",
-                        "usedLoad     ": "0",
-                        "reservedLoad ": "0"
-                    }
-                },
-                "device_4": {
-                    "dsaName    ": "xilinx_twitch_dynamic_5_1",
-                    "xclbinName ": "\/tmp\/xclbins\/test_xrm.xclbin",
-                    "uuid       ": "6b7b13fbff2649048d744307dd711466",
-                    "isExclusive": "false",
-                    "cuNumber   ": "2",
-                    "cu_0": {
-                        "cuId         ": "0",
-                        "cuType       ": "IP Kernel",
-                        "kernelName   ": "krnl_ngcodec_pistachio_enc",
-                        "kernelAlias  ": "ENCODER_VP9_NGCodec",
-                        "instanceName ": "krnl_0",
-                        "cuName       ": "krnl_ngcodec_pistachio_enc:krnl_0",
-                        "kernelPlugin ": "libngcvp9.so",
-                        "maxCapacity  ": "124416000",
-                        "numChanInuse ": "0",
-                        "usedLoad     ": "0",
-                        "reservedLoad ": "0"
-                    },
-                    "cu_1": {
-                        "cuId         ": "1",
-                        "cuType       ": "IP Kernel",
-                        "kernelName   ": "v_abrscaler_top",
-                        "kernelAlias  ": "",
-                        "instanceName ": "krnl_1",
-                        "cuName       ": "v_abrscaler_top:krnl_1",
-                        "kernelPlugin ": "",
-                        "maxCapacity  ": "",
-                        "numChanInuse ": "0",
-                        "usedLoad     ": "0",
-                        "reservedLoad ": "0"
-                    }
-                },
-                "device_5": {
-                    "dsaName    ": "xilinx_twitch_dynamic_5_1",
-                    "xclbinName ": "\/tmp\/xclbins\/test_xrm.xclbin",
-                    "uuid       ": "6b7b13fbff2649048d744307dd711466",
-                    "isExclusive": "false",
-                    "cuNumber   ": "2",
-                    "cu_0": {
-                        "cuId         ": "0",
-                        "cuType       ": "IP Kernel",
-                        "kernelName   ": "krnl_ngcodec_pistachio_enc",
-                        "kernelAlias  ": "ENCODER_VP9_NGCodec",
-                        "instanceName ": "krnl_0",
-                        "cuName       ": "krnl_ngcodec_pistachio_enc:krnl_0",
-                        "kernelPlugin ": "libngcvp9.so",
-                        "maxCapacity  ": "124416000",
-                        "numChanInuse ": "0",
-                        "usedLoad     ": "0",
-                        "reservedLoad ": "0"
-                    },
-                    "cu_1": {
-                        "cuId         ": "1",
-                        "cuType       ": "IP Kernel",
-                        "kernelName   ": "v_abrscaler_top",
-                        "kernelAlias  ": "",
-                        "instanceName ": "krnl_1",
-                        "cuName       ": "v_abrscaler_top:krnl_1",
-                        "kernelPlugin ": "",
-                        "maxCapacity  ": "",
-                        "numChanInuse ": "0",
-                        "usedLoad     ": "0",
-                        "reservedLoad ": "0"
-                    }
-                },
+
+                ......
+
                 "xrmPluginNumber": "1",
                 "xrmPlugin_0": {
                     "xrmPluginName    ": "xrmPluginExample",
-                    "xrmPluginFileName": "\/opt\/xilinx\/xrm\/plugin\/libxrmpluginexample.so"
+                    "xrmPluginFileName": "/opt/xilinx/xrm/plugin/libxrmpluginexample.so"
                 }
             }
         }

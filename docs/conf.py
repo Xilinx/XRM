@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019-2020, Xilinx Inc - All rights reserved
+# Copyright (C) 2019-2021, Xilinx Inc - All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ sys.path.insert(1, os.path.join(tools_dir, 'share/doxyrest_b/sphinx'))
 # -- Project information -----------------------------------------------------
 
 project = 'Xilinx FPGA Resource Manager (XRM)'
-copyright = 'Copyright (C) 2019-2020, Xilinx Inc - All rights reserved'
+copyright = 'Copyright (C) 2019-2021, Xilinx Inc - All rights reserved'
 author = 'Xilinx'
 
 # The short X.Y version

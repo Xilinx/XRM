@@ -1,5 +1,5 @@
 .. 
-   Copyright (C) 2019-2020, Xilinx Inc - All rights reserved
+   Copyright (C) 2019-2021, Xilinx Inc - All rights reserved
   
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ smallest allocation unit is channel, which is percentage of one CU. XRM provider
 command line tool (xrmadm) to download xclbin to device. During the download processing,
 XRM builds up the resource database. XRM daemon (xrmd) is running at background as
 core engine to support resource reservation, relinquish, allocation and release. The
-user APIs are defined in ``xrm.h`` header file.
+user APIs are defined in ``xrm.h`` and ``experimental/xrm_experimental.h`` header file.
 
 XRM Architecture
 ================
