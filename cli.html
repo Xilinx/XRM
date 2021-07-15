@@ -77,7 +77,7 @@
 															<div class="logo-column">
 																<div class="logo">
 																	<a href="https://www.xilinx.com/">
-																	<img src="https://www.xilinx.com/etc.clientlibs/site/clientlibs/xilinx/all/resources/imgs/header/xilinx-header-logo.svg" title="Xilinx Inc"/>
+																	<img src="https://github.com/Xilinx/Image-Collateral/blob/main/xilinx-header-logo.svg?raw=true" title="Xilinx Inc"/>
 																	</a>
 																</div>
 															</div>
@@ -305,7 +305,7 @@
             
             
               <div class="version">
-                2020.2
+                2021.1
               </div>
             
           
@@ -343,6 +343,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#fpga-device-operation">FPGA Device Operation</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#load-xclbin-to-devices">Load xclbin to devices</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#unload-xclbin-from-devices">Unload xclbin from devices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#disable-devices-with-xrm">Disable devices with XRM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#enable-devices-with-xrm">Enable devices with XRM</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#xrm-plugin-operation">XRM Plugin Operation</a><ul>
@@ -359,11 +361,6 @@
 <li class="toctree-l1"><a class="reference internal" href="lib.html">XRM Library C Program APIs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="workflow.html">XRM Application Work Flow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">XRM Application Examples</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Versions</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference external" href="https://xilinx.github.io/XRM/">2020.2</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://xilinx.github.io/XRM/2020.1/">2020.1</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notice</span></p>
 <ul>
@@ -525,6 +522,72 @@ xrmadm unload_devices_cmd.json
 <span class="p">}</span>
 </pre>
 </div>
+<div class="section" id="disable-devices-with-xrm">
+<h3>Disable devices with XRM<a class="headerlink" href="#disable-devices-with-xrm" title="Permalink to this headline">¶</a></h3>
+<pre class="highlight literal-block">
+<span></span><span class="nb">source</span> /opt/xilinx/xrm/setup.sh
+<span class="nb">cd</span> /opt/xilinx/xrm/test
+xrmadm disable_devices_cmd.json
+</pre>
+<p>Input JSON file example <code class="docutils literal notranslate"><span class="pre">disable_devices_cmd.json</span></code>:</p>
+<pre class="highlight literal-block">
+<span></span><span class="p">{</span>
+    <span class="nt">&quot;request&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;disableDevices&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;requestId&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="nt">&quot;parameters&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;device&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre>
+<p>Output example:</p>
+<pre class="highlight literal-block">
+<span></span><span class="p">{</span>
+    <span class="nt">&quot;response&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;disableDevices&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;requestId&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;ok&quot;</span><span class="p">:</span> <span class="s2">&quot;disable devices completed&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre>
+</div>
+<div class="section" id="enable-devices-with-xrm">
+<h3>Enable devices with XRM<a class="headerlink" href="#enable-devices-with-xrm" title="Permalink to this headline">¶</a></h3>
+<pre class="highlight literal-block">
+<span></span><span class="nb">source</span> /opt/xilinx/xrm/setup.sh
+<span class="nb">cd</span> /opt/xilinx/xrm/test
+xrmadm enable_devices_cmd.json
+</pre>
+<p>Input JSON file example <code class="docutils literal notranslate"><span class="pre">enable_devices_cmd.json</span></code>:</p>
+<pre class="highlight literal-block">
+<span></span><span class="p">{</span>
+    <span class="nt">&quot;request&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;enableDevices&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;requestId&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="nt">&quot;parameters&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;device&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre>
+<p>Output example:</p>
+<pre class="highlight literal-block">
+<span></span><span class="p">{</span>
+    <span class="nt">&quot;response&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;enableDevices&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;requestId&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;ok&quot;</span><span class="p">:</span> <span class="s2">&quot;enable devices completed&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre>
+</div>
 </div>
 <div class="section" id="xrm-plugin-operation">
 <h2>XRM Plugin Operation<a class="headerlink" href="#xrm-plugin-operation" title="Permalink to this headline">¶</a></h2>
@@ -614,219 +677,54 @@ xrmadm list_cmd.json
 </pre>
 <p>Output example:</p>
 <pre class="highlight literal-block">
-<span></span><span class="p">{</span>
-    <span class="nt">&quot;response&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;list&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;requestId&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="nt">&quot;deviceNumber&quot;</span><span class="p">:</span> <span class="s2">&quot;6&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;device_0&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">&quot;dsaName    &quot;</span><span class="p">:</span> <span class="s2">&quot;xilinx_twitch_dynamic_5_1&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;xclbinName &quot;</span><span class="p">:</span> <span class="s2">&quot;\/tmp\/xclbins\/test_xrm.xclbin&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;uuid       &quot;</span><span class="p">:</span> <span class="s2">&quot;6b7b13fbff2649048d744307dd711466&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;isExclusive&quot;</span><span class="p">:</span> <span class="s2">&quot;false&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;cuNumber   &quot;</span><span class="p">:</span> <span class="s2">&quot;2&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;cu_0&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;cuId         &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuType       &quot;</span><span class="p">:</span> <span class="s2">&quot;IP Kernel&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelName   &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_ngcodec_pistachio_enc&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelAlias  &quot;</span><span class="p">:</span> <span class="s2">&quot;ENCODER_VP9_NGCodec&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;instanceName &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuName       &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_ngcodec_pistachio_enc:krnl_0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelPlugin &quot;</span><span class="p">:</span> <span class="s2">&quot;libngcvp9.so&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;maxCapacity  &quot;</span><span class="p">:</span> <span class="s2">&quot;124416000&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;numChanInuse &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;usedLoad     &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;reservedLoad &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span>
-                <span class="p">},</span>
-                <span class="nt">&quot;cu_1&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;cuId         &quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuType       &quot;</span><span class="p">:</span> <span class="s2">&quot;IP Kernel&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelName   &quot;</span><span class="p">:</span> <span class="s2">&quot;v_abrscaler_top&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelAlias  &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;instanceName &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuName       &quot;</span><span class="p">:</span> <span class="s2">&quot;v_abrscaler_top:krnl_1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelPlugin &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;maxCapacity  &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;numChanInuse &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;usedLoad     &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;reservedLoad &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span>
-                <span class="p">}</span>
-            <span class="p">},</span>
-            <span class="nt">&quot;device_1&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">&quot;dsaName    &quot;</span><span class="p">:</span> <span class="s2">&quot;xilinx_twitch_dynamic_5_1&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;xclbinName &quot;</span><span class="p">:</span> <span class="s2">&quot;\/tmp\/xclbins\/test_xrm.xclbin&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;uuid       &quot;</span><span class="p">:</span> <span class="s2">&quot;6b7b13fbff2649048d744307dd711466&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;isExclusive&quot;</span><span class="p">:</span> <span class="s2">&quot;false&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;cuNumber   &quot;</span><span class="p">:</span> <span class="s2">&quot;2&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;cu_0&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;cuId         &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuType       &quot;</span><span class="p">:</span> <span class="s2">&quot;IP Kernel&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelName   &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_ngcodec_pistachio_enc&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelAlias  &quot;</span><span class="p">:</span> <span class="s2">&quot;ENCODER_VP9_NGCodec&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;instanceName &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuName       &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_ngcodec_pistachio_enc:krnl_0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelPlugin &quot;</span><span class="p">:</span> <span class="s2">&quot;libngcvp9.so&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;maxCapacity  &quot;</span><span class="p">:</span> <span class="s2">&quot;124416000&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;numChanInuse &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;usedLoad     &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;reservedLoad &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span>
-                <span class="p">},</span>
-                <span class="nt">&quot;cu_1&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;cuId         &quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuType       &quot;</span><span class="p">:</span> <span class="s2">&quot;IP Kernel&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelName   &quot;</span><span class="p">:</span> <span class="s2">&quot;v_abrscaler_top&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelAlias  &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;instanceName &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuName       &quot;</span><span class="p">:</span> <span class="s2">&quot;v_abrscaler_top:krnl_1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelPlugin &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;maxCapacity  &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;numChanInuse &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;usedLoad     &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;reservedLoad &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span>
-                <span class="p">}</span>
-            <span class="p">},</span>
-            <span class="nt">&quot;device_2&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">&quot;dsaName    &quot;</span><span class="p">:</span> <span class="s2">&quot;xilinx_twitch_dynamic_5_1&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;xclbinName &quot;</span><span class="p">:</span> <span class="s2">&quot;\/tmp\/xclbins\/test_xrm.xclbin&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;uuid       &quot;</span><span class="p">:</span> <span class="s2">&quot;6b7b13fbff2649048d744307dd711466&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;isExclusive&quot;</span><span class="p">:</span> <span class="s2">&quot;false&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;cuNumber   &quot;</span><span class="p">:</span> <span class="s2">&quot;2&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;cu_0&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;cuId         &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuType       &quot;</span><span class="p">:</span> <span class="s2">&quot;IP Kernel&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelName   &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_ngcodec_pistachio_enc&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelAlias  &quot;</span><span class="p">:</span> <span class="s2">&quot;ENCODER_VP9_NGCodec&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;instanceName &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuName       &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_ngcodec_pistachio_enc:krnl_0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelPlugin &quot;</span><span class="p">:</span> <span class="s2">&quot;libngcvp9.so&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;maxCapacity  &quot;</span><span class="p">:</span> <span class="s2">&quot;124416000&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;numChanInuse &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;usedLoad     &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;reservedLoad &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span>
-                <span class="p">},</span>
-                <span class="nt">&quot;cu_1&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;cuId         &quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuType       &quot;</span><span class="p">:</span> <span class="s2">&quot;IP Kernel&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelName   &quot;</span><span class="p">:</span> <span class="s2">&quot;v_abrscaler_top&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelAlias  &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;instanceName &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuName       &quot;</span><span class="p">:</span> <span class="s2">&quot;v_abrscaler_top:krnl_1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelPlugin &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;maxCapacity  &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;numChanInuse &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;usedLoad     &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;reservedLoad &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span>
-                <span class="p">}</span>
-            <span class="p">},</span>
-            <span class="nt">&quot;device_3&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">&quot;dsaName    &quot;</span><span class="p">:</span> <span class="s2">&quot;xilinx_twitch_dynamic_5_1&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;xclbinName &quot;</span><span class="p">:</span> <span class="s2">&quot;\/tmp\/xclbins\/test_xrm.xclbin&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;uuid       &quot;</span><span class="p">:</span> <span class="s2">&quot;6b7b13fbff2649048d744307dd711466&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;isExclusive&quot;</span><span class="p">:</span> <span class="s2">&quot;false&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;cuNumber   &quot;</span><span class="p">:</span> <span class="s2">&quot;2&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;cu_0&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;cuId         &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuType       &quot;</span><span class="p">:</span> <span class="s2">&quot;IP Kernel&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelName   &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_ngcodec_pistachio_enc&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelAlias  &quot;</span><span class="p">:</span> <span class="s2">&quot;ENCODER_VP9_NGCodec&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;instanceName &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuName       &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_ngcodec_pistachio_enc:krnl_0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelPlugin &quot;</span><span class="p">:</span> <span class="s2">&quot;libngcvp9.so&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;maxCapacity  &quot;</span><span class="p">:</span> <span class="s2">&quot;124416000&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;numChanInuse &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;usedLoad     &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;reservedLoad &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span>
-                <span class="p">},</span>
-                <span class="nt">&quot;cu_1&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;cuId         &quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuType       &quot;</span><span class="p">:</span> <span class="s2">&quot;IP Kernel&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelName   &quot;</span><span class="p">:</span> <span class="s2">&quot;v_abrscaler_top&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelAlias  &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;instanceName &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuName       &quot;</span><span class="p">:</span> <span class="s2">&quot;v_abrscaler_top:krnl_1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelPlugin &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;maxCapacity  &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;numChanInuse &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;usedLoad     &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;reservedLoad &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span>
-                <span class="p">}</span>
-            <span class="p">},</span>
-            <span class="nt">&quot;device_4&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">&quot;dsaName    &quot;</span><span class="p">:</span> <span class="s2">&quot;xilinx_twitch_dynamic_5_1&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;xclbinName &quot;</span><span class="p">:</span> <span class="s2">&quot;\/tmp\/xclbins\/test_xrm.xclbin&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;uuid       &quot;</span><span class="p">:</span> <span class="s2">&quot;6b7b13fbff2649048d744307dd711466&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;isExclusive&quot;</span><span class="p">:</span> <span class="s2">&quot;false&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;cuNumber   &quot;</span><span class="p">:</span> <span class="s2">&quot;2&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;cu_0&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;cuId         &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuType       &quot;</span><span class="p">:</span> <span class="s2">&quot;IP Kernel&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelName   &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_ngcodec_pistachio_enc&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelAlias  &quot;</span><span class="p">:</span> <span class="s2">&quot;ENCODER_VP9_NGCodec&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;instanceName &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuName       &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_ngcodec_pistachio_enc:krnl_0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelPlugin &quot;</span><span class="p">:</span> <span class="s2">&quot;libngcvp9.so&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;maxCapacity  &quot;</span><span class="p">:</span> <span class="s2">&quot;124416000&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;numChanInuse &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;usedLoad     &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;reservedLoad &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span>
-                <span class="p">},</span>
-                <span class="nt">&quot;cu_1&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;cuId         &quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuType       &quot;</span><span class="p">:</span> <span class="s2">&quot;IP Kernel&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelName   &quot;</span><span class="p">:</span> <span class="s2">&quot;v_abrscaler_top&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelAlias  &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;instanceName &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuName       &quot;</span><span class="p">:</span> <span class="s2">&quot;v_abrscaler_top:krnl_1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelPlugin &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;maxCapacity  &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;numChanInuse &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;usedLoad     &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;reservedLoad &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span>
-                <span class="p">}</span>
-            <span class="p">},</span>
-            <span class="nt">&quot;device_5&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">&quot;dsaName    &quot;</span><span class="p">:</span> <span class="s2">&quot;xilinx_twitch_dynamic_5_1&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;xclbinName &quot;</span><span class="p">:</span> <span class="s2">&quot;\/tmp\/xclbins\/test_xrm.xclbin&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;uuid       &quot;</span><span class="p">:</span> <span class="s2">&quot;6b7b13fbff2649048d744307dd711466&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;isExclusive&quot;</span><span class="p">:</span> <span class="s2">&quot;false&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;cuNumber   &quot;</span><span class="p">:</span> <span class="s2">&quot;2&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;cu_0&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;cuId         &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuType       &quot;</span><span class="p">:</span> <span class="s2">&quot;IP Kernel&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelName   &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_ngcodec_pistachio_enc&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelAlias  &quot;</span><span class="p">:</span> <span class="s2">&quot;ENCODER_VP9_NGCodec&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;instanceName &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuName       &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_ngcodec_pistachio_enc:krnl_0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelPlugin &quot;</span><span class="p">:</span> <span class="s2">&quot;libngcvp9.so&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;maxCapacity  &quot;</span><span class="p">:</span> <span class="s2">&quot;124416000&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;numChanInuse &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;usedLoad     &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;reservedLoad &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span>
-                <span class="p">},</span>
-                <span class="nt">&quot;cu_1&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;cuId         &quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuType       &quot;</span><span class="p">:</span> <span class="s2">&quot;IP Kernel&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelName   &quot;</span><span class="p">:</span> <span class="s2">&quot;v_abrscaler_top&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelAlias  &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;instanceName &quot;</span><span class="p">:</span> <span class="s2">&quot;krnl_1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;cuName       &quot;</span><span class="p">:</span> <span class="s2">&quot;v_abrscaler_top:krnl_1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;kernelPlugin &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;maxCapacity  &quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;numChanInuse &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;usedLoad     &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;reservedLoad &quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span>
-                <span class="p">}</span>
-            <span class="p">},</span>
-            <span class="nt">&quot;xrmPluginNumber&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;xrmPlugin_0&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">&quot;xrmPluginName    &quot;</span><span class="p">:</span> <span class="s2">&quot;xrmPluginExample&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;xrmPluginFileName&quot;</span><span class="p">:</span> <span class="s2">&quot;\/opt\/xilinx\/xrm\/plugin\/libxrmpluginexample.so&quot;</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-<span class="p">}</span>
+<span></span>{
+    &quot;response&quot;: {
+        &quot;name&quot;: &quot;list&quot;,
+        &quot;requestId&quot;: &quot;1&quot;,
+        &quot;status&quot;: &quot;ok&quot;,
+        &quot;data&quot;: {
+            &quot;deviceNumber&quot;: &quot;6&quot;,
+
+            ......
+
+            &quot;device_2&quot;: {
+                &quot;dsaName    &quot;: &quot;xilinx_u30_gen3x4_base_1&quot;,
+                &quot;xclbinName &quot;: &quot;/tmp/xclbins/test_xrm.xclbin&quot;,
+                &quot;uuid       &quot;: &quot;d1e0415e27d349a29f0fdfa92e69f8ee&quot;,
+                &quot;isExclusive&quot;: &quot;false&quot;,
+                &quot;cuNumber   &quot;: &quot;70&quot;,
+
+                ......
+
+                &quot;cu_2&quot;: {
+                    &quot;cuId         &quot;: &quot;2&quot;,
+                    &quot;cuType       &quot;: &quot;IP Kernel&quot;,
+                    &quot;kernelName   &quot;: &quot;lookahead&quot;,
+                    &quot;kernelAlias  &quot;: &quot;LOOKAHEAD_MPSOC&quot;,
+                    &quot;instanceName &quot;: &quot;lookahead_2&quot;,
+                    &quot;cuName       &quot;: &quot;lookahead:lookahead_2&quot;,
+                    &quot;kernelPlugin &quot;: &quot;/opt/xilinx/xma_plugins/libxlookahead.so&quot;,
+                    &quot;maxCapacity  &quot;: &quot;497664000&quot;,
+                    &quot;numChanInuse &quot;: &quot;0&quot;,
+                    &quot;usedLoad     &quot;: &quot;0 of 1000000&quot;,
+                    &quot;reservedLoad &quot;: &quot;0 of 1000000&quot;,
+                    &quot;resrvUsedLoad&quot;: &quot;0 of 1000000&quot;
+                },
+
+                ......
+
+            },
+
+            ......
+
+            &quot;xrmPluginNumber&quot;: &quot;1&quot;,
+            &quot;xrmPlugin_0&quot;: {
+                &quot;xrmPluginName    &quot;: &quot;xrmPluginExample&quot;,
+                &quot;xrmPluginFileName&quot;: &quot;/opt/xilinx/xrm/plugin/libxrmpluginexample.so&quot;
+            }
+        }
+    }
+}
 </pre>
 </div>
 </div>
@@ -954,7 +852,7 @@ xrmadm list_cmd.json
 														<div class="col-md-pull-6 col-lg-pull-6 col-md-6 col-lg-6">
 															<span class="copyright">
                                   
-                                  &copy; Copyright (C) 2019-2020, Xilinx Inc - All rights reserved
+                                  &copy; Copyright (C) 2019-2021, Xilinx Inc - All rights reserved
                               </span>
 															<ul class="list-inline sub-menu">
 																<li>

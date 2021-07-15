@@ -77,7 +77,7 @@
 															<div class="logo-column">
 																<div class="logo">
 																	<a href="https://www.xilinx.com/">
-																	<img src="https://www.xilinx.com/etc.clientlibs/site/clientlibs/xilinx/all/resources/imgs/header/xilinx-header-logo.svg" title="Xilinx Inc"/>
+																	<img src="https://github.com/Xilinx/Image-Collateral/blob/main/xilinx-header-logo.svg?raw=true" title="Xilinx Inc"/>
 																	</a>
 																</div>
 															</div>
@@ -305,7 +305,7 @@
             
             
               <div class="version">
-                2020.2
+                2021.1
               </div>
             
           
@@ -344,12 +344,17 @@
 <li class="toctree-l2"><a class="reference internal" href="#global-namespace">Global Namespace</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#global-functions">Global Functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcuallocleastusedwithload">xrmCuAllocLeastUsedWithLoad</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcuallocleastusedfromdev">xrmCuAllocLeastUsedFromDev</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#xrmcreatecontext">xrmCreateContext</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#xrmdestroycontext">xrmDestroyContext</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#xrmisdaemonrunning">xrmIsDaemonRunning</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmenableonedevice">xrmEnableOneDevice</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmdisableonedevice">xrmDisableOneDevice</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#xrmloadonedevice">xrmLoadOneDevice</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#xrmunloadonedevice">xrmUnloadOneDevice</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#xrmcualloc">xrmCuAlloc</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcuallocfromdev">xrmCuAllocFromDev</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#xrmculistalloc">xrmCuListAlloc</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#xrmcurelease">xrmCuRelease</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#xrmculistrelease">xrmCuListRelease</a></li>
@@ -381,11 +386,6 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="workflow.html">XRM Application Work Flow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">XRM Application Examples</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Versions</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference external" href="https://xilinx.github.io/XRM/">2020.2</a></li>
-<li class="toctree-l1"><a class="reference external" href="https://xilinx.github.io/XRM/2020.1/">2020.1</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notice</span></p>
 <ul>
@@ -504,6 +504,82 @@
 </div>
 <div class="section" id="global-functions">
 <h3>Global Functions<a class="headerlink" href="#global-functions" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="xrmcuallocleastusedwithload">
+<span id="cid-xrmcuallocleastusedwithload"></span><span id="doxid-xrm-experimental-8h-1adb8159d1ec91c7d31dd93134e6ede3a5"></span><h4>xrmCuAllocLeastUsedWithLoad<a class="headerlink" href="#xrmcuallocleastusedwithload" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/experimental/xrm_experimental.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmCuAllocLeastUsedWithLoad</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuProperty.html#doxid-structxrm-cu-property"><span class="std std-ref">xrmCuProperty</span></a><span></span><span class="o">*</span> <span class="n">cuProp</span><span class="p">,</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">xclbinFileName</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuResource.html#doxid-structxrm-cu-resource"><span class="std std-ref">xrmCuResource</span></a><span></span><span class="o">*</span> <span class="n">cuRes</span>
+    <span class="p">)</span>
+</pre>
+<p>Allocates compute unit with a device, cu, and channel given a kernel name or alias or both and request load. This function also provides the xclbin and kernel plugin loaded on the device. If required CU is not available, this function will try to load the xclbin to one device and do the allocation again. If there are no free CUs remaining, the CU with the minimum load which supports the requested capacity will be acquired. Additionally, it strictly enforces that the allocated CU comes from a device that was loaded with the user specified xclbinFileName.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a></td>
+</tr>
+<tr class="row-even"><td>cuProp</td>
+<td>the property of cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. requestLoad: request load, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: request to allocate cu from specified resource pool.</td>
+</tr>
+<tr class="row-odd"><td>xclbinFileName</td>
+<td>xclbin file (full path and name)</td>
+</tr>
+<tr class="row-even"><td>cuRes</td>
+<td>cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: id of the cu pool this cu comes from, the default pool id is 0.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, 0 on success or appropriate error number</p>
+</div>
+<div class="section" id="xrmcuallocleastusedfromdev">
+<span id="cid-xrmcuallocleastusedfromdev"></span><span id="doxid-xrm-experimental-8h-1a1001d12ef4fa89c8b42ed225c27d9369"></span><h4>xrmCuAllocLeastUsedFromDev<a class="headerlink" href="#xrmcuallocleastusedfromdev" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/experimental/xrm_experimental.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmCuAllocLeastUsedFromDev</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <span class="kt">int32_t</span> <span class="n">deviceId</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuProperty.html#doxid-structxrm-cu-property"><span class="std std-ref">xrmCuProperty</span></a><span></span><span class="o">*</span> <span class="n">cuProp</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuResource.html#doxid-structxrm-cu-resource"><span class="std std-ref">xrmCuResource</span></a><span></span><span class="o">*</span> <span class="n">cuRes</span>
+    <span class="p">)</span>
+</pre>
+<p>Allocates compute unit from specified device given a kernel name or alias or both and request load. This function also provides the xclbin and kernel plugin loaded on the device.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a></td>
+</tr>
+<tr class="row-even"><td>deviceId</td>
+<td>the id of target device to allocate the cu.</td>
+</tr>
+<tr class="row-odd"><td>cuProp</td>
+<td>the property of requested cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. requestLoad: request load, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: request to allocate cu from specified resource pool</td>
+</tr>
+<tr class="row-even"><td>cuRes</td>
+<td>the cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: id of the cu pool this cu comes from, the system default pool id is 0.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, 0 on success or appropriate error number</p>
+</div>
 <div class="section" id="xrmcreatecontext">
 <span id="cid-xrmcreatecontext"></span><span id="doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"></span><h4>xrmCreateContext<a class="headerlink" href="#xrmcreatecontext" title="Permalink to this headline">¶</a></h4>
 <pre class="highlight literal-block">
@@ -575,6 +651,66 @@
 </table>
 <p class="rubric">Returns:</p>
 <p>bool, true on running or false on NOT running</p>
+</div>
+<div class="section" id="xrmenableonedevice">
+<span id="cid-xrmenableonedevice"></span><span id="doxid-xrm-8h-1ab5a762ec475f69b86c7679e5d536296a"></span><h4>xrmEnableOneDevice<a class="headerlink" href="#xrmenableonedevice" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmEnableOneDevice</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <span class="kt">int32_t</span> <span class="n">deviceId</span>
+    <span class="p">)</span>
+</pre>
+<p>Enable one device.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a></td>
+</tr>
+<tr class="row-even"><td>deviceId</td>
+<td>the device id to enable</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>0 on success or appropriate error number</p>
+</div>
+<div class="section" id="xrmdisableonedevice">
+<span id="cid-xrmdisableonedevice"></span><span id="doxid-xrm-8h-1a5bafab50fc561f879757f4061ee034fe"></span><h4>xrmDisableOneDevice<a class="headerlink" href="#xrmdisableonedevice" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmDisableOneDevice</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <span class="kt">int32_t</span> <span class="n">deviceId</span>
+    <span class="p">)</span>
+</pre>
+<p>Disable one device.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a></td>
+</tr>
+<tr class="row-even"><td>deviceId</td>
+<td>the device id to disable</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, 0 on success or appropriate error number</p>
 </div>
 <div class="section" id="xrmloadonedevice">
 <span id="cid-xrmloadonedevice"></span><span id="doxid-xrm-8h-1a3947096459bbf7f720a1eee8b121d14f"></span><h4>xrmLoadOneDevice<a class="headerlink" href="#xrmloadonedevice" title="Permalink to this headline">¶</a></h4>
@@ -652,7 +788,7 @@
     <a class="reference internal" href="rst_libapi/struct_xrmCuResource.html#doxid-structxrm-cu-resource"><span class="std std-ref">xrmCuResource</span></a><span></span><span class="o">*</span> <span class="n">cuRes</span>
     <span class="p">)</span>
 </pre>
-<p>Allocates compute unit with a device, cu, and channel given a kernel name or alias or both and request load (1 - 100). This function also provides the xclbin and kernel plugin loaded on the device.</p>
+<p>Allocates compute unit with a device, cu, and channel given a kernel name or alias or both and request load. This function also provides the xclbin and kernel plugin loaded on the device.</p>
 <p class="rubric">Parameters:</p>
 <table border="1" class="colwidths-given docutils">
 <colgroup>
@@ -664,10 +800,48 @@
 <td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a></td>
 </tr>
 <tr class="row-even"><td>cuProp</td>
-<td>the property of requested cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. requestLoad: request load (1 - 100). poolId: request to allocate cu from specified resource pool</td>
+<td>the property of requested cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. requestLoad: request load, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: request to allocate cu from specified resource pool</td>
 </tr>
 <tr class="row-odd"><td>cuRes</td>
-<td>the cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu (1 - 100). poolId: id of the cu pool this cu comes from, the system default pool id is 0.</td>
+<td>the cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: id of the cu pool this cu comes from, the system default pool id is 0.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, 0 on success or appropriate error number</p>
+</div>
+<div class="section" id="xrmcuallocfromdev">
+<span id="cid-xrmcuallocfromdev"></span><span id="doxid-xrm-8h-1a672f7fc9d9379754aa2055ed159c8798"></span><h4>xrmCuAllocFromDev<a class="headerlink" href="#xrmcuallocfromdev" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmCuAllocFromDev</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <span class="kt">int32_t</span> <span class="n">deviceId</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuProperty.html#doxid-structxrm-cu-property"><span class="std std-ref">xrmCuProperty</span></a><span></span><span class="o">*</span> <span class="n">cuProp</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuResource.html#doxid-structxrm-cu-resource"><span class="std std-ref">xrmCuResource</span></a><span></span><span class="o">*</span> <span class="n">cuRes</span>
+    <span class="p">)</span>
+</pre>
+<p>Allocates compute unit from specified device given a kernel name or alias or both and request load. This function also provides the xclbin and kernel plugin loaded on the device.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a></td>
+</tr>
+<tr class="row-even"><td>deviceId</td>
+<td>the id of target device to allocate the cu.</td>
+</tr>
+<tr class="row-odd"><td>cuProp</td>
+<td>the property of requested cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. requestLoad: request load, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: request to allocate cu from specified resource pool</td>
+</tr>
+<tr class="row-even"><td>cuRes</td>
+<td>the cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: id of the cu pool this cu comes from, the system default pool id is 0.</td>
 </tr>
 </tbody>
 </table>
@@ -686,7 +860,7 @@
     <a class="reference internal" href="rst_libapi/struct_xrmCuListResource.html#doxid-structxrm-cu-list-resource"><span class="std std-ref">xrmCuListResource</span></a><span></span><span class="o">*</span> <span class="n">cuListRes</span>
     <span class="p">)</span>
 </pre>
-<p>Allocates a list of compute unit resource given a list of kernels’s property with kernel name or alias or both and request load (1 - 100).</p>
+<p>Allocates a list of compute unit resource given a list of kernels’s property with kernel name or alias or both and request load.</p>
 <p class="rubric">Parameters:</p>
 <table border="1" class="colwidths-given docutils">
 <colgroup>
@@ -731,7 +905,7 @@
 <td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a></td>
 </tr>
 <tr class="row-even"><td>cuRes</td>
-<td>the cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu (1 - 100). poolId: id of the cu pool this cu comes from, the system default pool id is 0.</td>
+<td>the cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: id of the cu pool this cu comes from, the system default pool id is 0.</td>
 </tr>
 </tbody>
 </table>
@@ -780,7 +954,7 @@
     <span class="kt">char</span><span class="o">*</span> <span class="n">udfCuGroupName</span>
     <span class="p">)</span>
 </pre>
-<p>Declares user defined cu group type given the specified kernels’s property with cu name (kernelName:instanceName) and request load (1 - 100).</p>
+<p>Declares user defined cu group type given the specified kernels’s property with cu name (kernelName:instanceName) and request load.</p>
 <p class="rubric">Parameters:</p>
 <table border="1" class="colwidths-given docutils">
 <colgroup>
@@ -844,7 +1018,7 @@
     <a class="reference internal" href="rst_libapi/struct_xrmCuGroupResource.html#doxid-structxrm-cu-group-resource"><span class="std std-ref">xrmCuGroupResource</span></a><span></span><span class="o">*</span> <span class="n">cuGroupRes</span>
     <span class="p">)</span>
 </pre>
-<p>Allocates a group of compute unit resource given a user defined group of kernels’s property with cu name (kernelName:instanceName) and request load (1 - 100).</p>
+<p>Allocates a group of compute unit resource given a user defined group of kernels’s property with cu name (kernelName:instanceName) and request load.</p>
 <p class="rubric">Parameters:</p>
 <table border="1" class="colwidths-given docutils">
 <colgroup>
@@ -953,7 +1127,7 @@
 <td>the cu resource. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation.</td>
 </tr>
 <tr class="row-odd"><td>cuStat</td>
-<td>the status of cu. isBusy: the cu is busy or not. usedLoad: allocated load on this cu.</td>
+<td>the status of cu. isBusy: the cu is busy or not. usedLoad: allocated load on this cu, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100)</td>
 </tr>
 </tbody>
 </table>
@@ -1005,7 +1179,7 @@
     <a class="reference internal" href="rst_libapi/struct_xrmCuProperty.html#doxid-structxrm-cu-property"><span class="std std-ref">xrmCuProperty</span></a><span></span><span class="o">*</span> <span class="n">cuProp</span>
     <span class="p">)</span>
 </pre>
-<p>To check the available cu num on the system given the kernels’s property with kernel name or alias or both and request load (1 - 100).</p>
+<p>To check the available cu num on the system given the kernels’s property with kernel name or alias or both and request load.</p>
 <p class="rubric">Parameters:</p>
 <table border="1" class="colwidths-given docutils">
 <colgroup>
@@ -1017,12 +1191,12 @@
 <td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a></td>
 </tr>
 <tr class="row-even"><td>cuProp</td>
-<td>the property of cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. requestLoad: request load (1 - 100). poolId: request to allocate cu from specified resource pool.</td>
+<td>the property of cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. requestLoad: request load, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: request to allocate cu from specified resource pool.</td>
 </tr>
 </tbody>
 </table>
 <p class="rubric">Returns:</p>
-<p>int32_t, available cu num (&gt;= 0) on success or appropriate error number (&lt; 0), if available cu number is &gt;= XRM_MAX_AVAILABLE_CU_NUM, will only return XRM_MAX_AVAILABLE_CU_NUM.</p>
+<p>int32_t, available cu num (&gt;= 0) on success or appropriate error number (&lt; 0).</p>
 </div>
 <div class="section" id="xrmcheckculistavailablenum">
 <span id="cid-xrmcheckculistavailablenum"></span><span id="doxid-xrm-8h-1a49bf3cd3e4af4c1c5c3b357ec36f2711"></span><h4>xrmCheckCuListAvailableNum<a class="headerlink" href="#xrmcheckculistavailablenum" title="Permalink to this headline">¶</a></h4>
@@ -1035,7 +1209,7 @@
     <a class="reference internal" href="rst_libapi/struct_xrmCuListProperty.html#doxid-structxrm-cu-list-property"><span class="std std-ref">xrmCuListProperty</span></a><span></span><span class="o">*</span> <span class="n">cuListProp</span>
     <span class="p">)</span>
 </pre>
-<p>To check the available cu list num on the system given a list of kernels’s property with kernel name or alias or both and request load (1 - 100).</p>
+<p>To check the available cu list num on the system given a list of kernels’s property with kernel name or alias or both and request load.</p>
 <p class="rubric">Parameters:</p>
 <table border="1" class="colwidths-given docutils">
 <colgroup>
@@ -1052,7 +1226,7 @@
 </tbody>
 </table>
 <p class="rubric">Returns:</p>
-<p>int32_t, available cu list num (&gt;= 0) on success or appropriate error number (&lt; 0), if available cu list number is &gt;= XRM_MAX_AVAILABLE_LIST_NUM, will only return XRM_MAX_AVAILABLE_LIST_NUM.</p>
+<p>int32_t, available cu list num (&gt;= 0) on success or appropriate error number (&lt; 0).</p>
 </div>
 <div class="section" id="xrmcheckcugroupavailablenum">
 <span id="cid-xrmcheckcugroupavailablenum"></span><span id="doxid-xrm-8h-1a656b12ad65a7f835b478b4432b50c69a"></span><h4>xrmCheckCuGroupAvailableNum<a class="headerlink" href="#xrmcheckcugroupavailablenum" title="Permalink to this headline">¶</a></h4>
@@ -1065,7 +1239,7 @@
     <a class="reference internal" href="rst_libapi/struct_xrmCuGroupProperty.html#doxid-structxrm-cu-group-property"><span class="std std-ref">xrmCuGroupProperty</span></a><span></span><span class="o">*</span> <span class="n">cuGroupProp</span>
     <span class="p">)</span>
 </pre>
-<p>To check the available group number of compute unit resource given a user defined group of kernels’s property with cu name (kernelName:instanceName) and request load (1 - 100).</p>
+<p>To check the available group number of compute unit resource given a user defined group of kernels’s property with cu name (kernelName:instanceName) and request load.</p>
 <p class="rubric">Parameters:</p>
 <table border="1" class="colwidths-given docutils">
 <colgroup>
@@ -1082,7 +1256,7 @@
 </tbody>
 </table>
 <p class="rubric">Returns:</p>
-<p>int32_t, 0 on success or appropriate error number</p>
+<p>int32_t, available cu group num (&gt;= 0) on success or appropriate error number (&lt; 0).</p>
 </div>
 <div class="section" id="xrmcheckcupoolavailablenum">
 <span id="cid-xrmcheckcupoolavailablenum"></span><span id="doxid-xrm-8h-1a92e2a2eb183cba32d636bdd7c54863d8"></span><h4>xrmCheckCuPoolAvailableNum<a class="headerlink" href="#xrmcheckcupoolavailablenum" title="Permalink to this headline">¶</a></h4>
@@ -1095,7 +1269,7 @@
     <a class="reference internal" href="rst_libapi/struct_xrmCuPoolProperty.html#doxid-structxrm-cu-pool-property"><span class="std std-ref">xrmCuPoolProperty</span></a><span></span><span class="o">*</span> <span class="n">cuPoolProp</span>
     <span class="p">)</span>
 </pre>
-<p>To check the available cu pool num on the system given a pool of kernels’s property with kernel name or alias or both and request load (1 - 100).</p>
+<p>To check the available cu pool num on the system given a pool of kernels’s property with kernel name or alias or both and request load.</p>
 <p class="rubric">Parameters:</p>
 <table border="1" class="colwidths-given docutils">
 <colgroup>
@@ -1112,7 +1286,7 @@
 </tbody>
 </table>
 <p class="rubric">Returns:</p>
-<p>int32_t, available cu pool num (&gt;= 0) on success or appropriate error number (&lt; 0), if available cu pool number is &gt;= XRM_MAX_AVAILABLE_POOL_NUM, will only return XRM_MAX_AVAILABLE_POOL_NUM.</p>
+<p>int32_t, available cu pool num (&gt;= 0) on success or appropriate error number (&lt; 0).</p>
 </div>
 <div class="section" id="xrmcupoolreserve">
 <span id="cid-xrmcupoolreserve"></span><span id="doxid-xrm-8h-1a48e77109c035cf50a290aa4b87280169"></span><h4>xrmCuPoolReserve<a class="headerlink" href="#xrmcupoolreserve" title="Permalink to this headline">¶</a></h4>
@@ -1125,7 +1299,7 @@
     <a class="reference internal" href="rst_libapi/struct_xrmCuPoolProperty.html#doxid-structxrm-cu-pool-property"><span class="std std-ref">xrmCuPoolProperty</span></a><span></span><span class="o">*</span> <span class="n">cuPoolProp</span>
     <span class="p">)</span>
 </pre>
-<p>Reserves a pool of compute unit resource given a pool of kernels’s property with kernel name or alias or both and request load (1 - 100).</p>
+<p>Reserves a pool of compute unit resource given a pool of kernels’s property with kernel name or alias or both and request load.</p>
 <p class="rubric">Parameters:</p>
 <table border="1" class="colwidths-given docutils">
 <colgroup>
@@ -1259,7 +1433,7 @@
     <a class="reference internal" href="rst_libapi/struct_xrmCuResource.html#doxid-structxrm-cu-resource"><span class="std std-ref">xrmCuResource</span></a><span></span><span class="o">*</span> <span class="n">cuRes</span>
     <span class="p">)</span>
 </pre>
-<p>Allocates compute unit with a device, cu, and channel given a kernel name or alias or both and request load (1 - 100). This function also provides the xclbin and kernel plugin loaded on the device. If required CU is not available, this function will try to load the xclbin to one device and do the allocation again.</p>
+<p>Allocates compute unit with a device, cu, and channel given a kernel name or alias or both and request load. This function also provides the xclbin and kernel plugin loaded on the device. If required CU is not available, this function will try to load the xclbin to one device and do the allocation again.</p>
 <p>Following APIs are NOT stable interface and may be changed in coming future.</p>
 <p class="rubric">Parameters:</p>
 <table border="1" class="colwidths-given docutils">
@@ -1272,13 +1446,13 @@
 <td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a></td>
 </tr>
 <tr class="row-even"><td>cuProp</td>
-<td>the property of cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. requestLoad: request load (1 - 100). poolId: request to allocate cu from specified resource pool.</td>
+<td>the property of cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. requestLoad: request load, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: request to allocate cu from specified resource pool.</td>
 </tr>
 <tr class="row-odd"><td>xclbinFileName</td>
 <td>xclbin file (full path and name)</td>
 </tr>
 <tr class="row-even"><td>cuRes</td>
-<td>cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu (1 - 100). poolId: id of the cu pool this cu comes from, the default pool id is 0.</td>
+<td>cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: id of the cu pool this cu comes from, the default pool id is 0.</td>
 </tr>
 </tbody>
 </table>
@@ -1344,13 +1518,13 @@
 <td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a></td>
 </tr>
 <tr class="row-even"><td>cuProp</td>
-<td>the property of cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. requestLoad: request load (1 - 100). poolId: request to allocate cu from specified resource pool.</td>
+<td>the property of cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. requestLoad: request load, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: request to allocate cu from specified resource pool.</td>
 </tr>
 <tr class="row-odd"><td>interval</td>
 <td>the interval time (useconds) before re-trying, [0 - 1000000], other value is invalid.</td>
 </tr>
 <tr class="row-even"><td>cuRes</td>
-<td>cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu (1 - 100). poolId: id of the cu pool this cu comes from, the default pool id is 0.</td>
+<td>cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: id of the cu pool this cu comes from, the default pool id is 0.</td>
 </tr>
 </tbody>
 </table>
@@ -1559,7 +1733,7 @@
 														<div class="col-md-pull-6 col-lg-pull-6 col-md-6 col-lg-6">
 															<span class="copyright">
                                   
-                                  &copy; Copyright (C) 2019-2020, Xilinx Inc - All rights reserved
+                                  &copy; Copyright (C) 2019-2021, Xilinx Inc - All rights reserved
                               </span>
 															<ul class="list-inline sub-menu">
 																<li>
