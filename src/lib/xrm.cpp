@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <boost/asio.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -30,11 +31,12 @@
 using boost::asio::ip::tcp;
 namespace pt = boost::property_tree;
 
+static std::recursive_mutex xrmMutex;
+
 struct xrmPrivateContext {
     uint32_t xrmApiVersion;
     xrmLogLevelType xrmLogLevel;
     uint64_t xrmClientId;
-    pthread_mutex_t lock;
     tcp::socket* socket;
     boost::asio::io_service* ioService;
     tcp::resolver* resolver;
@@ -58,6 +60,8 @@ int32_t xrmRetrieveLoadInfo(int32_t origInputLoad);
  * @return xrmContext, pointer to created context or NULL on fail
  */
 xrmContext xrmCreateContext(uint32_t xrmApiVersion) {
+    std::unique_lock<std::recursive_mutex> lock(xrmMutex);
+
     if (xrmApiVersion != XRM_API_VERSION_1) {
         xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): wrong XRM API version: %d", __func__, xrmApiVersion);
         return (NULL);
@@ -69,7 +73,6 @@ xrmContext xrmCreateContext(uint32_t xrmApiVersion) {
         return (NULL);
     }
     ctx->xrmApiVersion = XRM_API_VERSION_1;
-    pthread_mutex_init(&ctx->lock, NULL);
 
     try {
         ctx->ioService = new boost::asio::io_service;
@@ -100,7 +103,6 @@ xrmContext xrmCreateContext(uint32_t xrmApiVersion) {
         ctx->socket = NULL;
         ctx->ioService = NULL;
         ctx->resolver = NULL;
-        pthread_mutex_destroy(&ctx->lock);
         delete ctx;
         return (NULL);
     }
@@ -162,6 +164,8 @@ xrmContext xrmCreateContext(uint32_t xrmApiVersion) {
 int32_t xrmDestroyContext(xrmContext context) {
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
 
+    std::unique_lock<std::recursive_mutex> lock(xrmMutex);
+
     if (ctx != NULL) {
         if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
             xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
@@ -199,7 +203,6 @@ int32_t xrmDestroyContext(xrmContext context) {
         ctx->socket = NULL;
         ctx->ioService = NULL;
         ctx->resolver = NULL;
-        pthread_mutex_destroy(&ctx->lock);
         delete ctx;
         return (XRM_SUCCESS);
     } else {
@@ -259,16 +262,15 @@ static int32_t xrmJsonRequest(xrmContext context, const char* jsonReq, char* jso
         return (rc);
     }
 
+    std::unique_lock<std::recursive_mutex> lock(xrmMutex);
     try {
         // Send request
         size_t reqLen = std::strlen(jsonReq);
         xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "Sending %s\n", jsonReq);
-        pthread_mutex_lock(&ctx->lock);
         boost::asio::write(*ctx->socket, boost::asio::buffer(jsonReq, reqLen), ec);
         if (ec) {
             xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s: write error %s = %d", __func__, ec.category().name(),
                    ec.value());
-            pthread_mutex_unlock(&ctx->lock);
             rc = XRM_ERROR;
             return (rc);
         }
@@ -285,7 +287,6 @@ static int32_t xrmJsonRequest(xrmContext context, const char* jsonReq, char* jso
              */
             if (jsonRsp[replyLength] == 0) break;
         }
-        pthread_mutex_unlock(&ctx->lock);
 
         xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "%s\n", jsonRsp);
         if (replyLength == 0) {
