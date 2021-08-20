@@ -4949,6 +4949,7 @@ int32_t xrm::system::resReserveCuSubListFromSameDevice(uint64_t reservePoolId,
                                                        deviceIdListPropertyV2* usedDevIdList,
                                                        uint64_t* fromDevId) {
     int32_t i, devId, ret;
+    int32_t relinquishIdx, relinquishRet;
     cuProperty* cuProp = NULL;
 
     if (cuSubListProp == NULL || usedDevIdList == NULL) {
@@ -4981,6 +4982,15 @@ int32_t xrm::system::resReserveCuSubListFromSameDevice(uint64_t reservePoolId,
             cuProp = &cuSubListProp->cuProps[i];
             ret = reserveCuFromDev(reservePoolId, devId, cuProp);
             if (ret != XRM_SUCCESS) {
+                /* relinquish the cu resouce just reserved */
+                for (relinquishIdx = 0; relinquishIdx < i; relinquishIdx++) {
+                    cuProp = &cuSubListProp->cuProps[relinquishIdx];
+                    relinquishRet = relinquishCuFromDev(reservePoolId, devId, cuProp);
+                    if (relinquishRet != XRM_SUCCESS) {
+                        logMsg(XRM_LOG_ERROR, "%s: failed to relinquish cu [%d]\n", __func__, relinquishIdx);
+                        return (ret);
+                    }
+                }
                 break;
             }
         }
@@ -5117,7 +5127,90 @@ int32_t xrm::system::resReserveCuListV2(uint64_t reservePoolId, cuListPropertyV2
 }
 
 /*
- * the interface to relinquish cu list resource based on the reserve pool id
+ * relinquish one CU (Compute Unit) from specified device(devId) based on the request property.
+ *
+ * lock: should already in lock protection during the cu relinquish process
+ */
+int32_t xrm::system::relinquishCuFromDev(uint64_t reservePoolId, int32_t devId, cuProperty* cuProp) {
+    deviceData* dev;
+    cuData* cu;
+    bool kernelNameEqual, kernelAliasEqual;
+    int32_t cuId;
+    int32_t ret = XRM_ERROR;
+
+    if (reservePoolId == 0) {
+        logMsg(XRM_LOG_ERROR, "reservePoolId is invalid\n");
+        return (XRM_ERROR_INVALID);
+    }
+    if (devId < 0 || devId >= m_numDevice) {
+        logMsg(XRM_LOG_ERROR, "devId is invalid\n");
+        return (XRM_ERROR_INVALID);
+    }
+    if (cuProp == NULL) {
+        logMsg(XRM_LOG_ERROR, "cuProp is NULL\n");
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0')) {
+        logMsg(XRM_LOG_ERROR, "neither kernel name nor alias are presented\n");
+        return (XRM_ERROR_INVALID);
+    }
+
+    dev = &m_devList[devId];
+    if (!dev->isLoaded) {
+        logMsg(XRM_LOG_ERROR, "device [%d] is not loaded\n", devId);
+        return (ret);
+    }
+    for (cuId = 0; cuId < dev->xclbinInfo.numCu; cuId++) {
+        cu = &dev->xclbinInfo.cuList[cuId];
+        kernelNameEqual = true;
+        if (cuProp->kernelName[0] != '\0') {
+            if (cu->kernelName.compare(cuProp->kernelName)) kernelNameEqual = false;
+        }
+        /* kernel alias is presented, compare it; otherwise no need to compare */
+        kernelAliasEqual = true;
+        if (cuProp->kernelAlias[0] != '\0') {
+            if (cu->kernelAlias.compare(cuProp->kernelAlias)) kernelAliasEqual = false;
+        }
+        if (!(kernelNameEqual && kernelAliasEqual)) continue;
+
+        for (int32_t i = 0; i < cu->numReserve; i++) {
+            if ((cu->reserves[i].reservePoolId == reservePoolId) &&
+                (cu->reserves[i].reserveLoadUnified == cuProp->requestLoadUnified)) {
+                /* there maybe same cu reserved, try others */
+                if (cu->reserves[i].reserveUsedLoadUnified) {
+                    continue;
+                }
+                cu->totalUsedLoadUnified -= cu->reserves[i].reserveLoadUnified;
+                cu->totalReservedLoadUnified -= cu->reserves[i].reserveLoadUnified;
+                /* switch the slot until the last one */
+                for (; i < cu->numReserve - 1; i++) {
+                    cu->reserves[i].reserveLoadUnified = cu->reserves[i + 1].reserveLoadUnified;
+                    cu->reserves[i].reserveUsedLoadUnified = cu->reserves[i + 1].reserveUsedLoadUnified;
+                    cu->reserves[i].reservePoolId = cu->reserves[i + 1].reservePoolId;
+                    cu->reserves[i].clientIsActive = cu->reserves[i + 1].clientIsActive;
+                    cu->reserves[i].clientId = cu->reserves[i + 1].clientId;
+                    cu->reserves[i].clientProcessId = cu->reserves[i + 1].clientProcessId;
+                }
+                /* empty the last slot */
+                cu->reserves[i].reserveLoadUnified = 0;
+                cu->reserves[i].reserveUsedLoadUnified = 0;
+                cu->reserves[i].reservePoolId = 0;
+                cu->reserves[i].clientIsActive = false;
+                cu->reserves[i].clientId = 0;
+                cu->reserves[i].clientProcessId = 0;
+                cu->numReserve--;
+                /* relinquished the cu successfully */
+                ret = XRM_SUCCESS;
+                return (ret);
+            }
+        }
+    }
+    return (ret);
+}
+
+/*
+ * the interface to relinquish cu list resource based on the reserve pool id,
+ * it will actually relinquish whole cu pool resource.
  *
  * lock: should already in lock protection during the cu list relinquish process
  */
@@ -5166,7 +5259,8 @@ int32_t xrm::system::resRelinquishCuList(uint64_t reservePoolId) {
 }
 
 /*
- * the interface to relinquish cu list resource based on the reserve pool id
+ * the interface to relinquish cu list resource based on the reserve pool id,
+ * it will actually relinquish whole cu pool resource.
  *
  * lock: should already in lock protection during the cu list relinquish process
  */
@@ -5308,17 +5402,10 @@ uint64_t xrm::system::resReserveCuPool(cuPoolProperty* cuPoolProp) {
 
     ret = XRM_ERROR;
     reservePoolId = getNextReservePoolId();
-    while (reserveCuListNum < cuPoolProp->cuListNum) {
-        /*
-         * To reserve the cu list
-         */
-        ret = resReserveCuList(reservePoolId, cuListProp);
-        if (ret != XRM_SUCCESS) {
-            resRelinquishCuList(reservePoolId);
-            return (0);
-        }
-        reserveCuListNum++;
-    }
+    /*
+     * to reserve whole device at first, then reserve the cu list in case cu list
+     * resource available on multiple different devices.
+     */
     while (reserveXclbinNum < cuPoolProp->xclbinNum) {
         /*
          * To reserve all the cu resources of one xclbin
@@ -5326,10 +5413,21 @@ uint64_t xrm::system::resReserveCuPool(cuPoolProperty* cuPoolProp) {
         ret = resReserveCuOfXclbin(reservePoolId, cuPoolProp->xclbinUuid, cuPoolProp->clientId,
                                    cuPoolProp->clientProcessId);
         if (ret != XRM_SUCCESS) {
-            resRelinquishCuList(reservePoolId);
+            resRelinquishCuPool(reservePoolId);
             return (0);
         }
         reserveXclbinNum++;
+    }
+    while (reserveCuListNum < cuPoolProp->cuListNum) {
+        /*
+         * To reserve the cu list
+         */
+        ret = resReserveCuList(reservePoolId, cuListProp);
+        if (ret != XRM_SUCCESS) {
+            resRelinquishCuPool(reservePoolId);
+            return (0);
+        }
+        reserveCuListNum++;
     }
 
     updateReservePoolId();
@@ -5369,29 +5467,12 @@ uint64_t xrm::system::resReserveCuPoolV2(cuPoolPropertyV2* cuPoolProp) {
 
     ret = XRM_ERROR;
     reservePoolId = getNextReservePoolId();
-    while (reserveCuListNum < cuPoolProp->cuListNum) {
-        /*
-         * To reserve the cu list
-         */
-        ret = resReserveCuListV2(reservePoolId, cuListProp);
-        if (ret != XRM_SUCCESS) {
-            resRelinquishCuListV2(reservePoolId);
-            return (0);
-        }
-        reserveCuListNum++;
-    }
-    while (reserveXclbinNum < cuPoolProp->xclbinNum) {
-        /*
-         * To reserve all the cu resources of one xclbin
-         */
-        ret = resReserveCuOfXclbin(reservePoolId, cuPoolProp->xclbinUuid, cuPoolProp->clientId,
-                                   cuPoolProp->clientProcessId);
-        if (ret != XRM_SUCCESS) {
-            resRelinquishCuListV2(reservePoolId);
-            return (0);
-        }
-        reserveXclbinNum++;
-    }
+    /*
+     * first to reserve specified device (hardware device id);
+     * second to reserve whole device (xclbin uuid);
+     * third to reserve the cu list in case cu list
+     * resource available on multiple different devices.
+     */
     deviceIdListProp = &(cuPoolProp->deviceIdListProp);
     for (int32_t i = 0; i < deviceIdListProp->deviceNum; i++) {
         /*
@@ -5400,9 +5481,32 @@ uint64_t xrm::system::resReserveCuPoolV2(cuPoolPropertyV2* cuPoolProp) {
         ret = resReserveDevice(reservePoolId, deviceIdListProp->deviceIds[i], cuPoolProp->clientId,
                                cuPoolProp->clientProcessId);
         if (ret != XRM_SUCCESS) {
-            resRelinquishCuListV2(reservePoolId);
+            resRelinquishCuPoolV2(reservePoolId);
             return (0);
         }
+    }
+    while (reserveXclbinNum < cuPoolProp->xclbinNum) {
+        /*
+         * To reserve all the cu resources of one xclbin
+         */
+        ret = resReserveCuOfXclbin(reservePoolId, cuPoolProp->xclbinUuid, cuPoolProp->clientId,
+                                   cuPoolProp->clientProcessId);
+        if (ret != XRM_SUCCESS) {
+            resRelinquishCuPoolV2(reservePoolId);
+            return (0);
+        }
+        reserveXclbinNum++;
+    }
+    while (reserveCuListNum < cuPoolProp->cuListNum) {
+        /*
+         * To reserve the cu list
+         */
+        ret = resReserveCuListV2(reservePoolId, cuListProp);
+        if (ret != XRM_SUCCESS) {
+            resRelinquishCuPoolV2(reservePoolId);
+            return (0);
+        }
+        reserveCuListNum++;
     }
 
     updateReservePoolId();
@@ -5410,7 +5514,7 @@ uint64_t xrm::system::resReserveCuPoolV2(cuPoolPropertyV2* cuPoolProp) {
 }
 
 /*
- * the interface to relinquish cu list resource based on the reservation id
+ * the interface to relinquish cu pool resource based on the reservation id
  *
  * lock: need to enter lock to protect the resource pool access during the relinquish process
  */

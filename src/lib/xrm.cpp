@@ -3299,8 +3299,14 @@ int32_t xrmCuAllocV2(xrmContext context, xrmCuPropertyV2* cuProp, xrmCuResourceV
  * @param context the context created through xrmCreateContext()
  * @param cuListProp the property of cu list.
  *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole.
+ *                      For each cu in the list:
+ *                      1) if device constraint not set: allocate it from any device
+ *                      2) if device constraint set with hw index: reserve it from target device
+ *                      3) if device constraint set with virtual index: find all others with same
+ *                         virtual index, put them into one sub-list, and reserve requested CU
+ *                         from same device, the device id should be different from that
+ *                         for previous sub-lists request from virtual index.
  *             cuNum: request number of cu in this list.
- *             sameDevice: request this list of cu from same device.
  * @param cuListRes the cu list resource.
  *             cuResources: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
  *             cuNum: allocated cu number in this list.
@@ -4054,8 +4060,14 @@ int32_t xrmCheckCuAvailableNumV2(xrmContext context, xrmCuPropertyV2* cuProp) {
  * @param context the context created through xrmCreateContext().
  * @param cuListProp the property of cu list.
  *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole
+ *                      For each cu in the list:
+ *                      1) if device constraint not set: allocate it from any device
+ *                      2) if device constraint set with hw index: reserve it from target device
+ *                      3) if device constraint set with virtual index: find all others with same
+ *                         virtual index, put them into one sub-list, and reserve requested CU
+ *                         from same device, the device id should be different from that
+ *                         for previous sub-lists request from virtual index.
  *             cuNum: request number of cu in this list.
- *             sameDevice: request this list of cu from same device.
  * @return int32_t, available cu list num (>= 0) on success or appropriate error number (< 0).
  */
 int32_t xrmCheckCuListAvailableNumV2(xrmContext context, xrmCuListPropertyV2* cuListProp) {
@@ -4198,9 +4210,17 @@ int32_t xrmCheckCuGroupAvailableNumV2(xrmContext context, xrmCuGroupPropertyV2* 
  * @param context the context created through xrmCreateContext().
  * @param cuPoolProp the property of cu pool.
  *             cuListProp: cu list property.
+ *                         For each cu in the list:
+ *                         1) if device constraint not set: reserve it from any device
+ *                         2) if device constraint set with hw index: reserve it from target device
+ *                         3) if device constraint set with virtual index: find all others with same
+ *                            virtual index, put them into one sub-list, and reserve requested CU
+ *                            from same device, the device id should be different from that
+ *                            for previous sub-lists request from virtual index.
  *             cuListNum: number of cu list in this pool.
  *             xclbinUuid: uuid of xclbin.
  *             xclbinNum: number of xclbin in this pool.
+ *             deviceIdListProp: device id list
  * @return int32_t, available cu pool num (>= 0) on success or appropriate error number (< 0).
  */
 int32_t xrmCheckCuPoolAvailableNumV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp) {
@@ -4308,9 +4328,17 @@ int32_t xrmCheckCuPoolAvailableNumV2(xrmContext context, xrmCuPoolPropertyV2* cu
  * @param context the context created through xrmCreateContext().
  * @param cuPoolProp the property of cu pool.
  *             cuListProp: cu prop list to fill kernelName, devExcl and requestLoad etc. information.
+ *                         For each cu in the list:
+ *                         1) if device constraint not set: reserve it from any device
+ *                         2) if device constraint set with hw index: reserve it from target device
+ *                         3) if device constraint set with virtual index: find all others with same
+ *                            virtual index, put them into one sub-list, and reserve requested CU
+ *                            from same device, the device id should be different from that
+ *                            for previous sub-lists request from virtual index.
  *             cuListNum: request number of such cu list for this pool.
  *             xclbinUuid: request all resource in the xclbin.
  *             xclbinNum: request number of such xclbin for this pool.
+ *             deviceIdListProp: device id list
  * @return uint64_t, reserve pool id (> 0) or 0 on fail.
  */
 uint64_t xrmCuPoolReserveV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp) {

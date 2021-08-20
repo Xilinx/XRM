@@ -824,6 +824,7 @@ class system {
     int32_t isReservePoolUsingCu(cuData* cu, uint64_t reservePoolId);
     int32_t reserveLoadFromCu(uint64_t reservePoolId, cuData* cu, cuProperty* cuProp);
     int32_t reserveCuFromDev(uint64_t reservePoolId, int32_t devId, cuProperty* cuProp);
+    int32_t relinquishCuFromDev(uint64_t reservePoolId, int32_t devId, cuProperty* cuProp);
 
     deviceData m_devList[XRM_MAX_XILINX_DEVICES];
     uint32_t m_logLevel;
