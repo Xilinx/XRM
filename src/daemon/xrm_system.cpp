@@ -4981,7 +4981,6 @@ int32_t xrm::system::resReserveCuSubListFromSameDevice(uint64_t reservePoolId,
             cuProp = &cuSubListProp->cuProps[i];
             ret = reserveCuFromDev(reservePoolId, devId, cuProp);
             if (ret != XRM_SUCCESS) {
-                resRelinquishCuListV2(reservePoolId);
                 break;
             }
         }
