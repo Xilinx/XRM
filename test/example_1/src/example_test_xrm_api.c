@@ -1273,7 +1273,7 @@ void xrmCuPoolReserveAllocReleaseRelinquishTest(xrmContext* ctx) {
 }
 
 void xrmCuPoolReserveAllocReleaseRelinquishV2Test(xrmContext* ctx) {
-    int i;
+    int i, j;
     int32_t ret;
     uint64_t scalerReservePoolId;
     printf("<<<<<<<==  start the xrm cu reserve alloc release relinquish V2 test ===>>>>>>>>\n");
@@ -1290,35 +1290,94 @@ void xrmCuPoolReserveAllocReleaseRelinquishV2Test(xrmContext* ctx) {
 
     scalerCuPoolProp = (xrmCuPoolPropertyV2*)malloc(sizeof(xrmCuPoolPropertyV2));
     memset(scalerCuPoolProp, 0, sizeof(xrmCuPoolPropertyV2));
-
-    scalerCuPoolProp->cuListProp.cuNum = 4;
-
+    scalerCuPoolProp->cuListProp.cuNum = 8;
     deviceInfoContraintType = XRM_DEVICE_INFO_CONSTRAINT_TYPE_VIRTUAL_DEVICE_INDEX;
+    int32_t cuIdx;
     deviceInfoDeviceIndex = 0;
-    for (i = 0; i < 2; i++) {
-        strcpy(scalerCuPoolProp->cuListProp.cuProps[i].kernelName, "scaler");
-        strcpy(scalerCuPoolProp->cuListProp.cuProps[i].kernelAlias, "");
-        scalerCuPoolProp->cuListProp.cuProps[i].devExcl = false;
-        scalerCuPoolProp->cuListProp.cuProps[i].deviceInfo =
-            (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
-            (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
-        scalerCuPoolProp->cuListProp.cuProps[i].requestLoad = 50;
-    }
+    cuIdx = 0;
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelName, "decoder");
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelAlias, "DECODER_MPSOC");
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].devExcl = false;
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].deviceInfo =
+        (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+        (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].requestLoad = 100;
+
+    deviceInfoDeviceIndex = 0;
+    cuIdx = 1;
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelName, "kernel_vcu_decoder");
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelAlias, "");
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].devExcl = false;
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].deviceInfo =
+        (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+        (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].requestLoad = 100;
+
     deviceInfoDeviceIndex = 1;
-    for (i = 2; i < scalerCuPoolProp->cuListProp.cuNum; i++) {
-        strcpy(scalerCuPoolProp->cuListProp.cuProps[i].kernelName, "lookahead");
-        strcpy(scalerCuPoolProp->cuListProp.cuProps[i].kernelAlias, "");
-        scalerCuPoolProp->cuListProp.cuProps[i].deviceInfo =
-            (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
-            (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
-        scalerCuPoolProp->cuListProp.cuProps[i].devExcl = false;
-        scalerCuPoolProp->cuListProp.cuProps[i].requestLoad = 50;
-    }
+    cuIdx = 2;
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelName, "scaler");
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelAlias, "SCALER_MPSOC");
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].devExcl = false;
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].deviceInfo =
+        (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+        (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].requestLoad = 100;
+
+    deviceInfoDeviceIndex = 0;
+    cuIdx = 3;
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelName, "encoder");
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelAlias, "ENCODER_MPSOC");
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].devExcl = false;
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].deviceInfo =
+        (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+        (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].requestLoad = 100;
+
+    deviceInfoDeviceIndex = 0;
+    cuIdx = 4;
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelName, "kernel_vcu_encoder");
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelAlias, "");
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].devExcl = false;
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].deviceInfo =
+        (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+        (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].requestLoad = 100;
+
+    deviceInfoDeviceIndex = 1;
+    cuIdx = 5;
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelName, "encoder");
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelAlias, "ENCODER_MPSOC");
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].devExcl = false;
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].deviceInfo =
+        (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+        (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].requestLoad = 100;
+
+    deviceInfoDeviceIndex = 1;
+    cuIdx = 6;
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelName, "kernel_vcu_encoder");
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelAlias, "");
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].devExcl = false;
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].deviceInfo =
+        (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+        (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].requestLoad = 100;
+
+    deviceInfoDeviceIndex = 1;
+    cuIdx = 7;
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelName, "kernel_vcu_encoder");
+    strcpy(scalerCuPoolProp->cuListProp.cuProps[cuIdx].kernelAlias, "");
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].devExcl = false;
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].deviceInfo =
+        (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+        (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+    scalerCuPoolProp->cuListProp.cuProps[cuIdx].requestLoad = 100;
+
     scalerCuPoolProp->cuListNum = 1;
     char uuidStr[64];
     strcpy(uuidStr, "fd0c27c02a83493880b711385fbd48d4"); // to reserve one device loaded with target uuid
     xrmTestHexstrToBin(uuidStr, 2 * sizeof(uuid_t), (char*)&scalerCuPoolProp->xclbinUuid);
-    scalerCuPoolProp->xclbinNum = 1;
+    scalerCuPoolProp->xclbinNum = 0;
     ret = xrmCheckCuPoolAvailableNumV2(ctx, scalerCuPoolProp);
     if (ret < 0) {
         printf("xrmCheckCuPoolAvailableNumV2: fail to check scaler cu pool available num\n");
@@ -1326,11 +1385,30 @@ void xrmCuPoolReserveAllocReleaseRelinquishV2Test(xrmContext* ctx) {
         printf("xrmCheckCuPoolAvailableNumV2: scaler cu pool available num = %d\n", ret);
     }
 
-    scalerReservePoolId = xrmCuPoolReserveV2(ctx, scalerCuPoolProp);
+    xrmCuPoolResInforV2* scalerCuPoolResInfor;
+    xrmCuListResInforV2* cuListResInfor;
+    xrmCuResInforV2* cuResInfor;
+    scalerCuPoolResInfor = (xrmCuPoolResInforV2*)malloc(sizeof(xrmCuPoolResInforV2));
+    memset(scalerCuPoolResInfor, 0, sizeof(xrmCuPoolResInforV2));
+    scalerReservePoolId = xrmCuPoolReserveV2(ctx, scalerCuPoolProp, scalerCuPoolResInfor);
     if (scalerReservePoolId == 0) {
         printf("xrmCuPoolReserve: fail to reserve scaler cu pool\n");
     } else {
         printf("xrmCuPoolReserve: reservePoolId = %lu\n", scalerReservePoolId);
+        for (i = 0; i < scalerCuPoolResInfor->cuListNum; i++) {
+            cuListResInfor = &(scalerCuPoolResInfor->cuListResInfor[i]);
+            for (j = 0; j < cuListResInfor->cuNum; j++) {
+                cuResInfor = &(cuListResInfor->cuResInfor[j]);
+                printf("List[%d] Cu[%d] from device [%lu]\n", i, j, cuResInfor->deviceId);
+            }
+        }
+        for (i = 0; i < scalerCuPoolResInfor->xclbinNum; i++) {
+            printf("xclbin[%d] from device [%lu]\n", i, scalerCuPoolResInfor->xclbinResInfor[i].deviceId);
+        }
+        for (i = 0; i < scalerCuPoolResInfor->deviceListResInfor.deviceNum; i++) {
+            printf("deviceIdList[%d] from device [%lu]\n", i,
+                   scalerCuPoolResInfor->deviceListResInfor.deviceResInfor[i].deviceId);
+        }
     }
 
     // query the reserve result
@@ -1345,7 +1423,7 @@ void xrmCuPoolReserveAllocReleaseRelinquishV2Test(xrmContext* ctx) {
     xrmReservationQueryInfoV2 reserveQueryInfo;
     memset(&reserveQueryInfo, 0, sizeof(xrmReservationQueryInfoV2));
     reserveQueryInfo.poolId = scalerReservePoolId;
-    strcpy(reserveQueryInfo.kernelName, "");
+    strcpy(reserveQueryInfo.kernelName, "encoder");
     strcpy(reserveQueryInfo.kernelAlias, "");
 
     printf("Test V2-9-2: xrmReservationQueryV2\n");
@@ -1494,6 +1572,7 @@ void xrmCuPoolReserveAllocReleaseRelinquishV2Test(xrmContext* ctx) {
 
     free(scalerCuListRes);
     free(scalerCuListProp);
+    free(scalerCuPoolResInfor);
     free(scalerCuPoolRes);
     free(scalerCuPoolProp);
 }

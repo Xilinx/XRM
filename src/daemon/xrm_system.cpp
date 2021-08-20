@@ -4712,7 +4712,7 @@ int32_t xrm::system::reserveLoadFromCu(uint64_t reservePoolId, cuData* cu, cuPro
  *
  * Lock: should already in lock protection during the cu reservation
  */
-int32_t xrm::system::resReserveCu(uint64_t reservePoolId, cuProperty* cuProp) {
+int32_t xrm::system::resReserveCu(uint64_t reservePoolId, cuProperty* cuProp, uint64_t* fromDevId) {
     deviceData* dev;
     cuData* cu;
     int32_t ret = 0;
@@ -4739,6 +4739,7 @@ cu_reserve_loop:
         }
 
         dev = &m_devList[devId];
+        *fromDevId = (uint64_t)devId;
         /*
          * Now check whether matching cu is on allocated device
          * if not, free device, increment dev count, re-loop
@@ -4920,9 +4921,10 @@ int32_t xrm::system::resReserveCuList(uint64_t reservePoolId, cuListProperty* cu
         /*
          * To reserve the cu list from any device
          */
+        uint64_t fromDevId;
         for (i = 0; i < cuListProp->cuNum; i++) {
             cuProp = &cuListProp->cuProps[i];
-            ret = resReserveCu(reservePoolId, cuProp);
+            ret = resReserveCu(reservePoolId, cuProp, &fromDevId);
             if (ret != XRM_SUCCESS) {
                 resRelinquishCuList(reservePoolId);
                 return (ret);
@@ -5020,7 +5022,9 @@ int32_t xrm::system::resReserveCuSubListFromSameDevice(uint64_t reservePoolId,
  *
  * Lock: should enter lock during the cu list allocation
  */
-int32_t xrm::system::resReserveCuListV2(uint64_t reservePoolId, cuListPropertyV2* cuListPropV2) {
+int32_t xrm::system::resReserveCuListV2(uint64_t reservePoolId,
+                                        cuListPropertyV2* cuListPropV2,
+                                        cuListResInforV2* cuListResInforV2) {
     int32_t index, ret;
     cuPropertyV2* cuPropV2 = NULL;
     cuProperty cuProp;
@@ -5030,9 +5034,10 @@ int32_t xrm::system::resReserveCuListV2(uint64_t reservePoolId, cuListPropertyV2
     cuSubListPropertyV2* cuSubListProp;
     itemFlag* itemFlags;
     int32_t subListCuNum;
+    int32_t subIndex, oriIndex;
     uint64_t fromDevId;
 
-    if (cuListPropV2 == NULL) {
+    if ((cuListPropV2 == NULL) || (cuListResInforV2 == NULL)) {
         return (XRM_ERROR_INVALID);
     }
     if (cuListPropV2->cuNum <= 0 || cuListPropV2->cuNum > XRM_MAX_LIST_CU_NUM_V2) {
@@ -5068,11 +5073,13 @@ int32_t xrm::system::resReserveCuListV2(uint64_t reservePoolId, cuListPropertyV2
         switch (deviceInfoConstraintType) {
             case XRM_DEVICE_INFO_CONSTRAINT_TYPE_NULL:
                 cuPropertyCopyFromV2(&cuProp, cuPropV2);
-                ret = resReserveCu(reservePoolId, &cuProp);
+                ret = resReserveCu(reservePoolId, &cuProp, &fromDevId);
+                cuListResInforV2->cuResInfor[index].deviceId = fromDevId;
                 break;
             case XRM_DEVICE_INFO_CONSTRAINT_TYPE_HARDWARE_DEVICE_INDEX:
                 cuPropertyCopyFromV2(&cuProp, cuPropV2);
                 ret = reserveCuFromDev(reservePoolId, (int32_t)deviceInfoDeviceIndex, &cuProp);
+                cuListResInforV2->cuResInfor[index].deviceId = deviceInfoDeviceIndex;
                 break;
             case XRM_DEVICE_INFO_CONSTRAINT_TYPE_VIRTUAL_DEVICE_INDEX:
                 /*
@@ -5085,12 +5092,13 @@ int32_t xrm::system::resReserveCuListV2(uint64_t reservePoolId, cuListPropertyV2
                 /* put current cu property into sub list */
                 subListCuNum = 1;
                 cuPropertyCopyFromV2(&cuSubListProp->cuProps[subListCuNum - 1], cuPropV2);
+                cuSubListProp->indexInOriList[subListCuNum - 1] = index;
 
                 /*
                  * look through the rest of the original list, put the cu property into sub list if
                  * virtual device index is same as the current one.
                  */
-                for (int32_t subIndex = index + 1; subIndex < cuListPropV2->cuNum; subIndex++) {
+                for (subIndex = index + 1; subIndex < cuListPropV2->cuNum; subIndex++) {
                     if (itemFlags[subIndex].handled) continue;
                     cuPropV2 = &cuListPropV2->cuProps[subIndex];
                     deviceInfoConstraintTypeNext = (((cuPropV2->deviceInfo) >> XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT) &
@@ -5102,6 +5110,7 @@ int32_t xrm::system::resReserveCuListV2(uint64_t reservePoolId, cuListPropertyV2
                         /* put the cu property into sub list */
                         subListCuNum++;
                         cuPropertyCopyFromV2(&cuSubListProp->cuProps[subListCuNum - 1], cuPropV2);
+                        cuSubListProp->indexInOriList[subListCuNum - 1] = subIndex;
                         itemFlags[subIndex].handled = true;
                     }
                 }
@@ -5110,6 +5119,11 @@ int32_t xrm::system::resReserveCuListV2(uint64_t reservePoolId, cuListPropertyV2
                 if (ret == XRM_SUCCESS) {
                     // record the used device id (all cu in this sub list from same device)
                     insertDeviceIdList(usedDevIdList, fromDevId);
+                    // record the device id infor with original index
+                    for (subIndex = 0; subIndex < cuSubListProp->cuNum; subIndex++) {
+                        oriIndex = cuSubListProp->indexInOriList[subIndex];
+                        cuListResInforV2->cuResInfor[oriIndex].deviceId = fromDevId;
+                    }
                 }
                 free(cuSubListProp);
                 break;
@@ -5281,10 +5295,8 @@ int32_t xrm::system::resRelinquishCuListV2(uint64_t reservePoolId) {
  *
  * Lock: should already in lock protection during the cu reservation
  */
-int32_t xrm::system::resReserveCuOfXclbin(uint64_t reservePoolId,
-                                          uuid_t uuid,
-                                          uint64_t clientId,
-                                          pid_t clientProcessId) {
+int32_t xrm::system::resReserveCuOfXclbin(
+    uint64_t reservePoolId, uuid_t uuid, uint64_t clientId, pid_t clientProcessId, uint64_t* fromDevId) {
     deviceData* dev;
     cuData* cu;
     int32_t cuId;
@@ -5314,6 +5326,7 @@ int32_t xrm::system::resReserveCuOfXclbin(uint64_t reservePoolId,
             cu->reserves[0].clientProcessId = clientProcessId;
             cu->numReserve = 1;
         }
+        *fromDevId = devId;
         return (XRM_SUCCESS);
     }
 
@@ -5402,6 +5415,7 @@ uint64_t xrm::system::resReserveCuPool(cuPoolProperty* cuPoolProp) {
 
     ret = XRM_ERROR;
     reservePoolId = getNextReservePoolId();
+    uint64_t fromDevId;
     /*
      * to reserve whole device at first, then reserve the cu list in case cu list
      * resource available on multiple different devices.
@@ -5411,7 +5425,7 @@ uint64_t xrm::system::resReserveCuPool(cuPoolProperty* cuPoolProp) {
          * To reserve all the cu resources of one xclbin
          */
         ret = resReserveCuOfXclbin(reservePoolId, cuPoolProp->xclbinUuid, cuPoolProp->clientId,
-                                   cuPoolProp->clientProcessId);
+                                   cuPoolProp->clientProcessId, &fromDevId);
         if (ret != XRM_SUCCESS) {
             resRelinquishCuPool(reservePoolId);
             return (0);
@@ -5445,13 +5459,14 @@ uint64_t xrm::system::resReserveCuPool(cuPoolProperty* cuPoolProp) {
  *
  * Lock: should enter lock during the cu pool reservation process
  */
-uint64_t xrm::system::resReserveCuPoolV2(cuPoolPropertyV2* cuPoolProp) {
+uint64_t xrm::system::resReserveCuPoolV2(cuPoolPropertyV2* cuPoolProp, cuPoolResInforV2* cuPoolResInfor) {
     int32_t ret;
     uint64_t reservePoolId = 0;
     cuListPropertyV2* cuListProp = NULL;
     deviceIdListPropertyV2* deviceIdListProp = NULL;
     int32_t reserveCuListNum = 0;
     int32_t reserveXclbinNum = 0;
+    cuListResInforV2* cuListResInfor = NULL;
 
     if (cuPoolProp == NULL) {
         return (reservePoolId);
@@ -5467,6 +5482,7 @@ uint64_t xrm::system::resReserveCuPoolV2(cuPoolPropertyV2* cuPoolProp) {
 
     ret = XRM_ERROR;
     reservePoolId = getNextReservePoolId();
+    uint64_t fromDevId;
     /*
      * first to reserve specified device (hardware device id);
      * second to reserve whole device (xclbin uuid);
@@ -5490,24 +5506,29 @@ uint64_t xrm::system::resReserveCuPoolV2(cuPoolPropertyV2* cuPoolProp) {
          * To reserve all the cu resources of one xclbin
          */
         ret = resReserveCuOfXclbin(reservePoolId, cuPoolProp->xclbinUuid, cuPoolProp->clientId,
-                                   cuPoolProp->clientProcessId);
+                                   cuPoolProp->clientProcessId, &fromDevId);
         if (ret != XRM_SUCCESS) {
             resRelinquishCuPoolV2(reservePoolId);
             return (0);
         }
+        cuPoolResInfor->xclbinResInfor[reserveXclbinNum].deviceId = fromDevId;
         reserveXclbinNum++;
     }
+    cuPoolResInfor->xclbinNum = cuPoolProp->xclbinNum;
     while (reserveCuListNum < cuPoolProp->cuListNum) {
         /*
          * To reserve the cu list
          */
-        ret = resReserveCuListV2(reservePoolId, cuListProp);
+        cuListResInfor = &(cuPoolResInfor->cuListResInfor[reserveCuListNum]);
+        ret = resReserveCuListV2(reservePoolId, cuListProp, cuListResInfor);
         if (ret != XRM_SUCCESS) {
             resRelinquishCuPoolV2(reservePoolId);
             return (0);
         }
+        cuListResInfor->cuNum = cuListProp->cuNum;
         reserveCuListNum++;
     }
+    cuPoolResInfor->cuListNum = cuPoolProp->cuListNum;
 
     updateReservePoolId();
     return (reservePoolId);

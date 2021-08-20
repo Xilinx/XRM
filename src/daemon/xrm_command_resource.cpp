@@ -1837,6 +1837,7 @@ void xrm::checkCuPoolAvailableNumV2Command::processCmd(pt::ptree& incmd, pt::ptr
     int32_t i;
     uint64_t poolId;
     int32_t availablePoolNum = 0;
+    cuPoolResInforV2* cuPoolResInfor = NULL;
 
     cuPoolProp = (cuPoolPropertyV2*)malloc(sizeof(cuPoolPropertyV2));
     memset(cuPoolProp, 0, sizeof(cuPoolPropertyV2));
@@ -1884,9 +1885,11 @@ void xrm::checkCuPoolAvailableNumV2Command::processCmd(pt::ptree& incmd, pt::ptr
     auto xclbinNum = incmd.get<int32_t>("request.parameters.xclbinNum");
     cuPoolProp->xclbinNum = xclbinNum;
 
+    cuPoolResInfor = (cuPoolResInforV2*)malloc(sizeof(cuPoolResInforV2));
+    memset(cuPoolResInfor, 0, sizeof(cuPoolResInforV2));
     m_system->enterLock();
     do {
-        poolId = m_system->resReserveCuPoolV2(cuPoolProp);
+        poolId = m_system->resReserveCuPoolV2(cuPoolProp, cuPoolResInfor);
         if (poolId != 0) {
             cuPoolId.push_back(poolId);
             availablePoolNum++;
@@ -1908,14 +1911,19 @@ void xrm::checkCuPoolAvailableNumV2Command::processCmd(pt::ptree& incmd, pt::ptr
     }
     m_system->exitLock();
     free(cuPoolProp);
+    free(cuPoolResInfor);
 }
 
 void xrm::cuPoolReserveV2Command::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuPoolPropertyV2* cuPoolProp;
     cuListPropertyV2* cuListProp = NULL;
     deviceIdListPropertyV2* deviceIdListProp = NULL;
+    cuPoolResInforV2* cuPoolResInfor = NULL;
+    cuListResInforV2* cuListResInfor = NULL;
+    cuResInforV2* cuResInfor = NULL;
+
     std::string errmsg;
-    int32_t i;
+    int32_t i, j;
 
     cuPoolProp = (cuPoolPropertyV2*)malloc(sizeof(cuPoolPropertyV2));
     memset(cuPoolProp, 0, sizeof(cuPoolPropertyV2));
@@ -1967,16 +1975,37 @@ void xrm::cuPoolReserveV2Command::processCmd(pt::ptree& incmd, pt::ptree& outrsp
     cuPoolProp->clientId = clientId;
     cuPoolProp->clientProcessId = clientProcessId;
 
+    cuPoolResInfor = (cuPoolResInforV2*)malloc(sizeof(cuPoolResInforV2));
+    memset(cuPoolResInfor, 0, sizeof(cuPoolResInforV2));
     m_system->enterLock();
-    uint64_t poolId = m_system->resReserveCuPoolV2(cuPoolProp);
+    uint64_t poolId = m_system->resReserveCuPoolV2(cuPoolProp, cuPoolResInfor);
     m_system->exitLock();
     if (poolId > 0) {
         outrsp.put("response.status.value", XRM_SUCCESS);
         outrsp.put("response.data.poolId", poolId);
+
+        outrsp.put("response.data.cuListNum", cuPoolResInfor->cuListNum);
+        for (i = 0; i < cuPoolResInfor->cuListNum; i++) {
+            cuListResInfor = &(cuPoolResInfor->cuListResInfor[i]);
+            outrsp.put("response.data.cuList.cuNum" + std::to_string(i), cuListResInfor->cuNum);
+
+            for (j = 0; j < cuListResInfor->cuNum; j++) {
+                cuResInfor = &(cuListResInfor->cuResInfor[j]);
+                outrsp.put("response.data.cuList.deviceId" + std::to_string(i) + std::to_string(j),
+                           cuResInfor->deviceId);
+            }
+        }
+
+        outrsp.put("response.data.xclbinNum", cuPoolResInfor->xclbinNum);
+        for (i = 0; i < cuPoolResInfor->xclbinNum; i++) {
+            cuResInfor = &(cuPoolResInfor->xclbinResInfor[i]);
+            outrsp.put("response.data.xclbin.deviceId" + std::to_string(i), cuResInfor->deviceId);
+        }
     } else {
         outrsp.put("response.status.value", XRM_ERROR);
     }
     free(cuPoolProp);
+    free(cuPoolResInfor);
 }
 
 void xrm::cuPoolRelinquishV2Command::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {

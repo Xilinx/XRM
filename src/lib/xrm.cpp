@@ -2225,8 +2225,8 @@ int32_t xrmCheckCuPoolAvailableNum(xrmContext context, xrmCuPoolProperty* cuPool
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
         return (XRM_ERROR_INVALID);
     }
-    if ((cuPoolProp->cuListNum < 0) || (cuPoolProp->xclbinNum < 0) ||
-        ((cuPoolProp->cuListNum == 0) && (cuPoolProp->xclbinNum == 0))) {
+    if ((cuPoolProp->cuListNum < 0) || (cuPoolProp->cuListNum > XRM_MAX_POOL_CU_LIST_NUM) ||
+        (cuPoolProp->xclbinNum < 0) || ((cuPoolProp->cuListNum == 0) && (cuPoolProp->xclbinNum == 0))) {
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): invalid input: cuListNum is %d, xclbinNum is %d.\n", __func__,
                cuPoolProp->cuListNum, cuPoolProp->xclbinNum);
         return (XRM_ERROR_INVALID);
@@ -2329,8 +2329,8 @@ uint64_t xrmCuPoolReserve(xrmContext context, xrmCuPoolProperty* cuPoolProp) {
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
         return (XRM_ERROR_INVALID);
     }
-    if ((cuPoolProp->cuListNum < 0) || (cuPoolProp->xclbinNum < 0) ||
-        ((cuPoolProp->cuListNum == 0) && (cuPoolProp->xclbinNum == 0))) {
+    if ((cuPoolProp->cuListNum < 0) || (cuPoolProp->cuListNum > XRM_MAX_POOL_CU_LIST_NUM) ||
+        (cuPoolProp->xclbinNum < 0) || ((cuPoolProp->cuListNum == 0) && (cuPoolProp->xclbinNum == 0))) {
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): invalid input: cuListNum is %d, xclbinNum is %d.\n", __func__,
                cuPoolProp->cuListNum, cuPoolProp->xclbinNum);
         return (XRM_ERROR_INVALID);
@@ -4238,7 +4238,8 @@ int32_t xrmCheckCuPoolAvailableNumV2(xrmContext context, xrmCuPoolPropertyV2* cu
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
         return (XRM_ERROR_INVALID);
     }
-    if ((cuPoolProp->cuListNum < 0) || (cuPoolProp->xclbinNum < 0) || (cuPoolProp->deviceIdListProp.deviceNum < 0) ||
+    if ((cuPoolProp->cuListNum < 0) || (cuPoolProp->cuListNum > XRM_MAX_POOL_CU_LIST_NUM_V2) ||
+        (cuPoolProp->xclbinNum < 0) || (cuPoolProp->deviceIdListProp.deviceNum < 0) ||
         (cuPoolProp->deviceIdListProp.deviceNum > XRM_MAX_XILINX_DEVICES) ||
         ((cuPoolProp->cuListNum == 0) && (cuPoolProp->xclbinNum == 0) &&
          (cuPoolProp->deviceIdListProp.deviceNum == 0))) {
@@ -4339,17 +4340,24 @@ int32_t xrmCheckCuPoolAvailableNumV2(xrmContext context, xrmCuPoolPropertyV2* cu
  *             xclbinUuid: request all resource in the xclbin.
  *             xclbinNum: request number of such xclbin for this pool.
  *             deviceIdListProp: device id list
+ * @param cuPoolResInfor the return information of cu pool.
+ *             cuListResInfor: cu list resource information.
+ *             cuListNum: number of cu list for this pool.
+ *             xclbinResInfor: resource information of the xclbin.
+ *             xclbinNum: number of xclbin for this pool.
  * @return uint64_t, reserve pool id (> 0) or 0 on fail.
  */
-uint64_t xrmCuPoolReserveV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp) {
+uint64_t xrmCuPoolReserveV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp, xrmCuPoolResInforV2* cuPoolResInfor) {
     uint64_t reserve_poolId = 0;
     int32_t ret = XRM_ERROR;
-    int32_t i;
+    int32_t i, j;
     xrmCuPropertyV2* cuProp;
+    xrmCuListResInforV2* cuListResInfor;
+    xrmCuResInforV2* cuResInfor;
     xrmPrivateContext* ctx = (xrmPrivateContext*)context;
     int32_t unifiedLoad; // granularity of 1,000,000
 
-    if (ctx == NULL || cuPoolProp == NULL) {
+    if (ctx == NULL || cuPoolProp == NULL || cuPoolResInfor == NULL) {
         xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or cu pool properties pointer is NULL\n", __func__);
         return (XRM_ERROR_INVALID);
     }
@@ -4357,7 +4365,8 @@ uint64_t xrmCuPoolReserveV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp)
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
         return (XRM_ERROR_INVALID);
     }
-    if ((cuPoolProp->cuListNum < 0) || (cuPoolProp->xclbinNum < 0) || (cuPoolProp->deviceIdListProp.deviceNum < 0) ||
+    if ((cuPoolProp->cuListNum < 0) || (cuPoolProp->cuListNum > XRM_MAX_POOL_CU_LIST_NUM_V2) ||
+        (cuPoolProp->xclbinNum < 0) || (cuPoolProp->deviceIdListProp.deviceNum < 0) ||
         (cuPoolProp->deviceIdListProp.deviceNum > XRM_MAX_XILINX_DEVICES) ||
         ((cuPoolProp->cuListNum == 0) && (cuPoolProp->xclbinNum == 0) &&
          (cuPoolProp->deviceIdListProp.deviceNum == 0))) {
@@ -4376,6 +4385,7 @@ uint64_t xrmCuPoolReserveV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp)
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): request pool prop xclbinUuid is not specified.\n", __func__);
         return (XRM_ERROR_INVALID);
     }
+    memset(cuPoolResInfor, 0, sizeof(xrmCuPoolResInforV2));
 
     char jsonRsp[maxLength];
     memset(jsonRsp, 0, maxLength * sizeof(char));
@@ -4436,6 +4446,28 @@ uint64_t xrmCuPoolReserveV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp)
     auto value = rspTree.get<int32_t>("response.status.value");
     if (value == XRM_SUCCESS) {
         reserve_poolId = rspTree.get<int64_t>("response.data.poolId");
+
+        cuPoolResInfor->cuListNum = rspTree.get<int32_t>("response.data.cuListNum");
+        for (i = 0; i < cuPoolResInfor->cuListNum; i++) {
+            cuListResInfor = &(cuPoolResInfor->cuListResInfor[i]);
+            cuListResInfor->cuNum = rspTree.get<int32_t>("response.data.cuList.cuNum" + std::to_string(i));
+            for (j = 0; j < cuListResInfor->cuNum; j++) {
+                cuResInfor = &(cuListResInfor->cuResInfor[j]);
+                cuResInfor->deviceId =
+                    rspTree.get<uint64_t>("response.data.cuList.deviceId" + std::to_string(i) + std::to_string(j));
+            }
+        }
+
+        cuPoolResInfor->xclbinNum = rspTree.get<int32_t>("response.data.xclbinNum");
+        for (i = 0; i < cuPoolResInfor->xclbinNum; i++) {
+            cuResInfor = &(cuPoolResInfor->xclbinResInfor[i]);
+            cuResInfor->deviceId = rspTree.get<uint64_t>("response.data.xclbin.deviceId" + std::to_string(i));
+        }
+
+        cuPoolResInfor->deviceListResInfor.deviceNum = cuPoolProp->deviceIdListProp.deviceNum;
+        for (i = 0; i < cuPoolProp->deviceIdListProp.deviceNum; i++) {
+            cuPoolResInfor->deviceListResInfor.deviceResInfor[i].deviceId = cuPoolProp->deviceIdListProp.deviceIds[i];
+        }
     } else {
         reserve_poolId = 0;
     }

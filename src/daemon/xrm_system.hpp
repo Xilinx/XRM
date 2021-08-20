@@ -380,6 +380,30 @@ typedef struct cuPoolResourceV2 {
     uint8_t extData[64]; // for future extension
 } cuPoolResourceV2;
 
+/* cu resource information version 2 */
+typedef struct cuResInforV2 {
+    uint64_t deviceId;
+    uint8_t extData[64]; // for future extension
+} cuResInforV2;
+
+/* cu list resource information version 2 */
+typedef struct cuListResInforV2 {
+    cuResInforV2 cuResInfor[XRM_MAX_LIST_CU_NUM_V2];
+    int32_t cuNum;
+    uint8_t extData[64]; // for future extension
+} cuListResInforV2;
+
+/*
+ * cu pool resource information version 2
+ */
+typedef struct cuPoolResInforV2 {
+    cuListResInforV2 cuListResInfor[XRM_MAX_POOL_CU_LIST_NUM_V2];
+    int32_t cuListNum; // number of such cu list
+    cuResInforV2 xclbinResInfor[XRM_MAX_XILINX_DEVICES];
+    int32_t xclbinNum;   // number of xclbin
+    uint8_t extData[64]; // for future extension
+} cuPoolResInforV2;
+
 /* Alloction information for querying version 2 */
 typedef struct allocationQueryInfoV2 {
     uint64_t allocServiceId;            // the service id returned from allocation
@@ -738,15 +762,18 @@ class system {
                                               cuSubListPropertyV2* cuSubListProp,
                                               deviceIdListPropertyV2* usedDevIdList,
                                               uint64_t* fromDevId);
-    int32_t resReserveCuListV2(uint64_t reservePoolId, cuListPropertyV2* cuListPropV2);
+    int32_t resReserveCuListV2(uint64_t reservePoolId,
+                               cuListPropertyV2* cuListPropV2,
+                               cuListResInforV2* cuListResInforV2);
     int32_t resReserveDevice(uint64_t reservePoolId, uint64_t deviceId, uint64_t clientId, pid_t clientProcessId);
     int32_t resRelinquishCuListV2(uint64_t reservePoolId);
-    uint64_t resReserveCuPoolV2(cuPoolPropertyV2* cuPoolProp);
+    uint64_t resReserveCuPoolV2(cuPoolPropertyV2* cuPoolProp, cuPoolResInforV2* cuPoolResInfor);
     int32_t resRelinquishCuPoolV2(uint64_t reservePoolId);
     int32_t resReservationQueryV2(reservationQueryInfoV2* reserveQueryInfo, cuPoolResourceV2* cuPoolRes);
-    int32_t resReserveCu(uint64_t reservePoolId, cuProperty* cuProp);
+    int32_t resReserveCu(uint64_t reservePoolId, cuProperty* cuProp, uint64_t* fromDevId);
     int32_t resReserveCuList(uint64_t reservePoolId, cuListProperty* cuListProp);
-    int32_t resReserveCuOfXclbin(uint64_t reservePoolId, uuid_t uuid, uint64_t clientId, pid_t clientProcessId);
+    int32_t resReserveCuOfXclbin(
+        uint64_t reservePoolId, uuid_t uuid, uint64_t clientId, pid_t clientProcessId, uint64_t* fromDevId);
     int32_t resRelinquishCuList(uint64_t reservePoolId);
     uint64_t resReserveCuPool(cuPoolProperty* cuPoolProp);
     int32_t resRelinquishCuPool(uint64_t reservePoolId);

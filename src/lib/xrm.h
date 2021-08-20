@@ -397,6 +397,38 @@ typedef struct xrmCuPoolResourceV2 {
     uint8_t extData[64]; // for future extension
 } xrmCuPoolResourceV2;
 
+/* cu resource information version 2 */
+typedef struct xrmCuResInforV2 {
+    uint64_t deviceId;
+    uint8_t extData[64]; // for future extension
+} xrmCuResInforV2;
+
+/* cu list resource information version 2 */
+typedef struct xrmCuListResInforV2 {
+    xrmCuResInforV2 cuResInfor[XRM_MAX_LIST_CU_NUM_V2];
+    int32_t cuNum;
+    uint8_t extData[64]; // for future extension
+} xrmCuListResInforV2;
+
+/* device list resource information version 2 */
+typedef struct xrmDeviceListResInforV2 {
+    xrmCuResInforV2 deviceResInfor[XRM_MAX_XILINX_DEVICES];
+    int32_t deviceNum;
+    uint8_t extData[64]; // for future extension
+} xrmDeviceListResInforV2;
+
+/*
+ * cu pool resource information version 2
+ */
+typedef struct xrmCuPoolResInforV2 {
+    xrmCuListResInforV2 cuListResInfor[XRM_MAX_POOL_CU_LIST_NUM_V2];
+    int32_t cuListNum; // number of such cu list
+    xrmCuResInforV2 xclbinResInfor[XRM_MAX_XILINX_DEVICES];
+    int32_t xclbinNum; // number of xclbin
+    xrmDeviceListResInforV2 deviceListResInfor;
+    uint8_t extData[64]; // for future extension
+} xrmCuPoolResInforV2;
+
 /* Alloction information for querying version 2 */
 typedef struct xrmAllocationQueryInfoV2 {
     uint64_t allocServiceId;            // the service id returned from allocation
@@ -1240,9 +1272,14 @@ int32_t xrmCheckCuPoolAvailableNumV2(xrmContext context, xrmCuPoolPropertyV2* cu
  *             xclbinUuid: request all resource in the xclbin.
  *             xclbinNum: request number of such xclbin for this pool.
  *             deviceIdListProp: device id list
+ * @param cuPoolResInfor the return information of cu pool.
+ *             cuListResInfor: cu list resource information.
+ *             cuListNum: number of cu list for this pool.
+ *             xclbinResInfor: resource information of the xclbin.
+ *             xclbinNum: number of xclbin for this pool.
  * @return uint64_t, reserve pool id (> 0) or 0 on fail.
  */
-uint64_t xrmCuPoolReserveV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp);
+uint64_t xrmCuPoolReserveV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp, xrmCuPoolResInforV2* cuPoolResInfor);
 
 /**
  * \brief Relinquishes a previously reserved pool of resources.
