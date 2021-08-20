@@ -165,6 +165,76 @@ void xrmCuAllocReleaseTest(xrmContext* ctx) {
         printf("fail to release encoder cu\n");
 }
 
+void xrmCuAllocReleaseV2Test(xrmContext* ctx) {
+    int32_t ret;
+    printf("<<<<<<<==  start the xrm allocation V2 test ===>>>>>>>>\n");
+    if (ctx == NULL) {
+        printf("ctx is null, fail to do cu alloc test\n");
+        return;
+    }
+
+    // alloc scaler cu
+    xrmCuPropertyV2 scalerCuProp;
+    xrmCuResourceV2 scalerCuRes;
+
+    memset(&scalerCuProp, 0, sizeof(xrmCuPropertyV2));
+    memset(&scalerCuRes, 0, sizeof(xrmCuResourceV2));
+    strcpy(scalerCuProp.kernelName, "scaler");
+    strcpy(scalerCuProp.kernelAlias, "");
+    scalerCuProp.devExcl = false;
+    uint64_t deviceInfoContraintType = XRM_DEVICE_INFO_CONSTRAINT_TYPE_HARDWARE_DEVICE_INDEX;
+    uint64_t deviceInfoDeviceIndex = 1;
+    scalerCuProp.deviceInfo = (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+                              (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+    scalerCuProp.requestLoad = 45;
+    scalerCuProp.poolId = 0;
+
+    printf("Test V2-1-1: check scaler cu available number\n");
+    printf("    scaler cu prop: kernelName is %s\n", scalerCuProp.kernelName);
+    printf("    scaler cu prop: kernelAlias is %s\n", scalerCuProp.kernelAlias);
+
+    ret = xrmCheckCuAvailableNumV2(ctx, &scalerCuProp);
+    if (ret < 0) {
+        printf("xrmCheckCuAvailableNumV2: fail to check scaler cu available number\n");
+    } else {
+        printf("xrmCheckCuAvailableNumV2: scaler cu available number = %d\n", ret);
+    }
+
+    printf("Test V2-1-2: Alloc scaler cu\n");
+    ret = xrmCuAllocV2(ctx, &scalerCuProp, &scalerCuRes);
+    if (ret != 0) {
+        printf("xrmCuAllocV2: fail to alloc scaler cu\n");
+    } else {
+        printf("Allocated scaler cu: \n");
+        printf("   xclbinFileName is:  %s\n", scalerCuRes.xclbinFileName);
+        printf("   kernelPluginFileName is:  %s\n", scalerCuRes.kernelPluginFileName);
+        printf("   kernelName is:  %s\n", scalerCuRes.kernelName);
+        printf("   instanceName is:  %s\n", scalerCuRes.instanceName);
+        printf("   cuName is:  %s\n", scalerCuRes.cuName);
+        printf("   kernelAlias is:  %s\n", scalerCuRes.kernelAlias);
+        printf("   deviceId is:  %d\n", scalerCuRes.deviceId);
+        printf("   cuId is:  %d\n", scalerCuRes.cuId);
+        printf("   channelId is:  %d\n", scalerCuRes.channelId);
+        printf("   cuType is:  %d\n", scalerCuRes.cuType);
+        printf("   baseAddr is:  0x%lx\n", scalerCuRes.baseAddr);
+        printf("   membankId is:  %d\n", scalerCuRes.membankId);
+        printf("   membankType is:  %d\n", scalerCuRes.membankType);
+        printf("   membankSize is:  0x%lx\n", scalerCuRes.membankSize);
+        printf("   membankBaseAddr is:  0x%lx\n", scalerCuRes.membankBaseAddr);
+        printf("   allocServiceId is:  %lu\n", scalerCuRes.allocServiceId);
+        printf("   poolId is:  %lu\n", scalerCuRes.poolId);
+        printf("   channelLoad is:  %d\n", scalerCuRes.channelLoad);
+    }
+
+    printf("Test V2-1-3:  release scaler cu\n");
+    if (xrmCuReleaseV2(ctx, &scalerCuRes))
+        printf("success to  release scaler cu\n");
+    else
+        printf("fail to release scaler cu\n");
+
+    printf("<<<<<<<==  end the xrm allocation test ===>>>>>>>>\n");
+}
+
 void xrmCuListAllocReleaseTest(xrmContext* ctx) {
     int i;
     int32_t ret;
@@ -271,6 +341,160 @@ void xrmCuListAllocReleaseTest(xrmContext* ctx) {
         printf("success to release encoder cu list\n");
     else
         printf("fail to release encoder cu list\n");
+}
+
+void xrmCuListAllocReleaseV2Test(xrmContext* ctx) {
+    int i;
+    int32_t ret;
+    printf("<<<<<<<==  start the xrm cu list allocation V2 test ===>>>>>>>>\n");
+
+    printf("Test V2-2-1: alloc scaler cu list with hardware device index\n");
+    if (ctx == NULL) {
+        printf("ctx is null, fail to alloc cu list\n");
+        return;
+    }
+    // alloc scaler cu
+    xrmCuListPropertyV2* scalerCuListProp;
+    xrmCuListResourceV2* scalerCuListRes;
+
+    scalerCuListProp = (xrmCuListPropertyV2*)malloc(sizeof(xrmCuListPropertyV2));
+    memset(scalerCuListProp, 0, sizeof(xrmCuListPropertyV2));
+    scalerCuListRes = (xrmCuListResourceV2*)malloc(sizeof(xrmCuListResourceV2));
+    memset(scalerCuListRes, 0, sizeof(xrmCuListResourceV2));
+
+    scalerCuListProp->cuNum = 8;
+    uint64_t deviceInfoContraintType = XRM_DEVICE_INFO_CONSTRAINT_TYPE_HARDWARE_DEVICE_INDEX;
+    uint64_t deviceInfoDeviceIndex = 0;
+    for (i = 0; i < 4; i++) {
+        strcpy(scalerCuListProp->cuProps[i].kernelName, "scaler");
+        strcpy(scalerCuListProp->cuProps[i].kernelAlias, "");
+        scalerCuListProp->cuProps[i].devExcl = false;
+        scalerCuListProp->cuProps[i].deviceInfo = (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+                                                  (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+        scalerCuListProp->cuProps[i].requestLoad = 15;
+        scalerCuListProp->cuProps[i].poolId = 0;
+    }
+    deviceInfoDeviceIndex = 1;
+    for (i = 4; i < scalerCuListProp->cuNum; i++) {
+        strcpy(scalerCuListProp->cuProps[i].kernelName, "scaler");
+        strcpy(scalerCuListProp->cuProps[i].kernelAlias, "");
+        scalerCuListProp->cuProps[i].devExcl = false;
+        scalerCuListProp->cuProps[i].deviceInfo = (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+                                                  (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+        scalerCuListProp->cuProps[i].requestLoad = 15;
+        scalerCuListProp->cuProps[i].poolId = 0;
+    }
+
+    ret = xrmCheckCuListAvailableNumV2(ctx, scalerCuListProp);
+    if (ret < 0) {
+        printf("xrmCheckCuListAvailableNumV2: fail to check scaler cu list available number\n");
+    } else {
+        printf("xrmCheckCuListAvailableNumV2: scaler cu list available number = %d\n", ret);
+    }
+
+    ret = xrmCuListAllocV2(ctx, scalerCuListProp, scalerCuListRes);
+    if (ret != 0) {
+        printf("xrmCuListAllocV2: fail to alloc scaler cu list\n");
+    } else {
+        for (i = 0; i < scalerCuListRes->cuNum; i++) {
+            printf("Allocated scaler cu list: cu %d\n", i);
+            printf("   xclbinFileName is:  %s\n", scalerCuListRes->cuResources[i].xclbinFileName);
+            printf("   kernelPluginFileName is:  %s\n", scalerCuListRes->cuResources[i].kernelPluginFileName);
+            printf("   kernelName is:  %s\n", scalerCuListRes->cuResources[i].kernelName);
+            printf("   kernelAlias is:  %s\n", scalerCuListRes->cuResources[i].kernelAlias);
+            printf("   instanceName is:  %s\n", scalerCuListRes->cuResources[i].instanceName);
+            printf("   cuName is:  %s\n", scalerCuListRes->cuResources[i].cuName);
+            printf("   deviceId is:  %d\n", scalerCuListRes->cuResources[i].deviceId);
+            printf("   cuId is:  %d\n", scalerCuListRes->cuResources[i].cuId);
+            printf("   channelId is:  %d\n", scalerCuListRes->cuResources[i].channelId);
+            printf("   cuType is:  %d\n", scalerCuListRes->cuResources[i].cuType);
+            printf("   baseAddr is:  0x%lx\n", scalerCuListRes->cuResources[i].baseAddr);
+            printf("   membankId is:  %d\n", scalerCuListRes->cuResources[i].membankId);
+            printf("   membankType is:  %d\n", scalerCuListRes->cuResources[i].membankType);
+            printf("   membankSize is:  0x%lx\n", scalerCuListRes->cuResources[i].membankSize);
+            printf("   membankBaseAddr is:  0x%lx\n", scalerCuListRes->cuResources[i].membankBaseAddr);
+            printf("   allocServiceId is:  %lu\n", scalerCuListRes->cuResources[i].allocServiceId);
+            printf("   poolId is:  %lu\n", scalerCuListRes->cuResources[i].poolId);
+            printf("   channelLoad is:  %d\n", scalerCuListRes->cuResources[i].channelLoad);
+        }
+    }
+
+    printf("Test V2-2-2:   release scaler cu list\n");
+    if (xrmCuListReleaseV2(ctx, scalerCuListRes))
+        printf("success to release scaler cu list\n");
+    else
+        printf("fail to release scaler cu list\n");
+
+    printf("Test V2-2-3: alloc scaler cu list with virtual device index\n");
+
+    memset(scalerCuListProp, 0, sizeof(xrmCuListPropertyV2));
+    memset(scalerCuListRes, 0, sizeof(xrmCuListResourceV2));
+
+    scalerCuListProp->cuNum = 8;
+    deviceInfoContraintType = XRM_DEVICE_INFO_CONSTRAINT_TYPE_VIRTUAL_DEVICE_INDEX;
+    deviceInfoDeviceIndex = 0;
+    for (i = 0; i < 3; i++) {
+        strcpy(scalerCuListProp->cuProps[i].kernelName, "scaler");
+        strcpy(scalerCuListProp->cuProps[i].kernelAlias, "");
+        scalerCuListProp->cuProps[i].devExcl = false;
+        scalerCuListProp->cuProps[i].deviceInfo = (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+                                                  (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+        scalerCuListProp->cuProps[i].requestLoad = 15;
+        scalerCuListProp->cuProps[i].poolId = 0;
+    }
+    deviceInfoDeviceIndex = 1;
+    for (i = 3; i < scalerCuListProp->cuNum; i++) {
+        strcpy(scalerCuListProp->cuProps[i].kernelName, "scaler");
+        strcpy(scalerCuListProp->cuProps[i].kernelAlias, "");
+        scalerCuListProp->cuProps[i].devExcl = false;
+        scalerCuListProp->cuProps[i].deviceInfo = (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+                                                  (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+        scalerCuListProp->cuProps[i].requestLoad = 15;
+        scalerCuListProp->cuProps[i].poolId = 0;
+    }
+
+    ret = xrmCheckCuListAvailableNumV2(ctx, scalerCuListProp);
+    if (ret < 0) {
+        printf("xrmCheckCuListAvailableNumV2: fail to check scaler cu list available number\n");
+    } else {
+        printf("xrmCheckCuListAvailableNumV2: scaler cu list available number = %d\n", ret);
+    }
+
+    ret = xrmCuListAllocV2(ctx, scalerCuListProp, scalerCuListRes);
+    if (ret != 0) {
+        printf("xrmCuListAllocV2: fail to alloc scaler cu list\n");
+    } else {
+        for (i = 0; i < scalerCuListRes->cuNum; i++) {
+            printf("Allocated scaler cu list: cu %d\n", i);
+            printf("   xclbinFileName is:  %s\n", scalerCuListRes->cuResources[i].xclbinFileName);
+            printf("   kernelPluginFileName is:  %s\n", scalerCuListRes->cuResources[i].kernelPluginFileName);
+            printf("   kernelName is:  %s\n", scalerCuListRes->cuResources[i].kernelName);
+            printf("   kernelAlias is:  %s\n", scalerCuListRes->cuResources[i].kernelAlias);
+            printf("   instanceName is:  %s\n", scalerCuListRes->cuResources[i].instanceName);
+            printf("   cuName is:  %s\n", scalerCuListRes->cuResources[i].cuName);
+            printf("   deviceId is:  %d\n", scalerCuListRes->cuResources[i].deviceId);
+            printf("   cuId is:  %d\n", scalerCuListRes->cuResources[i].cuId);
+            printf("   channelId is:  %d\n", scalerCuListRes->cuResources[i].channelId);
+            printf("   cuType is:  %d\n", scalerCuListRes->cuResources[i].cuType);
+            printf("   baseAddr is:  0x%lx\n", scalerCuListRes->cuResources[i].baseAddr);
+            printf("   membankId is:  %d\n", scalerCuListRes->cuResources[i].membankId);
+            printf("   membankType is:  %d\n", scalerCuListRes->cuResources[i].membankType);
+            printf("   membankSize is:  0x%lx\n", scalerCuListRes->cuResources[i].membankSize);
+            printf("   membankBaseAddr is:  0x%lx\n", scalerCuListRes->cuResources[i].membankBaseAddr);
+            printf("   allocServiceId is:  %lu\n", scalerCuListRes->cuResources[i].allocServiceId);
+            printf("   poolId is:  %lu\n", scalerCuListRes->cuResources[i].poolId);
+            printf("   channelLoad is:  %d\n", scalerCuListRes->cuResources[i].channelLoad);
+        }
+    }
+
+    printf("Test V2-2-4:   release scaler cu list\n");
+    if (xrmCuListReleaseV2(ctx, scalerCuListRes))
+        printf("success to release scaler cu list\n");
+    else
+        printf("fail to release scaler cu list\n");
+
+    free(scalerCuListProp);
+    free(scalerCuListRes);
 }
 
 void xrmSoftCuAllocReleaseTest(xrmContext* ctx) {
@@ -1043,6 +1267,230 @@ void xrmCuPoolReserveAllocReleaseRelinquishTest(xrmContext* ctx) {
         printf("success to relinquish scaler cu pool\n");
     else
         printf("fail to relinquish encoder cu pool\n");
+}
+
+void xrmCuPoolReserveAllocReleaseRelinquishV2Test(xrmContext* ctx) {
+    int i;
+    int32_t ret;
+    uint64_t scalerReservePoolId;
+    printf("<<<<<<<==  start the xrm cu reserve alloc release relinquish V2 test ===>>>>>>>>\n");
+
+    printf("Test V2-9-1: reserve scaler cu pool\n");
+    if (ctx == NULL) {
+        printf("ctx is null, fail to reserve cu pool\n");
+        return;
+    }
+    // reserve scaler cu
+    xrmCuPoolPropertyV2* scalerCuPoolProp;
+    uint64_t deviceInfoContraintType;
+    uint64_t deviceInfoDeviceIndex;
+
+    scalerCuPoolProp = (xrmCuPoolPropertyV2*)malloc(sizeof(xrmCuPoolPropertyV2));
+    memset(scalerCuPoolProp, 0, sizeof(xrmCuPoolPropertyV2));
+
+    scalerCuPoolProp->cuListProp.cuNum = 4;
+
+    deviceInfoContraintType = XRM_DEVICE_INFO_CONSTRAINT_TYPE_VIRTUAL_DEVICE_INDEX;
+    deviceInfoDeviceIndex = 0;
+    for (i = 0; i < 2; i++) {
+        strcpy(scalerCuPoolProp->cuListProp.cuProps[i].kernelName, "scaler");
+        strcpy(scalerCuPoolProp->cuListProp.cuProps[i].kernelAlias, "");
+        scalerCuPoolProp->cuListProp.cuProps[i].devExcl = false;
+        scalerCuPoolProp->cuListProp.cuProps[i].deviceInfo =
+            (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+            (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+        scalerCuPoolProp->cuListProp.cuProps[i].requestLoad = 50;
+    }
+    deviceInfoDeviceIndex = 1;
+    for (i = 2; i < scalerCuPoolProp->cuListProp.cuNum; i++) {
+        strcpy(scalerCuPoolProp->cuListProp.cuProps[i].kernelName, "lookahead");
+        strcpy(scalerCuPoolProp->cuListProp.cuProps[i].kernelAlias, "");
+        scalerCuPoolProp->cuListProp.cuProps[i].deviceInfo =
+            (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+            (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+        scalerCuPoolProp->cuListProp.cuProps[i].devExcl = false;
+        scalerCuPoolProp->cuListProp.cuProps[i].requestLoad = 50;
+    }
+    scalerCuPoolProp->cuListNum = 1;
+    char uuidStr[64];
+    strcpy(uuidStr, "d1e0415e27d349a29f0fdfa92e69f8ee");
+    xrmTestHexstrToBin(uuidStr, 2 * sizeof(uuid_t), (char*)&scalerCuPoolProp->xclbinUuid);
+    scalerCuPoolProp->xclbinNum = 1;
+
+#if 0
+    ret = xrmCheckCuPoolAvailableNumV2(ctx, scalerCuPoolProp);
+    if (ret < 0) {
+        printf("xrmCheckCuPoolAvailableNumV2: fail to check scaler cu pool available num\n");
+    } else {
+        printf("xrmCheckCuPoolAvailableNumV2: scaler cu pool available num = %d\n", ret);
+    }
+#endif
+
+    scalerReservePoolId = xrmCuPoolReserveV2(ctx, scalerCuPoolProp);
+    if (scalerReservePoolId == 0) {
+        printf("xrmCuPoolReserve: fail to reserve scaler cu pool\n");
+    } else {
+        printf("xrmCuPoolReserve: reservePoolId = %lu\n", scalerReservePoolId);
+    }
+
+    // query the reserve result
+    xrmCuPoolResourceV2* scalerCuPoolRes;
+    scalerCuPoolRes = (xrmCuPoolResourceV2*)malloc(sizeof(xrmCuPoolResourceV2));
+    memset(scalerCuPoolRes, 0, sizeof(xrmCuPoolResourceV2));
+
+    xrmReservationQueryInfoV2 reserveQueryInfo;
+    memset(&reserveQueryInfo, 0, sizeof(xrmReservationQueryInfoV2));
+    reserveQueryInfo.poolId = scalerReservePoolId;
+    strcpy(reserveQueryInfo.kernelName, "");
+    strcpy(reserveQueryInfo.kernelAlias, "");
+
+    printf("Test V2-9-2: xrmReservationQueryV2\n");
+    ret = xrmReservationQueryV2(ctx, &reserveQueryInfo, scalerCuPoolRes);
+    if (ret != 0) {
+        printf("xrmReservationQueryV2: fail to query reserved scaler cu pool\n");
+    } else {
+        for (i = 0; i < scalerCuPoolRes->cuNum; i++) {
+            printf("query the reserved scaler cu pool: cu %d\n", i);
+            printf("   xclbinFileName is:  %s\n", scalerCuPoolRes->cuResources[i].xclbinFileName);
+            printf("   kernelPluginFileName is:  %s\n", scalerCuPoolRes->cuResources[i].kernelPluginFileName);
+            printf("   kernelName is:  %s\n", scalerCuPoolRes->cuResources[i].kernelName);
+            printf("   kernelAlias is:  %s\n", scalerCuPoolRes->cuResources[i].kernelAlias);
+            printf("   instanceName is:  %s\n", scalerCuPoolRes->cuResources[i].instanceName);
+            printf("   cuName is:  %s\n", scalerCuPoolRes->cuResources[i].cuName);
+            printf("   deviceId is:  %d\n", scalerCuPoolRes->cuResources[i].deviceId);
+            printf("   cuId is:  %d\n", scalerCuPoolRes->cuResources[i].cuId);
+            printf("   cuType is:  %d\n", scalerCuPoolRes->cuResources[i].cuType);
+            printf("   baseAddr is:  0x%lx\n", scalerCuPoolRes->cuResources[i].baseAddr);
+            printf("   membankId is:  %d\n", scalerCuPoolRes->cuResources[i].membankId);
+            printf("   membankType is:  %d\n", scalerCuPoolRes->cuResources[i].membankType);
+            printf("   membankSize is:  0x%lx\n", scalerCuPoolRes->cuResources[i].membankSize);
+            printf("   membankBaseAddr is:  0x%lx\n", scalerCuPoolRes->cuResources[i].membankBaseAddr);
+            printf("   poolId is:  %lu\n", scalerCuPoolRes->cuResources[i].poolId);
+        }
+    }
+
+    // alloc scaler cu
+    xrmCuPropertyV2 scalerCuProp;
+    xrmCuResourceV2 scalerCuRes;
+    memset(&scalerCuProp, 0, sizeof(xrmCuProperty));
+    memset(&scalerCuRes, 0, sizeof(xrmCuResource));
+    strcpy(scalerCuProp.kernelName, "scaler");
+    strcpy(scalerCuProp.kernelAlias, "");
+    scalerCuProp.devExcl = false;
+    scalerCuProp.requestLoad = 45;
+    scalerCuProp.poolId = scalerReservePoolId;
+
+    printf("Test V2-9-3: scaler cu prop: kernelName is %s\n", scalerCuProp.kernelName);
+    printf("          scaler cu prop: kernelAlias is %s\n", scalerCuProp.kernelAlias);
+
+    printf("Test V2-9-4: xrmCheckCuAvailableNumV2 in reserve pool\n");
+    ret = xrmCheckCuAvailableNumV2(ctx, &scalerCuProp);
+    if (ret < 0) {
+        printf("xrmCheckCuAvailableNum: fail to check scaler cu available number\n");
+    } else {
+        printf("xrmCheckCuAvailableNum: scaler cu available number = %d\n", ret);
+    }
+
+    printf("Test V2-9-5: xrmCuAlloc in reserve pool\n");
+    ret = xrmCuAllocV2(ctx, &scalerCuProp, &scalerCuRes);
+    if (ret != 0) {
+        printf("xrmCuAllocV2: fail to alloc scaler cu from reservation\n");
+    } else {
+        printf("Allocated scaler cu from reserve pool: \n");
+        printf("   xclbinFileName is:  %s\n", scalerCuRes.xclbinFileName);
+        printf("   kernelPluginFileName is:  %s\n", scalerCuRes.kernelPluginFileName);
+        printf("   kernelName is:  %s\n", scalerCuRes.kernelName);
+        printf("   kernelAlias is:  %s\n", scalerCuRes.kernelAlias);
+        printf("   instanceName is:  %s\n", scalerCuRes.instanceName);
+        printf("   cuName is:  %s\n", scalerCuRes.cuName);
+        printf("   deviceId is:  %d\n", scalerCuRes.deviceId);
+        printf("   cuId is:  %d\n", scalerCuRes.cuId);
+        printf("   channelId is:  %d\n", scalerCuRes.channelId);
+        printf("   cuType is:  %d\n", scalerCuRes.cuType);
+        printf("   baseAddr is:  0x%lx\n", scalerCuRes.baseAddr);
+        printf("   membankId is:  %d\n", scalerCuRes.membankId);
+        printf("   membankType is:  %d\n", scalerCuRes.membankType);
+        printf("   membankSize is:  0x%lx\n", scalerCuRes.membankSize);
+        printf("   membankBaseAddr is:  0x%lx\n", scalerCuRes.membankBaseAddr);
+        printf("   allocServiceId is:  %lu\n", scalerCuRes.allocServiceId);
+        printf("   poolId is:  %lu\n", scalerCuRes.poolId);
+        printf("   channelLoad is:  %d\n", scalerCuRes.channelLoad);
+    }
+
+    // alloc scaler cu list
+    xrmCuListPropertyV2* scalerCuListProp;
+    xrmCuListResourceV2* scalerCuListRes;
+    scalerCuListProp = (xrmCuListPropertyV2*)malloc(sizeof(xrmCuListPropertyV2));
+    memset(scalerCuListProp, 0, sizeof(xrmCuListPropertyV2));
+    scalerCuListRes = (xrmCuListResourceV2*)malloc(sizeof(xrmCuListResourceV2));
+    memset(scalerCuListRes, 0, sizeof(xrmCuListResourceV2));
+
+    scalerCuListProp->cuNum = 4;
+    for (i = 0; i < scalerCuListProp->cuNum; i++) {
+        strcpy(scalerCuListProp->cuProps[i].kernelName, "scaler");
+        strcpy(scalerCuListProp->cuProps[i].kernelAlias, "");
+        scalerCuListProp->cuProps[i].devExcl = false;
+        scalerCuListProp->cuProps[i].requestLoad = 15;
+        scalerCuListProp->cuProps[i].poolId = scalerReservePoolId;
+    }
+
+    printf("Test 9-6: xrmCheckCuListAvailableNumV2 in reserve pool\n");
+    ret = xrmCheckCuListAvailableNumV2(ctx, scalerCuListProp);
+    if (ret < 0) {
+        printf("xrmCheckCuListAvailableNumV2: fail to check scaler cu list available number\n");
+    } else {
+        printf("xrmCheckCuListAvailableNumV2: scaler cu list available number = %d\n", ret);
+    }
+
+    printf("Test 9-7: xrmCuListAllocV2 in reserve pool\n");
+    ret = xrmCuListAllocV2(ctx, scalerCuListProp, scalerCuListRes);
+    if (ret != 0) {
+        printf("xrmCuListAllocV2: fail to alloc scaler cu list from reservation\n");
+    } else {
+        for (i = 0; i < scalerCuListRes->cuNum; i++) {
+            printf("Allocated scaler cu list from reserve pool: cu %d\n", i);
+            printf("   xclbinFileName is:  %s\n", scalerCuListRes->cuResources[i].xclbinFileName);
+            printf("   kernelPluginFileName is:  %s\n", scalerCuListRes->cuResources[i].kernelPluginFileName);
+            printf("   kernelName is:  %s\n", scalerCuListRes->cuResources[i].kernelName);
+            printf("   kernelAlias is:  %s\n", scalerCuListRes->cuResources[i].kernelAlias);
+            printf("   instanceName is:  %s\n", scalerCuListRes->cuResources[i].instanceName);
+            printf("   cuName is:  %s\n", scalerCuListRes->cuResources[i].cuName);
+            printf("   deviceId is:  %d\n", scalerCuListRes->cuResources[i].deviceId);
+            printf("   cuId is:  %d\n", scalerCuListRes->cuResources[i].cuId);
+            printf("   channelId is:  %d\n", scalerCuListRes->cuResources[i].channelId);
+            printf("   cuType is:  %d\n", scalerCuListRes->cuResources[i].cuType);
+            printf("   baseAddr is:  0x%lx\n", scalerCuListRes->cuResources[i].baseAddr);
+            printf("   membankId is:  %d\n", scalerCuListRes->cuResources[i].membankId);
+            printf("   membankType is:  %d\n", scalerCuListRes->cuResources[i].membankType);
+            printf("   membankSize is:  0x%lx\n", scalerCuListRes->cuResources[i].membankSize);
+            printf("   membankBaseAddr is:  0x%lx\n", scalerCuListRes->cuResources[i].membankBaseAddr);
+            printf("   allocServiceId is:  %lu\n", scalerCuListRes->cuResources[i].allocServiceId);
+            printf("   poolId is:  %lu\n", scalerCuListRes->cuResources[i].poolId);
+            printf("   channelLoad is:  %d\n", scalerCuListRes->cuResources[i].channelLoad);
+        }
+    }
+
+    printf("Test V2-9-8:   release scaler cu\n");
+    if (xrmCuReleaseV2(ctx, &scalerCuRes))
+        printf("success to release scaler cu\n");
+    else
+        printf("fail to release scaler cu\n");
+
+    printf("Test V2-9-9:   release scaler cu list\n");
+    if (xrmCuListReleaseV2(ctx, scalerCuListRes))
+        printf("success to release scaler cu list\n");
+    else
+        printf("fail to release scaler cu list\n");
+
+    printf("Test V2-9-10:  relinquish scaler cu pool\n");
+    if (xrmCuPoolRelinquishV2(ctx, scalerReservePoolId))
+        printf("success to relinquish scaler cu pool\n");
+    else
+        printf("fail to relinquish encoder cu pool\n");
+    free(scalerCuPoolProp);
+    free(scalerCuPoolRes);
+    free(scalerCuListProp);
+    free(scalerCuListRes);
 }
 
 void xrmLoadUnloadXclbinTest(xrmContext* ctx) {
@@ -3678,6 +4126,11 @@ void testXrmFunctions(void) {
     xrmCuListBlockingAllocReleaseGranularity1000000Test(ctx);
     xrmCuGroupBlockingAllocReleaseGranularity1000000Test(ctx);
     xrmCuAllocFromDevReleaseGranularity1000000Test(ctx);
+
+    xrmCuAllocReleaseV2Test(ctx);
+    xrmCuListAllocReleaseV2Test(ctx);
+    xrmCuPoolReserveAllocReleaseRelinquishV2Test(ctx);
+
     printf("Test 0-2: destroy context\n");
     if (xrmDestroyContext(ctx) != XRM_SUCCESS)
         printf("Test 0-2: destroy context failed\n");

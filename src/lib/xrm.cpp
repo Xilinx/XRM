@@ -1650,9 +1650,9 @@ bool xrmCuGroupRelease(xrmContext context, xrmCuGroupResource* cuGroupRes) {
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
         return (ret);
     }
-    if (cuGroupRes->cuNum < 0 || cuGroupRes->cuNum > XRM_MAX_LIST_CU_NUM) {
+    if (cuGroupRes->cuNum < 0 || cuGroupRes->cuNum > XRM_MAX_GROUP_CU_NUM) {
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): group resource cuNum is %d, out of range 0 - %d.\n", __func__,
-               cuGroupRes->cuNum, XRM_MAX_LIST_CU_NUM);
+               cuGroupRes->cuNum, XRM_MAX_GROUP_CU_NUM);
         return (ret);
     }
     if (cuGroupRes->cuNum == 0) {
@@ -3138,5 +3138,1416 @@ int32_t xrmCuGroupBlockingAlloc(xrmContext context,
             ret = xrmCuGroupAlloc(ctx, cuGroupProp, cuGroupRes);
             sched_yield();
         }
+    return (ret);
+}
+
+/**
+ * \brief Allocates compute unit with a device, cu, and channel given a
+ * kernel name or alias or both and request load. This function also
+ * provides the xclbin and kernel plugin loaded on the device.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuProp the property of requested cu.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ *             devExcl: request exclusive device usage for this client.
+ *             deviceInfo: resource allocation device constaint information.
+ *                         bit[63 - 40] reserved
+ *                         bit[39 - 32] constraintType
+ *                                      0 : no specified device constraint
+ *                                      1 : hardware device index. It's used to identify hardware
+ *                                          device index is used as the constraint.
+ *                                      2 : virtual device index. it's used to descript multiple cu
+ *                                          from same device if device index is same. It does not
+ *                                          means from specified hardware device. This type is only
+ *                                          valid in property of cu list. It's not valid for single cu.
+ *                                      others : reserved
+ *                         bit[31 -  0] deviceIndex
+ *             memoryInfo: resource allocation memory constaint information.
+ *                         bit[63 - 40] reserved
+ *                         bit[39 - 32] constraintType
+ *                                      0 : no specified memory constraint
+ *                                      1 : hardware memory bank. It's used to identify hardware
+ *                                          memory bank is used as the constraint.
+ *                                      others : reserved
+ *                         bit[31 -  0] memoryBankIndex
+ *             policyInfo: resource allocation policy information.
+ *                         bit[63 -  8] reserved
+ *                         bit[ 7 -  0] policyType
+ *                                      0 : no specified policy
+ *                                      1 : most used first
+ *                                      2 : least used first
+ *                                      others : reserved
+ *             requestLoad: request load, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
+ *             poolId: request to allocate cu from specified resource pool.
+ * @param cuRes the cu resource.
+ *             xclbinFileName: xclbin (path and name) attached to this device.
+ *             kernelPluginFileName: kernel plugin (only name) attached to this device.
+ *             kernelName: the kernel name of allocated cu.
+ *             kernelAlias: the name alias of allocated cu.
+ *             instanceName: the instance name of allocated cu.
+ *             cuName: the name of allocated cu (kernelName:instanceName).
+ *             uuid: uuid of the loaded xclbin file.
+ *             deviceId: device id of this cu.
+ *             cuId: cu id of this cu.
+ *             channelId: channel id of this cu.
+ *             cuType: type of cu, hardware kernel or soft kernel.
+ *             allocServiceId: service id for this cu allocation.
+ *             channelLoad: allocated load of this cu, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
+ *             poolId: id of the cu pool this cu comes from, the system default pool id is 0.
+ * @return int32_t, 0 on success or appropriate error number
+ */
+int32_t xrmCuAllocV2(xrmContext context, xrmCuPropertyV2* cuProp, xrmCuResourceV2* cuRes) {
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+    int32_t unifiedLoad; // granularity of 1,000,000
+
+    if (ctx == NULL || cuProp == NULL || cuRes == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context, cu properties or resource pointer is NULL\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0')) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s neither kernel name nor alias are provided", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    unifiedLoad = xrmRetrieveLoadInfo(cuProp->requestLoad);
+    if (unifiedLoad < 0) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): wrong request load: 0x%x", __func__, cuProp->requestLoad);
+        return (XRM_ERROR_INVALID);
+    }
+
+    memset(cuRes, 0, sizeof(xrmCuResourceV2));
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree cuAllocTree;
+    pid_t clientProcessId = getpid();
+    cuAllocTree.put("request.name", "cuAllocV2");
+    cuAllocTree.put("request.requestId", 1);
+    cuAllocTree.put("request.parameters.echoClientId", "echo");
+    cuAllocTree.put("request.parameters.clientId", ctx->xrmClientId);
+    cuAllocTree.put("request.parameters.clientProcessId", clientProcessId);
+    /* use either kernel name or alias or both to identity the kernel */
+    cuAllocTree.put("request.parameters.kernelName", cuProp->kernelName);
+    cuAllocTree.put("request.parameters.kernelAlias", cuProp->kernelAlias);
+    if (cuProp->devExcl == false)
+        cuAllocTree.put("request.parameters.devExcl", 0);
+    else
+        cuAllocTree.put("request.parameters.devExcl", 1);
+    cuAllocTree.put("request.parameters.deviceInfo", cuProp->deviceInfo);
+    cuAllocTree.put("request.parameters.memoryInfo", cuProp->memoryInfo);
+    cuAllocTree.put("request.parameters.policyInfo", cuProp->policyInfo);
+    cuAllocTree.put("request.parameters.requestLoadUnified", unifiedLoad);
+    cuAllocTree.put("request.parameters.requestLoadOriginal", cuProp->requestLoad);
+    cuAllocTree.put("request.parameters.poolId", cuProp->poolId);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, cuAllocTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    int32_t ret = rspTree.get<int32_t>("response.status.value");
+    if (ret == XRM_SUCCESS) {
+        auto xclbinFileName = rspTree.get<std::string>("response.data.xclbinFileName");
+        strncpy(cuRes->xclbinFileName, xclbinFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+        auto uuidStr = rspTree.get<std::string>("response.data.uuidStr");
+        hexstrToBin(uuidStr, 2 * sizeof(uuid_t), (unsigned char*)cuRes->uuid);
+        auto kernelPluginFileName = rspTree.get<std::string>("response.data.kernelPluginFileName");
+        strncpy(cuRes->kernelPluginFileName, kernelPluginFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+        auto kernelName = rspTree.get<std::string>("response.data.kernelName");
+        strncpy(cuRes->kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
+        auto kernelAlias = rspTree.get<std::string>("response.data.kernelAlias");
+        strncpy(cuRes->kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
+        auto instanceName = rspTree.get<std::string>("response.data.instanceName");
+        strncpy(cuRes->instanceName, instanceName.c_str(), XRM_MAX_NAME_LEN - 1);
+        auto cuName = rspTree.get<std::string>("response.data.cuName");
+        strncpy(cuRes->cuName, cuName.c_str(), XRM_MAX_NAME_LEN - 1);
+        cuRes->deviceId = rspTree.get<int32_t>("response.data.deviceId");
+        cuRes->cuId = rspTree.get<int32_t>("response.data.cuId");
+        cuRes->channelId = rspTree.get<int32_t>("response.data.channelId");
+        auto cuType = rspTree.get<int32_t>("response.data.cuType");
+        cuRes->cuType = (xrmCuType)cuType;
+        cuRes->allocServiceId = rspTree.get<uint64_t>("response.data.allocServiceId");
+        cuRes->channelLoad = rspTree.get<int32_t>("response.data.channelLoadOriginal");
+        cuRes->baseAddr = rspTree.get<uint64_t>("response.data.baseAddr");
+        cuRes->membankId = rspTree.get<uint32_t>("response.data.membankId");
+        cuRes->membankType = rspTree.get<uint32_t>("response.data.membankType");
+        cuRes->membankSize = rspTree.get<uint64_t>("response.data.membankSize");
+        cuRes->membankBaseAddr = rspTree.get<uint64_t>("response.data.membankBaseAddr");
+        cuRes->poolId = rspTree.get<uint64_t>("response.data.poolId");
+    }
+    return (ret);
+}
+
+/**
+ * \brief Allocates a list of compute unit resource given a list of
+ * kernels's property with kernel name or alias or both and request load.
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param cuListProp the property of cu list.
+ *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole.
+ *             cuNum: request number of cu in this list.
+ *             sameDevice: request this list of cu from same device.
+ * @param cuListRes the cu list resource.
+ *             cuResources: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
+ *             cuNum: allocated cu number in this list.
+ * @return int32_t, 0 on success or appropriate error number.
+ */
+int32_t xrmCuListAllocV2(xrmContext context, xrmCuListPropertyV2* cuListProp, xrmCuListResourceV2* cuListRes) {
+    int32_t ret = XRM_ERROR;
+    int32_t i;
+    xrmCuPropertyV2* cuProp;
+    xrmCuResourceV2* cuRes;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+    int32_t unifiedLoad; // granularity of 1,000,000
+
+    if (ctx == NULL || cuListProp == NULL || cuListRes == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context, cu list properties or resource pointer is NULL\n",
+               __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    memset(cuListRes, 0, sizeof(xrmCuListResourceV2));
+    if (cuListProp->cuNum <= 0 || cuListProp->cuNum > XRM_MAX_LIST_CU_NUM_V2) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): request list prop cuNum is %d, out of range from 1 to %d.\n",
+               __func__, cuListProp->cuNum, XRM_MAX_LIST_CU_NUM_V2);
+        return (XRM_ERROR_INVALID);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree cuListAllocTree;
+    pid_t clientProcessId = getpid();
+    cuListAllocTree.put("request.name", "cuListAllocV2");
+    cuListAllocTree.put("request.requestId", 1);
+    cuListAllocTree.put("request.parameters.cuNum", cuListProp->cuNum);
+    cuListAllocTree.put("request.parameters.echoClientId", "echo");
+    cuListAllocTree.put("request.parameters.clientId", ctx->xrmClientId);
+    cuListAllocTree.put("request.parameters.clientProcessId", clientProcessId);
+    for (i = 0; i < cuListProp->cuNum; i++) {
+        cuProp = &cuListProp->cuProps[i];
+        if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0')) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s cuProps[%d] neither kernel name nor alias are provided",
+                   __func__, i);
+            return (XRM_ERROR_INVALID);
+        }
+        unifiedLoad = xrmRetrieveLoadInfo(cuProp->requestLoad);
+        if (unifiedLoad < 0) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): wrong request load: 0x%x", __func__, cuProp->requestLoad);
+            return (XRM_ERROR_INVALID);
+        }
+
+        cuListAllocTree.put("request.parameters.kernelName" + std::to_string(i), cuProp->kernelName);
+        cuListAllocTree.put("request.parameters.kernelAlias" + std::to_string(i), cuProp->kernelAlias);
+        if (cuProp->devExcl == false)
+            cuListAllocTree.put("request.parameters.devExcl" + std::to_string(i), 0);
+        else
+            cuListAllocTree.put("request.parameters.devExcl" + std::to_string(i), 1);
+        cuListAllocTree.put("request.parameters.deviceInfo" + std::to_string(i), cuProp->deviceInfo);
+        cuListAllocTree.put("request.parameters.memoryInfo" + std::to_string(i), cuProp->memoryInfo);
+        cuListAllocTree.put("request.parameters.policyInfo" + std::to_string(i), cuProp->policyInfo);
+        cuListAllocTree.put("request.parameters.requestLoadUnified" + std::to_string(i), unifiedLoad);
+        cuListAllocTree.put("request.parameters.requestLoadOriginal" + std::to_string(i), cuProp->requestLoad);
+        cuListAllocTree.put("request.parameters.poolId" + std::to_string(i), cuProp->poolId);
+    }
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, cuListAllocTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    ret = rspTree.get<int32_t>("response.status.value");
+    if (ret == XRM_SUCCESS) {
+        cuListRes->cuNum = rspTree.get<int32_t>("response.data.cuNum");
+        for (i = 0; i < cuListRes->cuNum; i++) {
+            cuRes = &cuListRes->cuResources[i];
+
+            auto xclbinFileName = rspTree.get<std::string>("response.data.xclbinFileName" + std::to_string(i));
+            strncpy(cuRes->xclbinFileName, xclbinFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto uuidStr = rspTree.get<std::string>("response.data.uuidStr" + std::to_string(i));
+            hexstrToBin(uuidStr, 2 * sizeof(uuid_t), (unsigned char*)cuRes->uuid);
+            auto kernelPluginFileName =
+                rspTree.get<std::string>("response.data.kernelPluginFileName" + std::to_string(i));
+            strncpy(cuRes->kernelPluginFileName, kernelPluginFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto kernelName = rspTree.get<std::string>("response.data.kernelName" + std::to_string(i));
+            strncpy(cuRes->kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto kernelAlias = rspTree.get<std::string>("response.data.kernelAlias" + std::to_string(i));
+            strncpy(cuRes->kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto instanceName = rspTree.get<std::string>("response.data.instanceName" + std::to_string(i));
+            strncpy(cuRes->instanceName, instanceName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto cuName = rspTree.get<std::string>("response.data.cuName" + std::to_string(i));
+            strncpy(cuRes->cuName, cuName.c_str(), XRM_MAX_NAME_LEN - 1);
+            cuRes->deviceId = rspTree.get<int32_t>("response.data.deviceId" + std::to_string(i));
+            cuRes->cuId = rspTree.get<int32_t>("response.data.cuId" + std::to_string(i));
+            cuRes->channelId = rspTree.get<int32_t>("response.data.channelId" + std::to_string(i));
+            auto cuType = rspTree.get<int32_t>("response.data.cuType" + std::to_string(i));
+            cuRes->cuType = (xrmCuType)cuType;
+            cuRes->allocServiceId = rspTree.get<uint64_t>("response.data.allocServiceId" + std::to_string(i));
+            cuRes->channelLoad = rspTree.get<int32_t>("response.data.channelLoadOriginal" + std::to_string(i));
+            cuRes->baseAddr = rspTree.get<uint64_t>("response.data.baseAddr" + std::to_string(i));
+            cuRes->membankId = rspTree.get<uint32_t>("response.data.membankId" + std::to_string(i));
+            cuRes->membankType = rspTree.get<uint32_t>("response.data.membankType" + std::to_string(i));
+            cuRes->membankSize = rspTree.get<uint64_t>("response.data.membankSize" + std::to_string(i));
+            cuRes->membankBaseAddr = rspTree.get<uint64_t>("response.data.membankBaseAddr" + std::to_string(i));
+            cuRes->poolId = rspTree.get<int32_t>("response.data.poolId" + std::to_string(i));
+        }
+    }
+    return (ret);
+}
+
+/**
+ * \brief Releases a previously allocated resource.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuRes the cu resource.
+ *             xclbinFileName: xclbin (path and name) attached to this device.
+ *             kernelPluginFileName: kernel plugin (only name) attached to this device.
+ *             kernelName: the kernel name of allocated cu.
+ *             kernelAlias: the name alias of allocated cu.
+ *             instanceName: the instance name of allocated cu.
+ *             cuName: the name of allocated cu (kernelName:instanceName).
+ *             uuid: uuid of the loaded xclbin file.
+ *             deviceId: device id of this cu.
+ *             cuId: cu id of this cu.
+ *             channelId: channel id of this cu.
+ *             cuType: type of cu, hardware kernel or soft kernel.
+ *             allocServiceId: service id for this cu allocation.
+ *             channelLoad: allocated load of this cu, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
+ *             poolId: id of the cu pool this cu comes from, the system default pool id is 0.
+ * @return bool, true on success or false on fail.
+ */
+bool xrmCuReleaseV2(xrmContext context, xrmCuResourceV2* cuRes) {
+    bool ret = false;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+    int32_t unifiedLoad; // granularity of 1,000,000
+
+    if (ctx == NULL || cuRes == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or cu resource pointer is NULL\n", __func__);
+        return (ret);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (ret);
+    }
+    unifiedLoad = xrmRetrieveLoadInfo(cuRes->channelLoad);
+    if (unifiedLoad < 0) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): wrong channel load: 0x%x", __func__, cuRes->channelLoad);
+        return (XRM_ERROR_INVALID);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree xrmCuRelease;
+    xrmCuRelease.put("request.name", "cuReleaseV2");
+    xrmCuRelease.put("request.requestId", 1);
+    xrmCuRelease.put("request.parameters.deviceId", cuRes->deviceId);
+    xrmCuRelease.put("request.parameters.cuId", cuRes->cuId);
+    xrmCuRelease.put("request.parameters.channelId", cuRes->channelId);
+    xrmCuRelease.put("request.parameters.cuType", (int32_t)cuRes->cuType);
+    xrmCuRelease.put("request.parameters.allocServiceId", cuRes->allocServiceId);
+    xrmCuRelease.put("request.parameters.echoClientId", "echo");
+    xrmCuRelease.put("request.parameters.clientId", ctx->xrmClientId);
+    xrmCuRelease.put("request.parameters.channelLoadUnified", unifiedLoad);
+    xrmCuRelease.put("request.parameters.channelLoadOriginal", cuRes->channelLoad);
+    xrmCuRelease.put("request.parameters.poolId", cuRes->poolId);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, xrmCuRelease);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (ret);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    auto value = rspTree.get<int32_t>("response.status.value");
+    if (value == XRM_SUCCESS) {
+        ret = true;
+    }
+    return (ret);
+}
+
+/**
+ * \brief Releases a previously allocated list of resources.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuListRes the cu list resource.
+ *             cuResources: cu resource list to be released, starting from cuResources[0], no hole.
+ *             cuNum: number of cu in this list.
+ * @return bool, true on success or false on fail.
+ */
+bool xrmCuListReleaseV2(xrmContext context, xrmCuListResourceV2* cuListRes) {
+    bool ret = false;
+    int32_t i;
+    xrmCuResourceV2* cuRes;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+    int32_t unifiedLoad; // granularity of 1,000,000
+
+    if (ctx == NULL || cuListRes == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or cu list resource pointer is NULL\n", __func__);
+        return (ret);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (ret);
+    }
+    if (cuListRes->cuNum < 0 || cuListRes->cuNum > XRM_MAX_LIST_CU_NUM_V2) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): list resource cuNum is %d, out of range 0 - %d.\n", __func__,
+               cuListRes->cuNum, XRM_MAX_LIST_CU_NUM_V2);
+        return (ret);
+    }
+    if (cuListRes->cuNum == 0) {
+        /* Nothing to release */
+        return (ret);
+    }
+
+    /* will release all the resource */
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree cuListReleaseTree;
+    cuListReleaseTree.put("request.name", "cuListReleaseV2");
+    cuListReleaseTree.put("request.requestId", 1);
+    cuListReleaseTree.put("request.parameters.cuNum", cuListRes->cuNum);
+    cuListReleaseTree.put("request.parameters.echoClientId", "echo");
+    cuListReleaseTree.put("request.parameters.clientId", ctx->xrmClientId);
+    for (i = 0; i < cuListRes->cuNum; i++) {
+        cuRes = &cuListRes->cuResources[i];
+        unifiedLoad = xrmRetrieveLoadInfo(cuRes->channelLoad);
+        if (unifiedLoad < 0) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): wrong channel load: 0x%x", __func__, cuRes->channelLoad);
+            return (XRM_ERROR_INVALID);
+        }
+        cuListReleaseTree.put("request.parameters.deviceId" + std::to_string(i), cuRes->deviceId);
+        cuListReleaseTree.put("request.parameters.cuId" + std::to_string(i), cuRes->cuId);
+        cuListReleaseTree.put("request.parameters.channelId" + std::to_string(i), cuRes->channelId);
+        cuListReleaseTree.put("request.parameters.cuType" + std::to_string(i), (int32_t)cuRes->cuType);
+        cuListReleaseTree.put("request.parameters.allocServiceId" + std::to_string(i), cuRes->allocServiceId);
+        cuListReleaseTree.put("request.parameters.channelLoadUnified" + std::to_string(i), unifiedLoad);
+        cuListReleaseTree.put("request.parameters.channelLoadOriginal" + std::to_string(i), cuRes->channelLoad);
+        cuListReleaseTree.put("request.parameters.poolId" + std::to_string(i), cuRes->poolId);
+    }
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, cuListReleaseTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (ret);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    auto value = rspTree.get<int32_t>("response.status.value");
+    if (value == XRM_SUCCESS) {
+        ret = true;
+    }
+
+    return (ret);
+}
+
+/**
+ * \brief Declares user defined cu group type given the specified
+ * kernels's property with cu name (kernelName:instanceName) and request load.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param udfCuGroupProp the property of user defined cu group.
+ *             optionUdfCuListProps[]: option cu list property array starting from optionCuListProps[0], no hole.
+ *             optionUdfCuListNum: number of option user defined cu list.
+ * @param udfCuGroupName unique user defined cu group name for the new group type declaration.
+ * @return int32_t, 0 on success or appropriate error number.
+ */
+int32_t xrmUdfCuGroupDeclareV2(xrmContext context, xrmUdfCuGroupPropertyV2* udfCuGroupProp, char* udfCuGroupName) {
+    int32_t ret = XRM_ERROR;
+    int32_t cuListIdx;
+    xrmUdfCuPropertyV2* udfCuProp;
+    xrmUdfCuListPropertyV2* udfCuListProp;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+    int32_t unifiedLoad; // granularity of 1,000,000
+
+    if (ctx == NULL || udfCuGroupProp == NULL || udfCuGroupName == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context, udf cu group property or name pointer is NULL\n",
+               __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    if (udfCuGroupName[0] == '\0') {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): udf cu group name is not provided\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (udfCuGroupProp->optionUdfCuListNum <= 0 ||
+        udfCuGroupProp->optionUdfCuListNum > XRM_MAX_UDF_CU_GROUP_OPTION_LIST_NUM_V2) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): optionUdfCuListNum : %d out of range\n", __func__,
+               udfCuGroupProp->optionUdfCuListNum);
+        return (XRM_ERROR_INVALID);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree groupDeclareTree;
+    groupDeclareTree.put("request.name", "udfCuGroupDeclareV2");
+    groupDeclareTree.put("request.requestId", 1);
+    groupDeclareTree.put("request.parameters.echoClientId", "echo");
+    groupDeclareTree.put("request.parameters.clientId", ctx->xrmClientId);
+    groupDeclareTree.put("request.parameters.udfCuGroupName", udfCuGroupName);
+    groupDeclareTree.put("request.parameters.optionUdfCuListNum", udfCuGroupProp->optionUdfCuListNum);
+    for (cuListIdx = 0; cuListIdx < udfCuGroupProp->optionUdfCuListNum; cuListIdx++) {
+        udfCuListProp = &udfCuGroupProp->optionUdfCuListProps[cuListIdx];
+        std::string udfCuListStr = "request.parameters.optionUdfCuListProps" + std::to_string(cuListIdx);
+        groupDeclareTree.put(udfCuListStr + ".cuNum", udfCuListProp->cuNum);
+        for (int32_t i = 0; i < udfCuListProp->cuNum; i++) {
+            udfCuProp = &udfCuListProp->udfCuProps[i];
+            if (udfCuProp->cuName[0] == '\0') {
+                xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s udfCuProps[%d] cu name is NOT provided", __func__, i);
+                return (XRM_ERROR_INVALID);
+            }
+            unifiedLoad = xrmRetrieveLoadInfo(udfCuProp->requestLoad);
+            if (unifiedLoad < 0) {
+                xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): udfCuProps[%d] wrong request load: %d", __func__, i,
+                       udfCuProp->requestLoad);
+                return (XRM_ERROR_INVALID);
+            }
+
+            groupDeclareTree.put(udfCuListStr + ".cuName" + std::to_string(i), udfCuProp->cuName);
+            if (udfCuProp->devExcl == false)
+                groupDeclareTree.put(udfCuListStr + ".devExcl" + std::to_string(i), 0);
+            else
+                groupDeclareTree.put(udfCuListStr + ".devExcl" + std::to_string(i), 1);
+            groupDeclareTree.put(udfCuListStr + ".deviceInfo" + std::to_string(i), udfCuProp->deviceInfo);
+            groupDeclareTree.put(udfCuListStr + ".memoryInfo" + std::to_string(i), udfCuProp->memoryInfo);
+            groupDeclareTree.put(udfCuListStr + ".requestLoadUnified" + std::to_string(i), unifiedLoad);
+            groupDeclareTree.put(udfCuListStr + ".requestLoadOriginal" + std::to_string(i), udfCuProp->requestLoad);
+        }
+    }
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, groupDeclareTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    ret = rspTree.get<int32_t>("response.status.value");
+    return (ret);
+}
+
+/**
+ * \brief Undeclares user defined cu group type given the specified
+ * group name.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param udfCuGroupName user defined cu group name for the group type undeclaration.
+ * @return int32_t, 0 on success or appropriate error number.
+ */
+int32_t xrmUdfCuGroupUndeclareV2(xrmContext context, char* udfCuGroupName) {
+    int32_t ret = XRM_ERROR;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+
+    if (ctx == NULL || udfCuGroupName == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or udf cu group name pointer is NULL\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    if (udfCuGroupName[0] == '\0') {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): udf cu group name is not provided\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree groupUndeclareTree;
+    groupUndeclareTree.put("request.name", "udfCuGroupUndeclareV2");
+    groupUndeclareTree.put("request.requestId", 1);
+    groupUndeclareTree.put("request.parameters.echoClientId", "echo");
+    groupUndeclareTree.put("request.parameters.clientId", ctx->xrmClientId);
+    groupUndeclareTree.put("request.parameters.udfCuGroupName", udfCuGroupName);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, groupUndeclareTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    ret = rspTree.get<int32_t>("response.status.value");
+    return (ret);
+}
+
+/**
+ * \brief Allocates a group of compute unit resource given a user defined group of
+ * kernels's property with cu name (kernelName:instanceName) and request load.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuGroupProp the property of cu group.
+ *             udfCuGroupName: user defined cu group type name.
+ *             poolId: id of the cu pool this group CUs come from, the system default pool id is 0.
+ * @param cuGroupRes the cu group resource.
+ *             cuResources: cu resource group to fill the allocated cus infor, starting from cuResources[0], no hole.
+ *             cuNum: allocated cu number in this group.
+ * @return int32_t, 0 on success or appropriate error number.
+ */
+int32_t xrmCuGroupAllocV2(xrmContext context, xrmCuGroupPropertyV2* cuGroupProp, xrmCuGroupResourceV2* cuGroupRes) {
+    int32_t ret = XRM_ERROR;
+    int32_t i;
+    xrmCuPropertyV2* cuProp;
+    xrmCuResourceV2* cuRes;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+
+    if (ctx == NULL || cuGroupProp == NULL || cuGroupRes == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context, cu group property or resource pointer is NULL\n",
+               __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    if (cuGroupProp->udfCuGroupName[0] == '\0') {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): invalid input: udfCuGroupName is not provided.\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+
+    memset(cuGroupRes, 0, sizeof(xrmCuGroupResourceV2));
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree cuGroupAllocTree;
+    pid_t clientProcessId = getpid();
+    cuGroupAllocTree.put("request.name", "cuGroupAllocV2");
+    cuGroupAllocTree.put("request.requestId", 1);
+    cuGroupAllocTree.put("request.parameters.udfCuGroupName", cuGroupProp->udfCuGroupName);
+    cuGroupAllocTree.put("request.parameters.poolId", cuGroupProp->poolId);
+    cuGroupAllocTree.put("request.parameters.echoClientId", "echo");
+    cuGroupAllocTree.put("request.parameters.clientId", ctx->xrmClientId);
+    cuGroupAllocTree.put("request.parameters.clientProcessId", clientProcessId);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, cuGroupAllocTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    ret = rspTree.get<int32_t>("response.status.value");
+    if (ret == XRM_SUCCESS) {
+        cuGroupRes->cuNum = rspTree.get<int32_t>("response.data.cuNum");
+        for (i = 0; i < cuGroupRes->cuNum; i++) {
+            cuRes = &cuGroupRes->cuResources[i];
+
+            auto xclbinFileName = rspTree.get<std::string>("response.data.xclbinFileName" + std::to_string(i));
+            strncpy(cuRes->xclbinFileName, xclbinFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto uuidStr = rspTree.get<std::string>("response.data.uuidStr" + std::to_string(i));
+            hexstrToBin(uuidStr, 2 * sizeof(uuid_t), (unsigned char*)cuRes->uuid);
+            auto kernelPluginFileName =
+                rspTree.get<std::string>("response.data.kernelPluginFileName" + std::to_string(i));
+            strncpy(cuRes->kernelPluginFileName, kernelPluginFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto kernelName = rspTree.get<std::string>("response.data.kernelName" + std::to_string(i));
+            strncpy(cuRes->kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto kernelAlias = rspTree.get<std::string>("response.data.kernelAlias" + std::to_string(i));
+            strncpy(cuRes->kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto instanceName = rspTree.get<std::string>("response.data.instanceName" + std::to_string(i));
+            strncpy(cuRes->instanceName, instanceName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto cuName = rspTree.get<std::string>("response.data.cuName" + std::to_string(i));
+            strncpy(cuRes->cuName, cuName.c_str(), XRM_MAX_NAME_LEN - 1);
+            cuRes->deviceId = rspTree.get<int32_t>("response.data.deviceId" + std::to_string(i));
+            cuRes->cuId = rspTree.get<int32_t>("response.data.cuId" + std::to_string(i));
+            cuRes->channelId = rspTree.get<int32_t>("response.data.channelId" + std::to_string(i));
+            auto cuType = rspTree.get<int32_t>("response.data.cuType" + std::to_string(i));
+            cuRes->cuType = (xrmCuType)cuType;
+            cuRes->allocServiceId = rspTree.get<uint64_t>("response.data.allocServiceId" + std::to_string(i));
+            cuRes->channelLoad = rspTree.get<int32_t>("response.data.channelLoadOriginal" + std::to_string(i));
+            cuRes->baseAddr = rspTree.get<uint64_t>("response.data.baseAddr" + std::to_string(i));
+            cuRes->membankId = rspTree.get<uint32_t>("response.data.membankId" + std::to_string(i));
+            cuRes->membankType = rspTree.get<uint32_t>("response.data.membankType" + std::to_string(i));
+            cuRes->membankSize = rspTree.get<uint64_t>("response.data.membankSize" + std::to_string(i));
+            cuRes->membankBaseAddr = rspTree.get<uint64_t>("response.data.membankBaseAddr" + std::to_string(i));
+            cuRes->poolId = rspTree.get<int32_t>("response.data.poolId" + std::to_string(i));
+        }
+    }
+    return (ret);
+}
+
+/**
+ * \brief Releases a previously allocated group of resources.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuGroupRes cu group resource.
+ *             cuResources: cu resource group to be released, starting from cuResources[0], no hole.
+ *             cuNum: number of cu in this group.
+ * @return bool, true on success or false on fail.
+ */
+bool xrmCuGroupReleaseV2(xrmContext context, xrmCuGroupResourceV2* cuGroupRes) {
+    bool ret = false;
+    int32_t i;
+    xrmCuResourceV2* cuRes;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+    int32_t unifiedLoad; // granularity of 1,000,000
+
+    if (ctx == NULL || cuGroupRes == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or cu group resource pointer is NULL\n", __func__);
+        return (ret);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (ret);
+    }
+    if (cuGroupRes->cuNum < 0 || cuGroupRes->cuNum > XRM_MAX_GROUP_CU_NUM_V2) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): group resource cuNum is %d, out of range 0 - %d.\n", __func__,
+               cuGroupRes->cuNum, XRM_MAX_GROUP_CU_NUM_V2);
+        return (ret);
+    }
+    if (cuGroupRes->cuNum == 0) {
+        /* Nothing to release */
+        return (ret);
+    }
+
+    /* will release all the resource */
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree cuGroupReleaseTree;
+    cuGroupReleaseTree.put("request.name", "cuGroupReleaseV2");
+    cuGroupReleaseTree.put("request.requestId", 1);
+    cuGroupReleaseTree.put("request.parameters.cuNum", cuGroupRes->cuNum);
+    cuGroupReleaseTree.put("request.parameters.echoClientId", "echo");
+    cuGroupReleaseTree.put("request.parameters.clientId", ctx->xrmClientId);
+    for (i = 0; i < cuGroupRes->cuNum; i++) {
+        cuRes = &cuGroupRes->cuResources[i];
+        unifiedLoad = xrmRetrieveLoadInfo(cuRes->channelLoad);
+        if (unifiedLoad < 0) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): wrong channel load: 0x%x", __func__, cuRes->channelLoad);
+            return (XRM_ERROR_INVALID);
+        }
+        cuGroupReleaseTree.put("request.parameters.deviceId" + std::to_string(i), cuRes->deviceId);
+        cuGroupReleaseTree.put("request.parameters.cuId" + std::to_string(i), cuRes->cuId);
+        cuGroupReleaseTree.put("request.parameters.channelId" + std::to_string(i), cuRes->channelId);
+        cuGroupReleaseTree.put("request.parameters.cuType" + std::to_string(i), (int32_t)cuRes->cuType);
+        cuGroupReleaseTree.put("request.parameters.allocServiceId" + std::to_string(i), cuRes->allocServiceId);
+        cuGroupReleaseTree.put("request.parameters.channelLoadUnified" + std::to_string(i), unifiedLoad);
+        cuGroupReleaseTree.put("request.parameters.channelLoadOriginal" + std::to_string(i), cuRes->channelLoad);
+        cuGroupReleaseTree.put("request.parameters.poolId" + std::to_string(i), cuRes->poolId);
+    }
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, cuGroupReleaseTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (ret);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    auto value = rspTree.get<int32_t>("response.status.value");
+    if (value == XRM_SUCCESS) {
+        ret = true;
+    }
+
+    return (ret);
+}
+
+/**
+ * \brief Querys the compute unit resource given the allocation service id.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param allocQuery the allocate query information.
+ *             allocServiceId: the service id returned from allocation.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ * @param cuListRes cu list resource.
+ *             cuListRes: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
+ *             cuNum: cu number in this list.
+ * @return int32_t, 0 on success or appropriate error number.
+ */
+int32_t xrmAllocationQueryV2(xrmContext context, xrmAllocationQueryInfoV2* allocQuery, xrmCuListResourceV2* cuListRes) {
+    int32_t ret = XRM_ERROR;
+    int32_t i;
+    xrmCuResourceV2* cuRes;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+
+    if (ctx == NULL || allocQuery == NULL || cuListRes == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context, allocation query or cu list pointer is NULL\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    if (allocQuery->allocServiceId == 0) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s invalid allocServiceId: 0 ", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    memset(cuListRes, 0, sizeof(xrmCuListResourceV2));
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree allocQueryTree;
+    allocQueryTree.put("request.name", "allocationQueryV2");
+    allocQueryTree.put("request.requestId", 1);
+    allocQueryTree.put("request.parameters.echoClientId", "echo");
+    allocQueryTree.put("request.parameters.clientId", ctx->xrmClientId);
+    allocQueryTree.put("request.parameters.allocServiceId", allocQuery->allocServiceId);
+    allocQueryTree.put("request.parameters.kernelName", allocQuery->kernelName);
+    allocQueryTree.put("request.parameters.kernelAlias", allocQuery->kernelAlias);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, allocQueryTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    ret = rspTree.get<int32_t>("response.status.value");
+    if (ret == XRM_SUCCESS) {
+        cuListRes->cuNum = rspTree.get<int32_t>("response.data.cuNum");
+        for (i = 0; i < cuListRes->cuNum; i++) {
+            cuRes = &cuListRes->cuResources[i];
+
+            auto xclbinFileName = rspTree.get<std::string>("response.data.xclbinFileName" + std::to_string(i));
+            strncpy(cuRes->xclbinFileName, xclbinFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto uuidStr = rspTree.get<std::string>("response.data.uuidStr" + std::to_string(i));
+            hexstrToBin(uuidStr, 2 * sizeof(uuid_t), (unsigned char*)cuRes->uuid);
+            auto kernelPluginFileName =
+                rspTree.get<std::string>("response.data.kernelPluginFileName" + std::to_string(i));
+            strncpy(cuRes->kernelPluginFileName, kernelPluginFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto kernelName = rspTree.get<std::string>("response.data.kernelName" + std::to_string(i));
+            strncpy(cuRes->kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto kernelAlias = rspTree.get<std::string>("response.data.kernelAlias" + std::to_string(i));
+            strncpy(cuRes->kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto instanceName = rspTree.get<std::string>("response.data.instanceName" + std::to_string(i));
+            strncpy(cuRes->instanceName, instanceName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto cuName = rspTree.get<std::string>("response.data.cuName" + std::to_string(i));
+            strncpy(cuRes->cuName, cuName.c_str(), XRM_MAX_NAME_LEN - 1);
+            cuRes->deviceId = rspTree.get<int32_t>("response.data.deviceId" + std::to_string(i));
+            cuRes->cuId = rspTree.get<int32_t>("response.data.cuId" + std::to_string(i));
+            cuRes->channelId = rspTree.get<int32_t>("response.data.channelId" + std::to_string(i));
+            auto cuType = rspTree.get<int32_t>("response.data.cuType" + std::to_string(i));
+            cuRes->cuType = (xrmCuType)cuType;
+            cuRes->allocServiceId = rspTree.get<uint64_t>("response.data.allocServiceId" + std::to_string(i));
+            cuRes->baseAddr = rspTree.get<uint64_t>("response.data.baseAddr" + std::to_string(i));
+            cuRes->membankId = rspTree.get<uint32_t>("response.data.membankId" + std::to_string(i));
+            cuRes->membankType = rspTree.get<uint32_t>("response.data.membankType" + std::to_string(i));
+            cuRes->membankSize = rspTree.get<uint64_t>("response.data.membankSize" + std::to_string(i));
+            cuRes->membankBaseAddr = rspTree.get<uint64_t>("response.data.membankBaseAddr" + std::to_string(i));
+            cuRes->channelLoad = rspTree.get<int32_t>("response.data.channelLoadOriginal" + std::to_string(i));
+            cuRes->poolId = rspTree.get<int32_t>("response.data.poolId" + std::to_string(i));
+        }
+    }
+    return (ret);
+}
+
+/**
+ * \brief To check the available cu num on the system given
+ * the kernels's property with kernel name or alias or both and request
+ * load.
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param cuProp the property of cu.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ *             devExcl: request exclusive device usage for this client.
+ *             requestLoad: request load, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
+ *             poolId: request to allocate cu from specified resource pool.
+ * @return int32_t, available cu num (>= 0) on success or appropriate error number (< 0).
+ */
+int32_t xrmCheckCuAvailableNumV2(xrmContext context, xrmCuPropertyV2* cuProp) {
+    int32_t ret = XRM_ERROR;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+    int32_t unifiedLoad; // granularity of 1,000,000
+
+    if (ctx == NULL || cuProp == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or cu property pointer is NULL\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0')) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s neither kernel name nor alias are provided", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    unifiedLoad = xrmRetrieveLoadInfo(cuProp->requestLoad);
+    if (unifiedLoad < 0) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): wrong request load: %d", __func__, cuProp->requestLoad);
+        return (XRM_ERROR_INVALID);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree checkCuAvailableTree;
+    pid_t clientProcessId = getpid();
+    checkCuAvailableTree.put("request.name", "checkCuAvailableNumV2");
+    checkCuAvailableTree.put("request.requestId", 1);
+    /* use either kernel name or alias or both to identity the kernel */
+    checkCuAvailableTree.put("request.parameters.kernelName", cuProp->kernelName);
+    checkCuAvailableTree.put("request.parameters.kernelAlias", cuProp->kernelAlias);
+    if (cuProp->devExcl == false)
+        checkCuAvailableTree.put("request.parameters.devExcl", 0);
+    else
+        checkCuAvailableTree.put("request.parameters.devExcl", 1);
+    checkCuAvailableTree.put("request.parameters.deviceInfo", cuProp->deviceInfo);
+    checkCuAvailableTree.put("request.parameters.memoryInfo", cuProp->memoryInfo);
+    checkCuAvailableTree.put("request.parameters.policyInfo", cuProp->policyInfo);
+    checkCuAvailableTree.put("request.parameters.requestLoadUnified", unifiedLoad);
+    checkCuAvailableTree.put("request.parameters.requestLoadOriginal", cuProp->requestLoad);
+    checkCuAvailableTree.put("request.parameters.echoClientId", "echo");
+    checkCuAvailableTree.put("request.parameters.clientId", ctx->xrmClientId);
+    checkCuAvailableTree.put("request.parameters.clientProcessId", clientProcessId);
+    checkCuAvailableTree.put("request.parameters.poolId", cuProp->poolId);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, checkCuAvailableTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    ret = rspTree.get<int32_t>("response.status.value");
+    if (ret == XRM_SUCCESS) {
+        ret = rspTree.get<int32_t>("response.data.availableCuNum");
+    }
+    return (ret);
+}
+
+/**
+ * \brief To check the available cu list num on the system given
+ * a list of kernels's property with kernel name or alias or both and request
+ * load.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuListProp the property of cu list.
+ *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole
+ *             cuNum: request number of cu in this list.
+ *             sameDevice: request this list of cu from same device.
+ * @return int32_t, available cu list num (>= 0) on success or appropriate error number (< 0).
+ */
+int32_t xrmCheckCuListAvailableNumV2(xrmContext context, xrmCuListPropertyV2* cuListProp) {
+    int32_t ret = XRM_ERROR;
+    int32_t i;
+    xrmCuPropertyV2* cuProp;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+    int32_t unifiedLoad; // granularity of 1,000,000
+
+    if (ctx == NULL || cuListProp == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or cu list properties pointer is NULL\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    if (cuListProp->cuNum <= 0 || cuListProp->cuNum > XRM_MAX_LIST_CU_NUM_V2) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): request list prop cuNum is %d, out of range from 1 to %d.\n",
+               __func__, cuListProp->cuNum, XRM_MAX_LIST_CU_NUM_V2);
+        return (XRM_ERROR_INVALID);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree checkCuListAvailableNumTree;
+    pid_t clientProcessId = getpid();
+    checkCuListAvailableNumTree.put("request.name", "checkCuListAvailableNumV2");
+    checkCuListAvailableNumTree.put("request.requestId", 1);
+    checkCuListAvailableNumTree.put("request.parameters.cuNum", cuListProp->cuNum);
+    checkCuListAvailableNumTree.put("request.parameters.echoClientId", "echo");
+    checkCuListAvailableNumTree.put("request.parameters.clientId", ctx->xrmClientId);
+    checkCuListAvailableNumTree.put("request.parameters.clientProcessId", clientProcessId);
+    for (i = 0; i < cuListProp->cuNum; i++) {
+        cuProp = &cuListProp->cuProps[i];
+        if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0')) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s cuProp[%d] neither kernel name nor alias are provided",
+                   __func__, i);
+            return (XRM_ERROR_INVALID);
+        }
+        unifiedLoad = xrmRetrieveLoadInfo(cuProp->requestLoad);
+        if (unifiedLoad < 0) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): cuProp[%d] wrong request load: %d", __func__, i,
+                   cuProp->requestLoad);
+            return (XRM_ERROR_INVALID);
+        }
+
+        checkCuListAvailableNumTree.put("request.parameters.kernelName" + std::to_string(i), cuProp->kernelName);
+        checkCuListAvailableNumTree.put("request.parameters.kernelAlias" + std::to_string(i), cuProp->kernelAlias);
+        if (cuProp->devExcl == false)
+            checkCuListAvailableNumTree.put("request.parameters.devExcl" + std::to_string(i), 0);
+        else
+            checkCuListAvailableNumTree.put("request.parameters.devExcl" + std::to_string(i), 1);
+        checkCuListAvailableNumTree.put("request.parameters.deviceInfo" + std::to_string(i), cuProp->deviceInfo);
+        checkCuListAvailableNumTree.put("request.parameters.memoryInfo" + std::to_string(i), cuProp->memoryInfo);
+        checkCuListAvailableNumTree.put("request.parameters.policyInfo" + std::to_string(i), cuProp->policyInfo);
+        checkCuListAvailableNumTree.put("request.parameters.requestLoadUnified" + std::to_string(i), unifiedLoad);
+        checkCuListAvailableNumTree.put("request.parameters.requestLoadOriginal" + std::to_string(i),
+                                        cuProp->requestLoad);
+        checkCuListAvailableNumTree.put("request.parameters.poolId" + std::to_string(i), cuProp->poolId);
+    }
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, checkCuListAvailableNumTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    ret = rspTree.get<int32_t>("response.status.value");
+    if (ret == XRM_SUCCESS) {
+        ret = rspTree.get<int32_t>("response.data.availableListNum");
+    }
+    return (ret);
+}
+
+/**
+ * \brief To check the available group number of compute unit resource given a user
+ * defined group of kernels's property with cu name (kernelName:instanceName) and request load.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuGroupProp the property of cu group.
+ *             udfCuGroupName: user defined cu group type name.
+ *             poolId: id of the cu pool this group CUs come from, the system default pool id is 0.
+ * @return int32_t, available cu group num (>= 0) on success or appropriate error number (< 0).
+ */
+int32_t xrmCheckCuGroupAvailableNumV2(xrmContext context, xrmCuGroupPropertyV2* cuGroupProp) {
+    int32_t ret = XRM_ERROR;
+    int32_t i;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+
+    if (ctx == NULL || cuGroupProp == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or cu pool properties pointer is NULL\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    if (cuGroupProp->udfCuGroupName[0] == '\0') {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): invalid input: udfCuGroupName is not provided.\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree checkCuGroupTree;
+    pid_t clientProcessId = getpid();
+    checkCuGroupTree.put("request.name", "checkCuGroupAvailableNumV2");
+    checkCuGroupTree.put("request.requestId", 1);
+    checkCuGroupTree.put("request.parameters.udfCuGroupName", cuGroupProp->udfCuGroupName);
+    checkCuGroupTree.put("request.parameters.poolId", cuGroupProp->poolId);
+    checkCuGroupTree.put("request.parameters.echoClientId", "echo");
+    checkCuGroupTree.put("request.parameters.clientId", ctx->xrmClientId);
+    checkCuGroupTree.put("request.parameters.clientProcessId", clientProcessId);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, checkCuGroupTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    ret = rspTree.get<int32_t>("response.status.value");
+    if (ret == XRM_SUCCESS) {
+        ret = rspTree.get<int32_t>("response.data.availableGroupNum");
+    }
+    return (ret);
+}
+
+/**
+ * \brief To check the available cu pool num on the system given
+ * a pool of kernels's property with kernel name or alias or both and request
+ * load.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuPoolProp the property of cu pool.
+ *             cuListProp: cu list property.
+ *             cuListNum: number of cu list in this pool.
+ *             xclbinUuid: uuid of xclbin.
+ *             xclbinNum: number of xclbin in this pool.
+ * @return int32_t, available cu pool num (>= 0) on success or appropriate error number (< 0).
+ */
+int32_t xrmCheckCuPoolAvailableNumV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp) {
+    int32_t ret = XRM_ERROR;
+    int32_t i;
+    xrmCuPropertyV2* cuProp;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+    int32_t unifiedLoad; // granularity of 1,000,000
+
+    if (ctx == NULL || cuPoolProp == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or cu pool properties pointer is NULL\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuPoolProp->cuListNum < 0) || (cuPoolProp->xclbinNum < 0) ||
+        ((cuPoolProp->cuListNum == 0) && (cuPoolProp->xclbinNum == 0))) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): invalid input: cuListNum is %d, xclbinNum is %d.\n", __func__,
+               cuPoolProp->cuListNum, cuPoolProp->xclbinNum);
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuPoolProp->cuListNum > 0) &&
+        (cuPoolProp->cuListProp.cuNum <= 0 || cuPoolProp->cuListProp.cuNum > XRM_MAX_LIST_CU_NUM_V2)) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): request pool prop cuNum is %d, out of range from 1 to %d.\n",
+               __func__, cuPoolProp->cuListProp.cuNum, XRM_MAX_LIST_CU_NUM_V2);
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuPoolProp->xclbinNum > 0) && (cuPoolProp->xclbinUuid == 0)) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): request pool prop xclbinUuid is not specified.\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree checkCuPoolTree;
+    pid_t clientProcessId = getpid();
+    checkCuPoolTree.put("request.name", "checkCuPoolAvailableNumV2");
+    checkCuPoolTree.put("request.requestId", 1);
+    checkCuPoolTree.put("request.parameters.cuListNum", cuPoolProp->cuListNum);
+    checkCuPoolTree.put("request.parameters.cuList.cuNum", cuPoolProp->cuListProp.cuNum);
+    checkCuPoolTree.put("request.parameters.deviceIdList.deviceNum", cuPoolProp->deviceIdListProp.deviceNum);
+    checkCuPoolTree.put("request.parameters.echoClientId", "echo");
+    checkCuPoolTree.put("request.parameters.clientId", ctx->xrmClientId);
+    checkCuPoolTree.put("request.parameters.clientProcessId", clientProcessId);
+    for (i = 0; i < cuPoolProp->cuListProp.cuNum; i++) {
+        cuProp = &cuPoolProp->cuListProp.cuProps[i];
+        if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0')) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s cuProp[%d] neither kernel name nor alias are provided",
+                   __func__, i);
+            return (XRM_ERROR_INVALID);
+        }
+        unifiedLoad = xrmRetrieveLoadInfo(cuProp->requestLoad);
+        if (unifiedLoad < 0) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): cuProp[%d] wrong request load: %d", __func__, i,
+                   cuProp->requestLoad);
+            return (XRM_ERROR_INVALID);
+        }
+
+        checkCuPoolTree.put("request.parameters.kernelName" + std::to_string(i), cuProp->kernelName);
+        checkCuPoolTree.put("request.parameters.kernelAlias" + std::to_string(i), cuProp->kernelAlias);
+        if (cuProp->devExcl == false)
+            checkCuPoolTree.put("request.parameters.devExcl" + std::to_string(i), 0);
+        else
+            checkCuPoolTree.put("request.parameters.devExcl" + std::to_string(i), 1);
+        checkCuPoolTree.put("request.parameters.deviceInfo" + std::to_string(i), cuProp->deviceInfo);
+        checkCuPoolTree.put("request.parameters.memoryInfo" + std::to_string(i), cuProp->memoryInfo);
+        checkCuPoolTree.put("request.parameters.policyInfo" + std::to_string(i), cuProp->policyInfo);
+        checkCuPoolTree.put("request.parameters.requestLoadUnified" + std::to_string(i), unifiedLoad);
+        checkCuPoolTree.put("request.parameters.requestLoadOriginal" + std::to_string(i), cuProp->requestLoad);
+    }
+    for (i = 0; i < cuPoolProp->deviceIdListProp.deviceNum; i++) {
+        checkCuPoolTree.put("request.parameters.deviceIdList.deviceIds" + std::to_string(i),
+                            cuPoolProp->deviceIdListProp.deviceIds[i]);
+    }
+    std::string uuidStr;
+    binToHexstr((unsigned char*)&cuPoolProp->xclbinUuid, sizeof(uuid_t), uuidStr);
+    checkCuPoolTree.put("request.parameters.xclbinUuidStr", uuidStr.c_str());
+    checkCuPoolTree.put("request.parameters.xclbinNum", cuPoolProp->xclbinNum);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, checkCuPoolTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    ret = rspTree.get<int32_t>("response.status.value");
+    if (ret == XRM_SUCCESS) {
+        ret = rspTree.get<int32_t>("response.data.availablePoolNum");
+    }
+    return (ret);
+}
+
+/**
+ * \brief Reserves a pool of compute unit resource given a pool of
+ * kernels's property with kernel name or alias or both and request load.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuPoolProp the property of cu pool.
+ *             cuListProp: cu prop list to fill kernelName, devExcl and requestLoad etc. information.
+ *             cuListNum: request number of such cu list for this pool.
+ *             xclbinUuid: request all resource in the xclbin.
+ *             xclbinNum: request number of such xclbin for this pool.
+ * @return uint64_t, reserve pool id (> 0) or 0 on fail.
+ */
+uint64_t xrmCuPoolReserveV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp) {
+    uint64_t reserve_poolId = 0;
+    int32_t ret = XRM_ERROR;
+    int32_t i;
+    xrmCuPropertyV2* cuProp;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+    int32_t unifiedLoad; // granularity of 1,000,000
+
+    if (ctx == NULL || cuPoolProp == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context or cu pool properties pointer is NULL\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuPoolProp->cuListNum < 0) || (cuPoolProp->xclbinNum < 0) || (cuPoolProp->deviceIdListProp.deviceNum < 0) ||
+        (cuPoolProp->deviceIdListProp.deviceNum > XRM_MAX_XILINX_DEVICES) ||
+        ((cuPoolProp->cuListNum == 0) && (cuPoolProp->xclbinNum == 0) &&
+         (cuPoolProp->deviceIdListProp.deviceNum == 0))) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR,
+               "%s(): invalid input: cuListNum is %d, xclbinNum is %d, deviceNum is %d.\n", __func__,
+               cuPoolProp->cuListNum, cuPoolProp->xclbinNum, cuPoolProp->deviceIdListProp.deviceNum);
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuPoolProp->cuListNum > 0) &&
+        (cuPoolProp->cuListProp.cuNum <= 0 || cuPoolProp->cuListProp.cuNum > XRM_MAX_LIST_CU_NUM_V2)) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): request pool prop cuNum is %d, out of range from 1 to %d.\n",
+               __func__, cuPoolProp->cuListProp.cuNum, XRM_MAX_LIST_CU_NUM_V2);
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuPoolProp->xclbinNum > 0) && (cuPoolProp->xclbinUuid == 0)) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): request pool prop xclbinUuid is not specified.\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree cuPoolReserveTree;
+    pid_t clientProcessId = getpid();
+    cuPoolReserveTree.put("request.name", "cuPoolReserveV2");
+    cuPoolReserveTree.put("request.requestId", 1);
+    cuPoolReserveTree.put("request.parameters.echoClientId", "echo");
+    cuPoolReserveTree.put("request.parameters.clientId", ctx->xrmClientId);
+    cuPoolReserveTree.put("request.parameters.clientProcessId", clientProcessId);
+    cuPoolReserveTree.put("request.parameters.cuListNum", cuPoolProp->cuListNum);
+    cuPoolReserveTree.put("request.parameters.cuList.cuNum", cuPoolProp->cuListProp.cuNum);
+    cuPoolReserveTree.put("request.parameters.deviceIdList.deviceNum", cuPoolProp->deviceIdListProp.deviceNum);
+    for (i = 0; i < cuPoolProp->cuListProp.cuNum; i++) {
+        cuProp = &cuPoolProp->cuListProp.cuProps[i];
+        if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0')) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s cuProp[%d] neither kernel name nor alias are provided",
+                   __func__, i);
+            return (reserve_poolId);
+        }
+        unifiedLoad = xrmRetrieveLoadInfo(cuProp->requestLoad);
+        if (unifiedLoad < 0) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): cuProp[%d] wrong request load: %d", __func__, i,
+                   cuProp->requestLoad);
+            return (reserve_poolId);
+        }
+
+        cuPoolReserveTree.put("request.parameters.cuList.kernelName" + std::to_string(i), cuProp->kernelName);
+        cuPoolReserveTree.put("request.parameters.cuList.kernelAlias" + std::to_string(i), cuProp->kernelAlias);
+        if (cuProp->devExcl == false)
+            cuPoolReserveTree.put("request.parameters.cuList.devExcl" + std::to_string(i), 0);
+        else
+            cuPoolReserveTree.put("request.parameters.cuList.devExcl" + std::to_string(i), 1);
+        cuPoolReserveTree.put("request.parameters.cuList.deviceInfo" + std::to_string(i), cuProp->deviceInfo);
+        cuPoolReserveTree.put("request.parameters.cuList.memoryInfo" + std::to_string(i), cuProp->memoryInfo);
+        cuPoolReserveTree.put("request.parameters.cuList.policyInfo" + std::to_string(i), cuProp->policyInfo);
+        cuPoolReserveTree.put("request.parameters.cuList.requestLoadUnified" + std::to_string(i), unifiedLoad);
+        cuPoolReserveTree.put("request.parameters.cuList.requestLoadOriginal" + std::to_string(i), cuProp->requestLoad);
+    }
+    for (i = 0; i < cuPoolProp->deviceIdListProp.deviceNum; i++) {
+        cuPoolReserveTree.put("request.parameters.deviceIdList.deviceIds" + std::to_string(i),
+                              cuPoolProp->deviceIdListProp.deviceIds[i]);
+    }
+    std::string uuidStr;
+    binToHexstr((unsigned char*)&cuPoolProp->xclbinUuid, sizeof(uuid_t), uuidStr);
+    cuPoolReserveTree.put("request.parameters.xclbinUuidStr", uuidStr.c_str());
+    cuPoolReserveTree.put("request.parameters.xclbinNum", cuPoolProp->xclbinNum);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, cuPoolReserveTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (reserve_poolId);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    auto value = rspTree.get<int32_t>("response.status.value");
+    if (value == XRM_SUCCESS) {
+        reserve_poolId = rspTree.get<int64_t>("response.data.poolId");
+    } else {
+        reserve_poolId = 0;
+    }
+    return (reserve_poolId);
+}
+
+/**
+ * \brief Relinquishes a previously reserved pool of resources.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param poolId the reserve pool id.
+ * @return bool, true on success or false on fail.
+ */
+bool xrmCuPoolRelinquishV2(xrmContext context, uint64_t poolId) {
+    bool ret = false;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+
+    if (ctx == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context is NULL\n", __func__);
+        return (ret);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (ret);
+    }
+    if (poolId == 0) {
+        /* Nothing to relinquish */
+        return (ret);
+    }
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree cuPoolRelinquishTree;
+    cuPoolRelinquishTree.put("request.name", "cuPoolRelinquishV2");
+    cuPoolRelinquishTree.put("request.requestId", 1);
+    cuPoolRelinquishTree.put("request.parameters.poolId", poolId);
+    cuPoolRelinquishTree.put("request.parameters.echoClientId", "echo");
+    cuPoolRelinquishTree.put("request.parameters.clientId", ctx->xrmClientId);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, cuPoolRelinquishTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (ret);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    auto value = rspTree.get<int32_t>("response.status.value");
+    if (value == XRM_SUCCESS) {
+        ret = true;
+    }
+    return (ret);
+}
+
+/**
+ * \brief Querys the compute unit resource given the reservation id.
+ * NOTE: The allocServiceId, channelId and channelLoad are NOT valid in the cuPoolRes
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param reserveQueryInfo the reservation query information.
+ *             poolId: reservation pool id.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ * @param cuPoolRes the cu pool resource.
+ *             cuPoolRes: cu resource pool to fill the allocated cus infor, starting from cuPoolRes[0], no hole.
+ *             cuNum: cu number in this pool.
+ * @return int32_t, 0 on success or appropriate error number.
+ */
+int32_t xrmReservationQueryV2(xrmContext context,
+                              xrmReservationQueryInfoV2* reserveQueryInfo,
+                              xrmCuPoolResourceV2* cuPoolRes) {
+    int32_t ret = XRM_ERROR;
+    int32_t i;
+    xrmCuResourceV2* cuRes;
+    xrmPrivateContext* ctx = (xrmPrivateContext*)context;
+
+    if (ctx == NULL || reserveQueryInfo == NULL || cuPoolRes == NULL) {
+        xrmLog(XRM_LOG_ERROR, XRM_LOG_ERROR, "%s(): context, reserveQueryInfo or cu pool pointer is NULL\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    if (ctx->xrmApiVersion != XRM_API_VERSION_1) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
+        return (XRM_ERROR_INVALID);
+    }
+    if (reserveQueryInfo->poolId == 0) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s invalid reserve pool id: 0 ", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    memset(cuPoolRes, 0, sizeof(xrmCuPoolResourceV2));
+
+    char jsonRsp[maxLength];
+    memset(jsonRsp, 0, maxLength * sizeof(char));
+    pt::ptree reservationQueryTree;
+    reservationQueryTree.put("request.name", "reservationQueryV2");
+    reservationQueryTree.put("request.requestId", 1);
+    reservationQueryTree.put("request.parameters.echoClientId", "echo");
+    reservationQueryTree.put("request.parameters.clientId", ctx->xrmClientId);
+    reservationQueryTree.put("request.parameters.kernelName", reserveQueryInfo->kernelName);
+    reservationQueryTree.put("request.parameters.kernelAlias", reserveQueryInfo->kernelAlias);
+    reservationQueryTree.put("request.parameters.poolId", reserveQueryInfo->poolId);
+
+    std::stringstream reqstr;
+    boost::property_tree::write_json(reqstr, reservationQueryTree);
+    if (xrmJsonRequest(context, reqstr.str().c_str(), jsonRsp) != XRM_SUCCESS) return (XRM_ERROR_CONNECT_FAIL);
+
+    std::stringstream rspstr;
+    rspstr << jsonRsp;
+    pt::ptree rspTree;
+    boost::property_tree::read_json(rspstr, rspTree);
+
+    ret = rspTree.get<int32_t>("response.status.value");
+    if (ret == XRM_SUCCESS) {
+        cuPoolRes->cuNum = rspTree.get<int32_t>("response.data.cuNum");
+        for (i = 0; i < cuPoolRes->cuNum; i++) {
+            cuRes = &cuPoolRes->cuResources[i];
+
+            auto xclbinFileName = rspTree.get<std::string>("response.data.xclbinFileName" + std::to_string(i));
+            strncpy(cuRes->xclbinFileName, xclbinFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto uuidStr = rspTree.get<std::string>("response.data.uuidStr" + std::to_string(i));
+            hexstrToBin(uuidStr, 2 * sizeof(uuid_t), (unsigned char*)cuRes->uuid);
+            auto kernelPluginFileName =
+                rspTree.get<std::string>("response.data.kernelPluginFileName" + std::to_string(i));
+            strncpy(cuRes->kernelPluginFileName, kernelPluginFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto kernelName = rspTree.get<std::string>("response.data.kernelName" + std::to_string(i));
+            strncpy(cuRes->kernelName, kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto kernelAlias = rspTree.get<std::string>("response.data.kernelAlias" + std::to_string(i));
+            strncpy(cuRes->kernelAlias, kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto instanceName = rspTree.get<std::string>("response.data.instanceName" + std::to_string(i));
+            strncpy(cuRes->instanceName, instanceName.c_str(), XRM_MAX_NAME_LEN - 1);
+            auto cuName = rspTree.get<std::string>("response.data.cuName" + std::to_string(i));
+            strncpy(cuRes->cuName, cuName.c_str(), XRM_MAX_NAME_LEN - 1);
+            cuRes->deviceId = rspTree.get<int32_t>("response.data.deviceId" + std::to_string(i));
+            cuRes->cuId = rspTree.get<int32_t>("response.data.cuId" + std::to_string(i));
+            cuRes->baseAddr = rspTree.get<uint64_t>("response.data.baseAddr" + std::to_string(i));
+            cuRes->membankId = rspTree.get<uint32_t>("response.data.membankId" + std::to_string(i));
+            cuRes->membankType = rspTree.get<uint32_t>("response.data.membankType" + std::to_string(i));
+            cuRes->membankSize = rspTree.get<uint64_t>("response.data.membankSize" + std::to_string(i));
+            cuRes->membankBaseAddr = rspTree.get<uint64_t>("response.data.membankBaseAddr" + std::to_string(i));
+            auto cuType = rspTree.get<int32_t>("response.data.cuType" + std::to_string(i));
+            cuRes->cuType = (xrmCuType)cuType;
+            cuRes->poolId = rspTree.get<uint64_t>("response.data.poolId" + std::to_string(i));
+        }
+    }
     return (ret);
 }

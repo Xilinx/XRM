@@ -70,6 +70,9 @@ void xrmCuBlockingAllocReleaseGranularity1000000Test(xrmContext* ctx);
 void xrmCuListBlockingAllocReleaseGranularity1000000Test(xrmContext* ctx);
 void xrmCuGroupBlockingAllocReleaseGranularity1000000Test(xrmContext* ctx);
 void xrmCuAllocFromDevReleaseGranularity1000000Test(xrmContext* ctx);
+void xrmCuAllocReleaseV2Test(xrmContext* ctx);
+void xrmCuListAllocReleaseV2Test(xrmContext* ctx);
+void xrmCuPoolReserveAllocReleaseRelinquishV2Test(xrmContext* ctx);
 
 #ifdef __cplusplus
 }

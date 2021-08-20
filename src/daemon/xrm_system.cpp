@@ -243,8 +243,13 @@ void xrm::system::initXrmPlugins() {
 void xrm::system::initUdfCuGroups() {
     /* init the user defined cu groups */
     m_numUdfCuGroup = 0;
+    uint32_t udfCuGroupIdx;
     for (uint32_t udfCuGroupIdx = 0; udfCuGroupIdx < XRM_MAX_UDF_CU_GROUP_NUM; udfCuGroupIdx++) {
         flushUdfCuGroupInfo(udfCuGroupIdx);
+    }
+    m_numUdfCuGroupV2 = 0;
+    for (udfCuGroupIdx = 0; udfCuGroupIdx < XRM_MAX_UDF_CU_GROUP_NUM_V2; udfCuGroupIdx++) {
+        flushUdfCuGroupInfoV2(udfCuGroupIdx);
     }
 }
 
@@ -1949,6 +1954,53 @@ cu_alloc_loop:
 }
 
 /*
+ * Alloc one cu (compute unit) based on the request property version 2.
+ *
+ * XRM_SUCCESS: allocated resouce is recorded by cuRes
+ * Otherwise: failed to allocate the cu resource
+ *
+ * Lock: should enter lock during the cu allocation
+ */
+int32_t xrm::system::resAllocCuV2(cuPropertyV2* cuPropV2, cuResource* cuRes, bool updateId) {
+    if ((cuPropV2 == NULL) || (cuRes == NULL)) {
+        logMsg(XRM_LOG_ERROR, "cuProp or cuRes is NULL\n");
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuPropV2->kernelName[0] == '\0') && (cuPropV2->kernelAlias[0] == '\0') && (cuPropV2->cuName[0] == '\0')) {
+        logMsg(XRM_LOG_ERROR, "None of kernel name, kernel alias and cu name are presented\n");
+        return (XRM_ERROR_INVALID);
+    }
+    uint64_t deviceInfoConstraintType =
+        (cuPropV2->deviceInfo >> XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT) & XRM_DEVICE_INFO_CONSTRAINT_TYPE_MASK;
+    uint64_t deviceInfoDeviceIndex =
+        (cuPropV2->deviceInfo >> XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) & XRM_DEVICE_INFO_DEVICE_INDEX_MASK;
+    cuProperty cuProp;
+    strncpy(cuProp.kernelName, cuPropV2->kernelName, XRM_MAX_NAME_LEN - 1);
+    cuProp.kernelName[XRM_MAX_NAME_LEN - 1] = '\0';
+    strncpy(cuProp.kernelAlias, cuPropV2->kernelAlias, XRM_MAX_NAME_LEN - 1);
+    cuProp.kernelAlias[XRM_MAX_NAME_LEN - 1] = '\0';
+    strcpy(cuProp.cuName, "");
+    cuProp.devExcl = cuPropV2->devExcl;
+    cuProp.requestLoadUnified = cuPropV2->requestLoadUnified;
+    cuProp.requestLoadOriginal = cuPropV2->requestLoadOriginal;
+    cuProp.clientId = cuPropV2->clientId;
+    cuProp.clientProcessId = cuPropV2->clientProcessId;
+    cuProp.poolId = cuPropV2->poolId;
+    switch (deviceInfoConstraintType) {
+        case XRM_DEVICE_INFO_CONSTRAINT_TYPE_NULL: {
+            return (resAllocCu(&cuProp, cuRes, updateId));
+        }
+        case XRM_DEVICE_INFO_CONSTRAINT_TYPE_HARDWARE_DEVICE_INDEX: {
+            return (resAllocCuFromDev((uint32_t)deviceInfoDeviceIndex, &cuProp, cuRes, updateId));
+        }
+        default: {
+            logMsg(XRM_LOG_ERROR, "invalid device info constraint type\n");
+            return (XRM_ERROR_INVALID);
+        }
+    }
+}
+
+/*
  * Alloc one cu (compute unit) from target device based on the request property.
  *
  * XRM_SUCCESS: allocated resouce is recorded by cuRes
@@ -2058,14 +2110,17 @@ cu_alloc_from_dev_loop:
  *
  * Lock: should enter lock during the cu allocation
  */
-int32_t xrm::system::resAllocLeastUsedCuFromDev(int32_t deviceId, cuProperty* cuProp, cuResource* cuRes, bool updateId) {
+int32_t xrm::system::resAllocLeastUsedCuFromDev(int32_t deviceId,
+                                                cuProperty* cuProp,
+                                                cuResource* cuRes,
+                                                bool updateId) {
     deviceData* dev;
     cuData* cu;
     int32_t ret = 0;
     bool kernelNameEqual, kernelAliasEqual, cuNameEqual;
     uint64_t clientId = cuProp->clientId;
     int32_t cuId;
-    std::vector<std::tuple<int32_t,int32_t>> leastUsedCus;
+    std::vector<std::tuple<int32_t, int32_t> > leastUsedCus;
     bool cuAcquired = false;
 
     if ((deviceId < 0) || (deviceId > (m_numDevice - 1))) {
@@ -2149,62 +2204,61 @@ int32_t xrm::system::resAllocLeastUsedCuFromDev(int32_t deviceId, cuProperty* cu
     }
 
 cu_alloc_from_dev_loop:
-   for (cuId = 0; cuId < XRM_MAX_XILINX_KERNELS && cuId < dev->xclbinInfo.numCu; cuId++) {
-       cu = &dev->xclbinInfo.cuList[cuId];
+    for (cuId = 0; cuId < XRM_MAX_XILINX_KERNELS && cuId < dev->xclbinInfo.numCu; cuId++) {
+        cu = &dev->xclbinInfo.cuList[cuId];
 
-       /*
-        * compare, 0: equal
-        *
-        * kernel name is presented, compare it; otherwise no need to compare
-        */
-       kernelNameEqual = true;
-       if (cuProp->kernelName[0] != '\0') {
-           if (cu->kernelName.compare(cuProp->kernelName)) kernelNameEqual = false;
-       }
-       /* kernel alias is presented, compare it; otherwise no need to compare */
-       kernelAliasEqual = true;
-       if (cuProp->kernelAlias[0] != '\0') {
-           if (cu->kernelAlias.compare(cuProp->kernelAlias)) kernelAliasEqual = false;
-       }
-       /* cu name is presented, compare it; otherwise no need to compare */
-       cuNameEqual = true;
-       if (cuProp->cuName[0] != '\0') {
-           if (cu->cuName.compare(cuProp->cuName)) cuNameEqual = false;
-       }
-       if (!(kernelNameEqual && kernelAliasEqual && cuNameEqual)) continue;
+        /*
+         * compare, 0: equal
+         *
+         * kernel name is presented, compare it; otherwise no need to compare
+         */
+        kernelNameEqual = true;
+        if (cuProp->kernelName[0] != '\0') {
+            if (cu->kernelName.compare(cuProp->kernelName)) kernelNameEqual = false;
+        }
+        /* kernel alias is presented, compare it; otherwise no need to compare */
+        kernelAliasEqual = true;
+        if (cuProp->kernelAlias[0] != '\0') {
+            if (cu->kernelAlias.compare(cuProp->kernelAlias)) kernelAliasEqual = false;
+        }
+        /* cu name is presented, compare it; otherwise no need to compare */
+        cuNameEqual = true;
+        if (cuProp->cuName[0] != '\0') {
+            if (cu->cuName.compare(cuProp->cuName)) cuNameEqual = false;
+        }
+        if (!(kernelNameEqual && kernelAliasEqual && cuNameEqual)) continue;
 
-       int64_t resultLoad =  cuProp->requestLoadUnified + cu->totalUsedLoadUnified;
-       if ( resultLoad <= XRM_MAX_CHAN_LOAD_GRANULARITY_1000000) {
-           // We've found a potential CU, lets note down its load, and cuId
-           leastUsedCus.emplace_back(cu->totalUsedLoadUnified, cuId);
-       }
-   }
+        int64_t resultLoad = cuProp->requestLoadUnified + cu->totalUsedLoadUnified;
+        if (resultLoad <= XRM_MAX_CHAN_LOAD_GRANULARITY_1000000) {
+            // We've found a potential CU, lets note down its load, and cuId
+            leastUsedCus.emplace_back(cu->totalUsedLoadUnified, cuId);
+        }
+    }
 
-   std::sort(leastUsedCus.begin(),leastUsedCus.end());
+    std::sort(leastUsedCus.begin(), leastUsedCus.end());
 
-   ret = XRM_ERROR_NO_KERNEL; // If no candidates, we fail
+    ret = XRM_ERROR_NO_KERNEL; // If no candidates, we fail
 
-   for(const auto& candidate : leastUsedCus) {
-       cuId = std::get<1>(candidate);
+    for (const auto& candidate : leastUsedCus) {
+        cuId = std::get<1>(candidate);
 
-       cu = &dev->xclbinInfo.cuList[cuId];
+        cu = &dev->xclbinInfo.cuList[cuId];
 
-       ret = allocChanClientFromCu(cu, cuProp, cuRes);
-       if (ret != XRM_SUCCESS) {
-           releaseClientOnDev(deviceId, clientId);
-           continue;
-       }
-       cuRes->deviceId = deviceId;
-       cuRes->cuId = cuId;
-       strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
-       strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
-       cuAcquired = true;
-       if (updateId) updateAllocServiceId();
-       
-           return (XRM_SUCCESS);
+        ret = allocChanClientFromCu(cu, cuProp, cuRes);
+        if (ret != XRM_SUCCESS) {
+            releaseClientOnDev(deviceId, clientId);
+            continue;
+        }
+        cuRes->deviceId = deviceId;
+        cuRes->cuId = cuId;
+        strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
+        strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
+        cuAcquired = true;
+        if (updateId) updateAllocServiceId();
+
+        return (XRM_SUCCESS);
     }
     return (XRM_ERROR_NO_KERNEL);
-
 }
 /*
  * Allocate one cu (compute unit) based on the request property. if fail to allocate cu, then try
@@ -2722,6 +2776,335 @@ int32_t xrm::system::resAllocCuList(cuListProperty* cuListProp, cuListResource* 
 }
 
 /*
+ * copy cu property from src prop (V2) to des prop.
+ */
+void xrm::system::cuPropertyCopyFromV2(cuProperty* desCuProp, cuPropertyV2* srcCuPropV2) {
+    if (desCuProp != NULL && srcCuPropV2 != NULL) {
+        strncpy(desCuProp->kernelName, srcCuPropV2->kernelName, XRM_MAX_NAME_LEN - 1);
+        desCuProp->kernelName[XRM_MAX_NAME_LEN - 1] = '\0';
+        strncpy(desCuProp->kernelAlias, srcCuPropV2->kernelAlias, XRM_MAX_NAME_LEN - 1);
+        desCuProp->kernelAlias[XRM_MAX_NAME_LEN - 1] = '\0';
+        strcpy(desCuProp->cuName, "");
+        desCuProp->devExcl = srcCuPropV2->devExcl;
+        desCuProp->requestLoadUnified = srcCuPropV2->requestLoadUnified;
+        desCuProp->requestLoadOriginal = srcCuPropV2->requestLoadOriginal;
+        desCuProp->clientId = srcCuPropV2->clientId;
+        desCuProp->clientProcessId = srcCuPropV2->clientProcessId;
+        desCuProp->poolId = srcCuPropV2->poolId;
+    }
+}
+
+/*
+ * copy cu resource from src to des.
+ */
+void xrm::system::cuResourceCopy(cuResource* desCuRes, cuResource* srcCuRes) {
+    if (desCuRes != NULL && srcCuRes != NULL) {
+        strncpy(desCuRes->xclbinFileName, srcCuRes->xclbinFileName, XRM_MAX_NAME_LEN - 1);
+        desCuRes->xclbinFileName[XRM_MAX_NAME_LEN - 1] = '\0';
+        strncpy(desCuRes->kernelPluginFileName, srcCuRes->kernelPluginFileName, XRM_MAX_NAME_LEN - 1);
+        desCuRes->kernelPluginFileName[XRM_MAX_NAME_LEN - 1] = '\0';
+        strncpy(desCuRes->kernelName, srcCuRes->kernelName, XRM_MAX_NAME_LEN - 1);
+        desCuRes->kernelName[XRM_MAX_NAME_LEN - 1] = '\0';
+        strncpy(desCuRes->kernelAlias, srcCuRes->kernelAlias, XRM_MAX_NAME_LEN - 1);
+        desCuRes->kernelAlias[XRM_MAX_NAME_LEN - 1] = '\0';
+        strncpy(desCuRes->instanceName, srcCuRes->instanceName, XRM_MAX_NAME_LEN - 1);
+        desCuRes->instanceName[XRM_MAX_NAME_LEN - 1] = '\0';
+        strncpy(desCuRes->cuName, srcCuRes->cuName, XRM_MAX_NAME_LEN - 1);
+        desCuRes->cuName[XRM_MAX_NAME_LEN - 1] = '\0';
+        strncpy(desCuRes->uuidStr, srcCuRes->uuidStr, XRM_MAX_NAME_LEN - 1);
+        desCuRes->uuidStr[XRM_MAX_NAME_LEN - 1] = '\0';
+        desCuRes->deviceId = srcCuRes->deviceId;
+        desCuRes->cuId = srcCuRes->cuId;
+        desCuRes->channelId = srcCuRes->channelId;
+        desCuRes->cuType = srcCuRes->cuType;
+        desCuRes->baseAddr = srcCuRes->baseAddr;
+        desCuRes->membankId = srcCuRes->membankId;
+        desCuRes->membankType = srcCuRes->membankType;
+        desCuRes->membankSize = srcCuRes->membankSize;
+        desCuRes->membankBaseAddr = srcCuRes->membankBaseAddr;
+        desCuRes->allocServiceId = srcCuRes->allocServiceId;
+        desCuRes->clientId = srcCuRes->clientId;
+        desCuRes->channelLoadUnified = srcCuRes->channelLoadUnified;
+        desCuRes->channelLoadOriginal = srcCuRes->channelLoadOriginal;
+        desCuRes->poolId = srcCuRes->poolId;
+    }
+}
+
+/* check whether devId in device id list */
+bool xrm::system::isInDeviceIdList(deviceIdListPropertyV2* devIdList, int32_t devId) {
+    bool ret = false;
+    if (devIdList->deviceNum < 0 || devIdList->deviceNum > XRM_MAX_XILINX_DEVICES) return (ret);
+    if (devId < 0 || devId > (XRM_MAX_XILINX_DEVICES - 1)) return (ret);
+    for (int32_t i = 0; i < devIdList->deviceNum; i++) {
+        if (devIdList->deviceIds[i] == (uint64_t)devId) {
+            ret = true;
+            break;
+        }
+    }
+    return (ret);
+}
+
+/* insert one devId into device id list, device id in list is unique */
+uint32_t xrm::system::insertDeviceIdList(deviceIdListPropertyV2* devIdList, int32_t devId) {
+    uint32_t ret = XRM_ERROR;
+    if (devIdList->deviceNum < 0 || devIdList->deviceNum > XRM_MAX_XILINX_DEVICES) return (ret);
+    if (devId < 0 || devId > (XRM_MAX_XILINX_DEVICES - 1)) return (ret);
+    for (int32_t i = 0; i < devIdList->deviceNum; i++) {
+        if (devIdList->deviceIds[i] == (uint64_t)devId) {
+            ret = XRM_SUCCESS;
+            return (ret);
+        }
+    }
+    if (devIdList->deviceNum < XRM_MAX_XILINX_DEVICES) {
+        devIdList->deviceIds[devIdList->deviceNum] = (uint64_t)devId;
+        devIdList->deviceNum++;
+        ret = XRM_SUCCESS;
+    } else {
+        ret = XRM_ERROR;
+    }
+    return (ret);
+}
+
+/*
+ * To allocate sub list of cu from same device, the device should be different from that in used deviceId list.
+ * but will not update AllocServiceId
+ */
+int32_t xrm::system::resAllocCuSubListFromSameDevice(cuSubListPropertyV2* cuSubListPropV2,
+                                                     deviceIdListPropertyV2* usedDevIdListV2,
+                                                     cuSubListResourceV2* cuSubListResV2) {
+    int32_t devId, ret, i;
+    cuProperty* cuProp = NULL;
+    cuResource* cuRes = NULL;
+
+    if (cuSubListPropV2 == NULL || usedDevIdListV2 == NULL || cuSubListResV2 == NULL) {
+        return (XRM_ERROR_INVALID);
+    }
+    if (cuSubListPropV2->cuNum <= 0 || cuSubListPropV2->cuNum > XRM_MAX_LIST_CU_NUM_V2 ||
+        usedDevIdListV2->deviceNum < 0 || usedDevIdListV2->deviceNum > XRM_MAX_XILINX_DEVICES) {
+        return (XRM_ERROR_INVALID);
+    }
+
+    for (devId = -1; devId < m_numDevice;) {
+        /* find one available device for first cu*/
+        cuProp = &cuSubListPropV2->cuProps[0];
+    alloc_device:
+        devId = allocDevForClient(&devId, cuProp);
+        if (devId < 0) {
+            return (XRM_ERROR_NO_KERNEL);
+        }
+        /* check whether the device is in used devId list, if yes, then find another one */
+        if (isInDeviceIdList(usedDevIdListV2, devId)) {
+            goto alloc_device;
+        }
+        /* alloc the cu list from this device */
+        for (i = 0; i < cuSubListPropV2->cuNum; i++) {
+            cuProp = &cuSubListPropV2->cuProps[i];
+            cuRes = &cuSubListResV2->cuResources[i];
+            ret = allocClientFromDev(devId, cuProp);
+            if (ret != XRM_SUCCESS) {
+                resReleaseCuSubList(cuSubListResV2);
+                memset(cuSubListResV2, 0, sizeof(cuSubListResourceV2));
+                break;
+            }
+            ret = allocCuFromDev(devId, cuProp, cuRes);
+            if (ret != XRM_SUCCESS) {
+                releaseClientOnDev(devId, cuProp->clientId);
+                resReleaseCuSubList(cuSubListResV2);
+                memset(cuSubListResV2, 0, sizeof(cuSubListResourceV2));
+                break;
+            }
+            cuSubListResV2->cuNum++;
+        }
+        if (ret == XRM_SUCCESS) {
+            // will not update AllocServiceId
+            return (XRM_SUCCESS);
+        }
+    }
+    if (ret == XRM_SUCCESS)
+        return (XRM_SUCCESS);
+    else
+        return (XRM_ERROR_NO_KERNEL);
+}
+
+int32_t xrm::system::resReleaseCuSubList(cuSubListResourceV2* cuSubListResV2) {
+    int32_t i, ret;
+    cuResource* cuRes;
+
+    if (cuSubListResV2 == NULL) return (XRM_ERROR_INVALID);
+    if (cuSubListResV2->cuNum < 0 || cuSubListResV2->cuNum > XRM_MAX_LIST_CU_NUM_V2) return (XRM_ERROR_INVALID);
+    /* No resource need to be released */
+    if (cuSubListResV2->cuNum == 0) return (XRM_SUCCESS);
+
+    for (i = 0; i < cuSubListResV2->cuNum; i++) {
+        cuRes = &cuSubListResV2->cuResources[i];
+        ret = resReleaseCuV2(cuRes);
+        if (ret != XRM_SUCCESS) break;
+    }
+    return (ret);
+}
+
+// #define GET_DEVICE_INFO_CONSTRAINT_TYPE(deviceInfo) (((deviceInfo) >> XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT) &
+// XRM_DEVICE_INFO_CONSTRAINT_TYPE_MASK) #define GET_DEVICE_INFO_DEVICE_INDEX(deviceInfo) (((deviceInfo) >>
+// XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) & XRM_DEVICE_INFO_DEVICE_INDEX_MASK)
+
+/*
+ * Alloc one cu list based on the request property.
+ *
+ * For each CU:
+ * 1) if device constraint not set: allocate it from any device
+ * 2) if device constraint set with hw index: allocate it from target device
+ * 3) if device constraint set with virtual index: find all others with same virtual index, put them into
+ *    one sub-list, and allocate requested CU from same device, the device id should be different from that
+ *    for previous sub-lists request from virtual index.
+ *
+ * XRM_SUCCESS: allocated resouce is filled into cuListRes
+ * Otherwise: failed to allocate the cu list
+ *
+ * Lock: should enter lock during the cu list allocation
+ */
+int32_t xrm::system::resAllocCuListV2(cuListPropertyV2* cuListPropV2, cuListResourceV2* cuListResV2) {
+    int32_t index, ret;
+    cuPropertyV2* cuPropV2 = NULL;
+    cuResource* cuRes = NULL;
+    uint64_t deviceInfoConstraintType;
+    uint64_t deviceInfoDeviceIndex;
+    itemFlag* itemFlags;
+    deviceIdListPropertyV2* usedDevIdList = NULL;
+    cuProperty cuProp;
+    int32_t subListCuNum;
+
+    if (cuListPropV2 == NULL || cuListResV2 == NULL) {
+        return (XRM_ERROR_INVALID);
+    }
+    if (cuListPropV2->cuNum <= 0 || cuListPropV2->cuNum > XRM_MAX_LIST_CU_NUM_V2) {
+        return (XRM_ERROR_INVALID);
+    }
+
+    /* use to set the flag to record whether the item is handled */
+    itemFlags = (itemFlag*)malloc(sizeof(itemFlag) * XRM_MAX_LIST_CU_NUM_V2);
+    memset(itemFlags, 0, sizeof(itemFlag) * XRM_MAX_LIST_CU_NUM_V2);
+
+    /* use to record used device id for sub-list which request from different virtual device index */
+    usedDevIdList = (deviceIdListPropertyV2*)malloc(sizeof(deviceIdListPropertyV2));
+    memset(usedDevIdList, 0, sizeof(deviceIdListPropertyV2));
+
+    ret = XRM_ERROR;
+
+    /*
+     * To allocate the requested cu:
+     * 1) if device constraint not set: allocate it from any device
+     * 2) if device constraint set with hw index: allocate it from target device
+     * 3) if device constraint set with virtual index: find all others with same virtual index, put them into
+     *    one sub-list, and allocate requested CU from same device, the device id should be different from that
+     *    for previous sub-lists request from virtual index.
+     */
+    for (index = 0; index < cuListPropV2->cuNum; index++) {
+        if (itemFlags[index].handled) continue;
+        itemFlags[index].handled = true;
+        cuPropV2 = &cuListPropV2->cuProps[index];
+        deviceInfoConstraintType =
+            (((cuPropV2->deviceInfo) >> XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT) & XRM_DEVICE_INFO_CONSTRAINT_TYPE_MASK);
+        deviceInfoDeviceIndex =
+            (((cuPropV2->deviceInfo) >> XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) & XRM_DEVICE_INFO_DEVICE_INDEX_MASK);
+        cuRes = &cuListResV2->cuResources[index];
+        switch (deviceInfoConstraintType) {
+            case XRM_DEVICE_INFO_CONSTRAINT_TYPE_NULL:
+                cuPropertyCopyFromV2(&cuProp, cuPropV2);
+                cuRes = &cuListResV2->cuResources[index];
+                ret = resAllocCu(&cuProp, cuRes, false);
+                if (ret == XRM_SUCCESS) {
+                    cuListResV2->cuNum++;
+                    itemFlags[index].allocated = true;
+                }
+                break;
+            case XRM_DEVICE_INFO_CONSTRAINT_TYPE_HARDWARE_DEVICE_INDEX:
+                cuPropertyCopyFromV2(&cuProp, cuPropV2);
+                cuRes = &cuListResV2->cuResources[index];
+                ret = resAllocCuFromDev((uint32_t)deviceInfoDeviceIndex, &cuProp, cuRes, false);
+                if (ret == XRM_SUCCESS) {
+                    cuListResV2->cuNum++;
+                    itemFlags[index].allocated = true;
+                }
+                break;
+            case XRM_DEVICE_INFO_CONSTRAINT_TYPE_VIRTUAL_DEVICE_INDEX:
+                /*
+                 * This is the first cu with different virtual device index from privious CUes.
+                 * Here need create a new sub-list to handle all cu with same virtual device.
+                 */
+                cuSubListPropertyV2* cuSubListProp;
+                cuSubListResourceV2* cuSubListRes;
+                cuSubListProp = (cuSubListPropertyV2*)malloc(sizeof(cuSubListPropertyV2));
+                memset(cuSubListProp, 0, sizeof(cuSubListPropertyV2));
+
+                /* put current cu property into sub list */
+                subListCuNum = 1;
+                cuPropertyCopyFromV2(&cuSubListProp->cuProps[subListCuNum - 1], cuPropV2);
+                cuSubListProp->indexInOriList[subListCuNum - 1] = index;
+
+                /*
+                 * look through the rest of the original list, put the cu property into sub list if
+                 * virtual device index is same as the current one.
+                 */
+                uint64_t deviceInfoConstraintTypeNext;
+                uint64_t deviceInfoDeviceIndexNext;
+                for (int32_t subIndex = index + 1; subIndex < cuListPropV2->cuNum; subIndex++) {
+                    if (itemFlags[subIndex].handled) continue;
+                    cuPropV2 = &cuListPropV2->cuProps[subIndex];
+                    deviceInfoConstraintTypeNext = (((cuPropV2->deviceInfo) >> XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT) &
+                                                    XRM_DEVICE_INFO_CONSTRAINT_TYPE_MASK);
+                    deviceInfoDeviceIndexNext = (((cuPropV2->deviceInfo) >> XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) &
+                                                 XRM_DEVICE_INFO_DEVICE_INDEX_MASK);
+                    if ((deviceInfoConstraintTypeNext == XRM_DEVICE_INFO_CONSTRAINT_TYPE_VIRTUAL_DEVICE_INDEX) &&
+                        (deviceInfoDeviceIndexNext == deviceInfoDeviceIndex)) {
+                        /* put the cu property into sub list */
+                        subListCuNum++;
+                        cuPropertyCopyFromV2(&cuSubListProp->cuProps[subListCuNum - 1], cuPropV2);
+                        cuSubListProp->indexInOriList[subListCuNum - 1] = subIndex;
+                        itemFlags[subIndex].handled = true;
+                    }
+                }
+                cuSubListProp->cuNum = subListCuNum;
+                cuSubListRes = (cuSubListResourceV2*)malloc(sizeof(cuSubListResourceV2));
+                memset(cuSubListRes, 0, sizeof(cuSubListResourceV2));
+                ret = resAllocCuSubListFromSameDevice(cuSubListProp, usedDevIdList, cuSubListRes);
+                if (ret == XRM_SUCCESS) {
+                    int32_t indexInOriList;
+                    for (int32_t i = 0; i < cuSubListRes->cuNum; i++) {
+                        indexInOriList = cuSubListProp->indexInOriList[i];
+                        cuResourceCopy(&cuListResV2->cuResources[indexInOriList], &cuSubListRes->cuResources[i]);
+                        itemFlags[indexInOriList].allocated = true;
+                    }
+                    cuListResV2->cuNum += cuSubListRes->cuNum;
+                    // record the used device id (all cu in this sub list from same device)
+                    insertDeviceIdList(usedDevIdList, cuSubListRes->cuResources[0].deviceId);
+                }
+                free(cuSubListProp);
+                free(cuSubListRes);
+                break;
+            default:
+                logMsg(XRM_LOG_ERROR, "invalid device info [%d] constraint type\n", index);
+                ret = XRM_ERROR_INVALID;
+                break;
+        }
+        if (ret != XRM_SUCCESS) break;
+    }
+    if (ret == XRM_SUCCESS) {
+        updateAllocServiceId();
+    } else {
+        for (index = 0; index < cuListPropV2->cuNum; index++) {
+            if (itemFlags[index].allocated) {
+                cuRes = &cuListResV2->cuResources[index];
+                resReleaseCuV2(cuRes);
+            }
+            cuListResV2->cuNum = 0;
+        }
+    }
+    free(itemFlags);
+    free(usedDevIdList);
+    return (ret);
+}
+
+/*
  * Load xclbin to one device and alloc all cu from this device.
  *
  * XRM_SUCCESS: allocated resouce is filled into cuListRes
@@ -2818,6 +3201,17 @@ void xrm::system::flushUdfCuGroupInfo(uint32_t udfCuGroupIdx) {
 }
 
 /*
+ * flush the information data of user define cu group V2
+ */
+void xrm::system::flushUdfCuGroupInfoV2(uint32_t udfCuGroupIdx) {
+    m_udfCuGroupsV2[udfCuGroupIdx].udfCuGroupName = "";
+    m_udfCuGroupsV2[udfCuGroupIdx].optionUdfCuListNum = 0;
+    for (int32_t cuListIdx = 0; cuListIdx < m_udfCuGroupsV2[udfCuGroupIdx].optionUdfCuListNum; cuListIdx++) {
+        memset(&m_udfCuGroupsV2[udfCuGroupIdx].optionUdfCuListProps[cuListIdx], 0, sizeof(cuListPropertyV2));
+    }
+}
+
+/*
  * declare one user defined cu group type based on the input information.
  *
  * XRM_SUCCESS: the user defined cu group is added into end of m_udfCuGroups[], no hole
@@ -2861,6 +3255,54 @@ int32_t xrm::system::resUdfCuGroupDeclare(udfCuGroupInformation* udfCuGroupInfo)
         }
     }
     m_numUdfCuGroup++;
+    return (XRM_SUCCESS);
+}
+
+/*
+ * declare one user defined cu group type based on the input information.
+ *
+ * XRM_SUCCESS: the user defined cu group is added into end of m_udfCuGroupsV2[], no hole
+ * Otherwise: failed to declare the user defined cu group
+ *
+ * Lock: should enter lock during the cu group declaration
+ */
+int32_t xrm::system::resUdfCuGroupDeclareV2(udfCuGroupInformationV2* udfCuGroupInfoV2) {
+    cuListPropertyV2* cuListProp;
+    cuListPropertyV2* udfCuListProp;
+    int32_t udfCuGroupIdx = -1;
+
+    if (udfCuGroupInfoV2 == NULL) {
+        return (XRM_ERROR_INVALID);
+    }
+    for (uint32_t cuGroupIdx = 0; cuGroupIdx < m_numUdfCuGroupV2; cuGroupIdx++) {
+        /* compare, 0: equal */
+        if (!m_udfCuGroupsV2[cuGroupIdx].udfCuGroupName.compare(udfCuGroupInfoV2->udfCuGroupName.c_str())) {
+            udfCuGroupIdx = (int32_t)cuGroupIdx;
+            break;
+        }
+    }
+    if (udfCuGroupIdx != -1) {
+        logMsg(XRM_LOG_ERROR, "%s : user defined cu group is already existing\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+
+    m_udfCuGroupsV2[m_numUdfCuGroupV2].udfCuGroupName = udfCuGroupInfoV2->udfCuGroupName;
+    m_udfCuGroupsV2[m_numUdfCuGroupV2].optionUdfCuListNum = udfCuGroupInfoV2->optionUdfCuListNum;
+    for (int32_t cuListIdx = 0; cuListIdx < udfCuGroupInfoV2->optionUdfCuListNum; cuListIdx++) {
+        cuListProp = &m_udfCuGroupsV2[m_numUdfCuGroupV2].optionUdfCuListProps[cuListIdx];
+        udfCuListProp = &udfCuGroupInfoV2->optionUdfCuListProps[cuListIdx];
+        memset(cuListProp, 0, sizeof(cuListPropertyV2));
+        cuListProp->cuNum = udfCuListProp->cuNum;
+        for (int32_t i = 0; i < cuListProp->cuNum; i++) {
+            strncpy(cuListProp->cuProps[i].cuName, udfCuListProp->cuProps[i].cuName, XRM_MAX_NAME_LEN - 1);
+            cuListProp->cuProps[i].devExcl = udfCuListProp->cuProps[i].devExcl;
+            cuListProp->cuProps[i].deviceInfo = udfCuListProp->cuProps[i].deviceInfo;
+            cuListProp->cuProps[i].memoryInfo = udfCuListProp->cuProps[i].memoryInfo;
+            cuListProp->cuProps[i].requestLoadUnified = udfCuListProp->cuProps[i].requestLoadUnified;
+            cuListProp->cuProps[i].requestLoadOriginal = udfCuListProp->cuProps[i].requestLoadOriginal;
+        }
+    }
+    m_numUdfCuGroupV2++;
     return (XRM_SUCCESS);
 }
 
@@ -2920,6 +3362,62 @@ int32_t xrm::system::resUdfCuGroupUndeclare(udfCuGroupInformation* udfCuGroupInf
 }
 
 /*
+ * undeclare one user defined cu group type based on the input information.
+ *
+ * XRM_SUCCESS: the user defined cu group is removed from m_udfCuGroupsV2[], no hole
+ * Otherwise: failed to undeclare the user defined cu group
+ *
+ * Lock: should enter lock during the cu group undeclaration
+ */
+int32_t xrm::system::resUdfCuGroupUndeclareV2(udfCuGroupInformationV2* udfCuGroupInfoV2) {
+    cuListPropertyV2* desCuListProp;
+    cuListPropertyV2* srcCuListProp;
+    bool udfCuGroupFound = false;
+    uint32_t udfCuGroupIdx;
+
+    if (udfCuGroupInfoV2 == NULL) {
+        return (XRM_ERROR_INVALID);
+    }
+    for (udfCuGroupIdx = 0; udfCuGroupIdx < m_numUdfCuGroupV2; udfCuGroupIdx++) {
+        /* compare, 0: equal */
+        if (!m_udfCuGroupsV2[udfCuGroupIdx].udfCuGroupName.compare(udfCuGroupInfoV2->udfCuGroupName.c_str())) {
+            udfCuGroupFound = true;
+            break;
+        }
+    }
+    if (!udfCuGroupFound) {
+        logMsg(XRM_LOG_ERROR, "%s : user defined cu group is NOT existing\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+
+    /* move slot one step forward */
+    for (; udfCuGroupIdx < (m_numUdfCuGroupV2 - 1); udfCuGroupIdx++) {
+        m_udfCuGroupsV2[udfCuGroupIdx].udfCuGroupName = m_udfCuGroupsV2[udfCuGroupIdx + 1].udfCuGroupName;
+        m_udfCuGroupsV2[udfCuGroupIdx].optionUdfCuListNum = m_udfCuGroupsV2[udfCuGroupIdx + 1].optionUdfCuListNum;
+        for (int32_t cuListIdx = 0; cuListIdx < m_udfCuGroupsV2[udfCuGroupIdx].optionUdfCuListNum; cuListIdx++) {
+            desCuListProp = &m_udfCuGroupsV2[udfCuGroupIdx].optionUdfCuListProps[cuListIdx];
+            srcCuListProp = &m_udfCuGroupsV2[udfCuGroupIdx + 1].optionUdfCuListProps[cuListIdx];
+            memset(desCuListProp, 0, sizeof(cuListPropertyV2));
+            desCuListProp->cuNum = srcCuListProp->cuNum;
+            for (int32_t i = 0; i < desCuListProp->cuNum; i++) {
+                strncpy(desCuListProp->cuProps[i].cuName, srcCuListProp->cuProps[i].cuName, XRM_MAX_NAME_LEN - 1);
+                desCuListProp->cuProps[i].devExcl = srcCuListProp->cuProps[i].devExcl;
+                desCuListProp->cuProps[i].deviceInfo = srcCuListProp->cuProps[i].deviceInfo;
+                desCuListProp->cuProps[i].memoryInfo = srcCuListProp->cuProps[i].memoryInfo;
+                desCuListProp->cuProps[i].requestLoadUnified = srcCuListProp->cuProps[i].requestLoadUnified;
+                desCuListProp->cuProps[i].requestLoadOriginal = srcCuListProp->cuProps[i].requestLoadOriginal;
+            }
+        }
+    }
+
+    /* flush the last slot */
+    flushUdfCuGroupInfoV2(udfCuGroupIdx);
+    m_numUdfCuGroupV2--;
+
+    return (XRM_SUCCESS);
+}
+
+/*
  * Alloc one cu group based on the request property.
  *
  * XRM_SUCCESS: allocated resouce is filled into cuGroupRes
@@ -2971,6 +3469,64 @@ int32_t xrm::system::resAllocCuGroup(cuGroupProperty* cuGroupProp, cuGroupResour
          * use cuGroupRes to call resAllocCuList() directly, otherwise should use cuListResource instead.
          */
         ret = resAllocCuList(&cuListProp, (cuListResource*)cuGroupRes);
+        if (ret == XRM_SUCCESS) break;
+    }
+    return (ret);
+}
+
+/*
+ * Alloc one cu group based on the request property.
+ *
+ * XRM_SUCCESS: allocated resouce is filled into cuGroupRes
+ * Otherwise: failed to allocate the cu group
+ *
+ * Lock: should enter lock during the cu group allocation
+ */
+int32_t xrm::system::resAllocCuGroupV2(cuGroupPropertyV2* cuGroupPropV2, cuGroupResourceV2* cuGroupResV2) {
+    int32_t ret = XRM_ERROR;
+    cuListPropertyV2 cuListProp;
+    cuListPropertyV2* udfCuListProp;
+    cuPropertyV2* cuProp;
+    cuPropertyV2* udfCuProp;
+    int32_t udfCuGroupIdx = -1;
+
+    if (cuGroupPropV2 == NULL || cuGroupResV2 == NULL) {
+        return (XRM_ERROR_INVALID);
+    }
+    for (uint32_t cuGroupIdx = 0; cuGroupIdx < m_numUdfCuGroupV2; cuGroupIdx++) {
+        /* compare, 0: equal */
+        if (!m_udfCuGroupsV2[cuGroupIdx].udfCuGroupName.compare(cuGroupPropV2->udfCuGroupName.c_str())) {
+            udfCuGroupIdx = cuGroupIdx;
+            break;
+        }
+    }
+    if (udfCuGroupIdx == -1) {
+        logMsg(XRM_LOG_ERROR, "%s : user defined cu group is not declared\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+    for (int32_t cuListIdx = 0; cuListIdx < m_udfCuGroupsV2[udfCuGroupIdx].optionUdfCuListNum; cuListIdx++) {
+        memset(&cuListProp, 0, sizeof(cuListPropertyV2));
+        udfCuListProp = &m_udfCuGroupsV2[udfCuGroupIdx].optionUdfCuListProps[cuListIdx];
+        cuListProp.cuNum = udfCuListProp->cuNum;
+        for (int32_t i = 0; i < cuListProp.cuNum; i++) {
+            cuProp = &cuListProp.cuProps[i];
+            udfCuProp = &udfCuListProp->cuProps[i];
+            strncpy(cuProp->cuName, udfCuProp->cuName, XRM_MAX_NAME_LEN - 1);
+            cuProp->devExcl = udfCuProp->devExcl;
+            cuProp->deviceInfo = udfCuProp->deviceInfo;
+            cuProp->memoryInfo = udfCuProp->memoryInfo;
+            cuProp->requestLoadUnified = udfCuProp->requestLoadUnified;
+            cuProp->requestLoadOriginal = udfCuProp->requestLoadOriginal;
+            cuProp->clientId = cuGroupPropV2->clientId;
+            cuProp->clientProcessId = cuGroupPropV2->clientProcessId;
+            cuProp->poolId = cuGroupPropV2->poolId;
+        }
+        memset(cuGroupResV2, 0, sizeof(cuGroupResourceV2));
+        /*
+         * NOTE: here since the cuListResource has same member of cuGroupResource, so it's fine to
+         * use cuGroupResV2 to call resAllocCuList() directly, otherwise should use cuListResource instead.
+         */
+        ret = resAllocCuListV2(&cuListProp, (cuListResourceV2*)cuGroupResV2);
         if (ret == XRM_SUCCESS) break;
     }
     return (ret);
@@ -3066,6 +3622,16 @@ int32_t xrm::system::resReleaseCu(cuResource* cuRes) {
     return (ret);
 }
 
+/*
+ * the interface to free one cu resource
+ *
+ * lock: need to enter lock to protect the resource pool access during the free process
+ */
+int32_t xrm::system::resReleaseCuV2(cuResource* cuRes) {
+    int32_t ret = resReleaseCu(cuRes);
+    return (ret);
+}
+
 int32_t xrm::system::resReleaseCuList(cuListResource* cuListRes) {
     int32_t i, ret;
     cuResource* cuRes;
@@ -3083,6 +3649,23 @@ int32_t xrm::system::resReleaseCuList(cuListResource* cuListRes) {
     return (ret);
 }
 
+int32_t xrm::system::resReleaseCuListV2(cuListResourceV2* cuListResV2) {
+    int32_t i, ret;
+    cuResource* cuRes;
+
+    if (cuListResV2 == NULL) return (XRM_ERROR_INVALID);
+    if (cuListResV2->cuNum < 0 || cuListResV2->cuNum > XRM_MAX_LIST_CU_NUM_V2) return (XRM_ERROR_INVALID);
+    /* No resource need to be released */
+    if (cuListResV2->cuNum == 0) return (XRM_SUCCESS);
+
+    for (i = 0; i < cuListResV2->cuNum; i++) {
+        cuRes = &cuListResV2->cuResources[i];
+        ret = resReleaseCuV2(cuRes);
+        if (ret != XRM_SUCCESS) break;
+    }
+    return (ret);
+}
+
 int32_t xrm::system::resReleaseCuGroup(cuGroupResource* cuGroupRes) {
     int32_t i, ret;
     cuResource* cuRes;
@@ -3095,6 +3678,23 @@ int32_t xrm::system::resReleaseCuGroup(cuGroupResource* cuGroupRes) {
     for (i = 0; i < cuGroupRes->cuNum; i++) {
         cuRes = &cuGroupRes->cuResources[i];
         ret = resReleaseCu(cuRes);
+        if (ret != XRM_SUCCESS) break;
+    }
+    return (ret);
+}
+
+int32_t xrm::system::resReleaseCuGroupV2(cuGroupResourceV2* cuGroupRes) {
+    int32_t i, ret;
+    cuResource* cuRes;
+
+    if (cuGroupRes == NULL) return (XRM_ERROR_INVALID);
+    if (cuGroupRes->cuNum < 0 || cuGroupRes->cuNum > XRM_MAX_GROUP_CU_NUM_V2) return (XRM_ERROR_INVALID);
+    /* No resource need to be released */
+    if (cuGroupRes->cuNum == 0) return (XRM_SUCCESS);
+
+    for (i = 0; i < cuGroupRes->cuNum; i++) {
+        cuRes = &cuGroupRes->cuResources[i];
+        ret = resReleaseCuV2(cuRes);
         if (ret != XRM_SUCCESS) break;
     }
     return (ret);
@@ -3831,6 +4431,91 @@ int32_t xrm::system::resAllocationQuery(allocationQueryInfo* allocQuery, cuListR
 }
 
 /*
+ * Query allocated cu resource from system based on the query property.
+ *
+ * XRM_SUCCESS: queried resouces are filled into cuListRes
+ * Otherwise: failed to query the allocated resource
+ *
+ * Lock: should enter lock during the resource allocation query
+ */
+int32_t xrm::system::resAllocationQueryV2(allocationQueryInfoV2* allocQueryV2, cuListResourceV2* cuListResV2) {
+    int32_t devId, cuId, chanId;
+    uint64_t allocServiceId;
+    bool kernelNameEqual, kernelAliasEqual;
+    deviceData* dev = NULL;
+    cuData* cu = NULL;
+    channelData* chan = NULL;
+    cuResource* cuRes = NULL;
+    int32_t cuNum;
+
+    if (allocQueryV2 == NULL || cuListResV2 == NULL) {
+        return (XRM_ERROR_INVALID);
+    }
+    allocServiceId = allocQueryV2->allocServiceId;
+    if (allocServiceId == 0) {
+        return (XRM_ERROR_INVALID);
+    }
+
+    cuNum = 0;
+    memset(cuListResV2, 0, sizeof(cuListResourceV2));
+    /* Check all the devices */
+    for (devId = 0; devId < m_numDevice; devId++) {
+        dev = &m_devList[devId];
+        /* Check all the cu on this device */
+        for (cuId = 0; cuId < dev->xclbinInfo.numCu; cuId++) {
+            cu = &dev->xclbinInfo.cuList[cuId];
+            /* kernel name is presented, compare it; otherwise no need to compare */
+            kernelNameEqual = true;
+            if (allocQueryV2->kernelName[0] != '\0') {
+                if (cu->kernelName.compare(allocQueryV2->kernelName)) kernelNameEqual = false;
+            }
+            /* kernel alias is presented, compare it; otherwise no need to compare */
+            kernelAliasEqual = true;
+            if (allocQueryV2->kernelAlias[0] != '\0') {
+                if (cu->kernelAlias.compare(allocQueryV2->kernelAlias)) kernelAliasEqual = false;
+            }
+            if (!(kernelNameEqual && kernelAliasEqual)) continue;
+            /* Check all the channels on this cu */
+            for (chanId = 0; chanId < XRM_MAX_KERNEL_CHANNELS; chanId++) {
+                chan = &cu->channels[chanId];
+                if (chan->allocServiceId == allocServiceId) {
+                    /* out of cu list limitation */
+                    if (cuNum >= XRM_MAX_LIST_CU_NUM_V2) {
+                        memset(cuListResV2, 0, sizeof(cuListResource));
+                        return (XRM_ERROR);
+                    }
+                    cuRes = &cuListResV2->cuResources[cuNum];
+                    strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
+                    strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
+                    strncpy(cuRes->kernelPluginFileName, cu->kernelPluginFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+                    strncpy(cuRes->kernelName, cu->kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
+                    strncpy(cuRes->instanceName, cu->instanceName.c_str(), XRM_MAX_NAME_LEN - 1);
+                    strncpy(cuRes->kernelAlias, cu->kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
+                    strncpy(cuRes->cuName, cu->cuName.c_str(), XRM_MAX_NAME_LEN - 1);
+                    cuRes->cuType = cu->cuType;
+                    cuRes->baseAddr = cu->baseAddr;
+                    cuRes->membankId = cu->membankId;
+                    cuRes->membankType = cu->membankType;
+                    cuRes->membankSize = cu->membankSize;
+                    cuRes->membankBaseAddr = cu->membankBaseAddr;
+                    cuRes->deviceId = devId;
+                    cuRes->cuId = cuId;
+                    cuRes->channelId = chanId;
+                    cuRes->allocServiceId = allocServiceId;
+                    cuRes->poolId = chan->poolId;
+                    cuRes->clientId = chan->clientId;
+                    cuRes->channelLoadUnified = chan->channelLoadUnified;
+                    cuRes->channelLoadOriginal = chan->channelLoadOriginal;
+                    cuNum++;
+                }
+            }
+        }
+    }
+    cuListResV2->cuNum = cuNum;
+    return (XRM_SUCCESS);
+}
+
+/*
  * Recycle all resource from client whose connection is broken.
  */
 void xrm::system::recycleResource(uint64_t clientId) {
@@ -4248,6 +4933,191 @@ int32_t xrm::system::resReserveCuList(uint64_t reservePoolId, cuListProperty* cu
 }
 
 /*
+ * Reserve one cu list based on the request property.
+ *
+ * Please be noted that the reservation will NOT record the client information
+ * (clientId etc).
+ *
+ * return:
+ *   XRM_SUCCESS: reserve the cu list and associate it with the reserve pool id
+ *   Otherwise: failed to reserve the cu list with specified reserve pool id
+ *
+ * Lock: should already in lock protection during the cu list reservation.
+ */
+int32_t xrm::system::resReserveCuSubListFromSameDevice(uint64_t reservePoolId,
+                                                       cuSubListPropertyV2* cuSubListProp,
+                                                       deviceIdListPropertyV2* usedDevIdList,
+                                                       uint64_t* fromDevId) {
+    int32_t i, devId, ret;
+    cuProperty* cuProp = NULL;
+
+    if (cuSubListProp == NULL || usedDevIdList == NULL) {
+        return (XRM_ERROR_INVALID);
+    }
+    if (cuSubListProp->cuNum <= 0 || cuSubListProp->cuNum > XRM_MAX_LIST_CU_NUM_V2 || usedDevIdList->deviceNum < 0 ||
+        usedDevIdList->deviceNum > XRM_MAX_XILINX_DEVICES) {
+        return (XRM_ERROR_INVALID);
+    }
+
+    ret = XRM_ERROR;
+    /*
+     * To reserve the cu sub list from same device
+     */
+    for (devId = -1; devId < m_numDevice;) {
+        /* find one available device for first cu */
+    allocate_device:
+        cuProp = &cuSubListProp->cuProps[0];
+        devId = allocDevForClient(&devId, cuProp);
+        if (devId < 0) {
+            return (ret);
+        }
+        /* check whether the device is in used devId list, if yes, then find another one */
+        if (isInDeviceIdList(usedDevIdList, devId)) {
+            goto allocate_device;
+        }
+
+        /* reserve the cu list from this device */
+        for (i = 0; i < cuSubListProp->cuNum; i++) {
+            cuProp = &cuSubListProp->cuProps[i];
+            ret = reserveCuFromDev(reservePoolId, devId, cuProp);
+            if (ret != XRM_SUCCESS) {
+                resRelinquishCuListV2(reservePoolId);
+                break;
+            }
+        }
+        if (ret == XRM_SUCCESS) {
+            *fromDevId = (uint64_t)devId;
+            return (ret);
+        }
+    }
+    return (ret);
+}
+
+/*
+ * Reserve one cu list based on the request property.
+ *
+ * Please be noted that the reservation will NOT record the client information
+ * (clientId etc).
+ *
+ * For each CU:
+ * 1) if device constraint not set: reserve it from any device
+ * 2) if device constraint set with hw index: reserve it from target device
+ * 3) if device constraint set with virtual index: find all others with same virtual index, put them into
+ *    one sub-list, and reserve requested CU from same device, the device id should be different from that
+ *    for previous sub-lists request from virtual index.
+ *
+ * XRM_SUCCESS: allocated resouce is filled into cuListRes
+ * Otherwise: failed to allocate the cu list
+ *
+ * Lock: should enter lock during the cu list allocation
+ */
+int32_t xrm::system::resReserveCuListV2(uint64_t reservePoolId, cuListPropertyV2* cuListPropV2) {
+    int32_t index, ret;
+    cuPropertyV2* cuPropV2 = NULL;
+    cuProperty cuProp;
+    uint64_t deviceInfoConstraintType, deviceInfoConstraintTypeNext;
+    uint64_t deviceInfoDeviceIndex, deviceInfoDeviceIndexNext;
+    deviceIdListPropertyV2* usedDevIdList = NULL;
+    cuSubListPropertyV2* cuSubListProp;
+    itemFlag* itemFlags;
+    int32_t subListCuNum;
+    uint64_t fromDevId;
+
+    if (cuListPropV2 == NULL) {
+        return (XRM_ERROR_INVALID);
+    }
+    if (cuListPropV2->cuNum <= 0 || cuListPropV2->cuNum > XRM_MAX_LIST_CU_NUM_V2) {
+        return (XRM_ERROR_INVALID);
+    }
+
+    /* use to set the flag to record whether the item is handled */
+    itemFlags = (itemFlag*)malloc(sizeof(itemFlag) * XRM_MAX_LIST_CU_NUM_V2);
+    memset(itemFlags, 0, sizeof(itemFlag) * XRM_MAX_LIST_CU_NUM_V2);
+
+    /* use to record used device id for sub-list which request from different virtual device index */
+    usedDevIdList = (deviceIdListPropertyV2*)malloc(sizeof(deviceIdListPropertyV2));
+    memset(usedDevIdList, 0, sizeof(deviceIdListPropertyV2));
+
+    ret = XRM_ERROR;
+
+    /*
+     * To reserve the requested cu:
+     * 1) if device constraint not set: reserve it from any device
+     * 2) if device constraint set with hw index: reserve it from target device
+     * 3) if device constraint set with virtual index: find all others with same virtual index, put them into
+     *    one sub-list, and reserve requested CU from same device, the device id should be different from that
+     *    for previous sub-lists request from virtual index.
+     */
+    for (index = 0; index < cuListPropV2->cuNum; index++) {
+        if (itemFlags[index].handled) continue;
+        itemFlags[index].handled = true;
+        cuPropV2 = &cuListPropV2->cuProps[index];
+        deviceInfoConstraintType =
+            (((cuPropV2->deviceInfo) >> XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT) & XRM_DEVICE_INFO_CONSTRAINT_TYPE_MASK);
+        deviceInfoDeviceIndex =
+            (((cuPropV2->deviceInfo) >> XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) & XRM_DEVICE_INFO_DEVICE_INDEX_MASK);
+        switch (deviceInfoConstraintType) {
+            case XRM_DEVICE_INFO_CONSTRAINT_TYPE_NULL:
+                cuPropertyCopyFromV2(&cuProp, cuPropV2);
+                ret = resReserveCu(reservePoolId, &cuProp);
+                break;
+            case XRM_DEVICE_INFO_CONSTRAINT_TYPE_HARDWARE_DEVICE_INDEX:
+                cuPropertyCopyFromV2(&cuProp, cuPropV2);
+                ret = reserveCuFromDev(reservePoolId, (int32_t)deviceInfoDeviceIndex, &cuProp);
+                break;
+            case XRM_DEVICE_INFO_CONSTRAINT_TYPE_VIRTUAL_DEVICE_INDEX:
+                /*
+                 * This is the first cu with different virtual device index from privious CUes.
+                 * Here need create a new sub-list to handle all cu with same virtual device.
+                 */
+                cuSubListProp = (cuSubListPropertyV2*)malloc(sizeof(cuSubListPropertyV2));
+                memset(cuSubListProp, 0, sizeof(cuSubListPropertyV2));
+
+                /* put current cu property into sub list */
+                subListCuNum = 1;
+                cuPropertyCopyFromV2(&cuSubListProp->cuProps[subListCuNum - 1], cuPropV2);
+
+                /*
+                 * look through the rest of the original list, put the cu property into sub list if
+                 * virtual device index is same as the current one.
+                 */
+                for (int32_t subIndex = index + 1; subIndex < cuListPropV2->cuNum; subIndex++) {
+                    if (itemFlags[subIndex].handled) continue;
+                    cuPropV2 = &cuListPropV2->cuProps[subIndex];
+                    deviceInfoConstraintTypeNext = (((cuPropV2->deviceInfo) >> XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT) &
+                                                    XRM_DEVICE_INFO_CONSTRAINT_TYPE_MASK);
+                    deviceInfoDeviceIndexNext = (((cuPropV2->deviceInfo) >> XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) &
+                                                 XRM_DEVICE_INFO_DEVICE_INDEX_MASK);
+                    if ((deviceInfoConstraintTypeNext == XRM_DEVICE_INFO_CONSTRAINT_TYPE_VIRTUAL_DEVICE_INDEX) &&
+                        (deviceInfoDeviceIndexNext == deviceInfoDeviceIndex)) {
+                        /* put the cu property into sub list */
+                        subListCuNum++;
+                        cuPropertyCopyFromV2(&cuSubListProp->cuProps[subListCuNum - 1], cuPropV2);
+                        itemFlags[subIndex].handled = true;
+                    }
+                }
+                cuSubListProp->cuNum = subListCuNum;
+                ret = resReserveCuSubListFromSameDevice(reservePoolId, cuSubListProp, usedDevIdList, &fromDevId);
+                if (ret == XRM_SUCCESS) {
+                    // record the used device id (all cu in this sub list from same device)
+                    insertDeviceIdList(usedDevIdList, fromDevId);
+                }
+                free(cuSubListProp);
+                break;
+            default:
+                logMsg(XRM_LOG_ERROR, "invalid device info [%d] constraint type\n", index);
+                ret = XRM_ERROR_INVALID;
+                break;
+        }
+        if (ret != XRM_SUCCESS) break;
+    }
+    if (ret != XRM_SUCCESS) resRelinquishCuListV2(reservePoolId);
+    free(itemFlags);
+    free(usedDevIdList);
+    return (ret);
+}
+
+/*
  * the interface to relinquish cu list resource based on the reserve pool id
  *
  * lock: should already in lock protection during the cu list relinquish process
@@ -4294,6 +5164,16 @@ int32_t xrm::system::resRelinquishCuList(uint64_t reservePoolId) {
         }
     }
     return (XRM_SUCCESS);
+}
+
+/*
+ * the interface to relinquish cu list resource based on the reserve pool id
+ *
+ * lock: should already in lock protection during the cu list relinquish process
+ */
+int32_t xrm::system::resRelinquishCuListV2(uint64_t reservePoolId) {
+    int32_t ret = resRelinquishCuList(reservePoolId);
+    return (ret);
 }
 
 /*
@@ -4345,6 +5225,57 @@ int32_t xrm::system::resReserveCuOfXclbin(uint64_t reservePoolId,
     }
 
     return (XRM_ERROR_NO_KERNEL);
+}
+
+/*
+ * Reserve CU (Compute Unit) of one whole device based on the request property.
+ *
+ * Please be noted that the reservation will NOT record the client information
+ * (clientId etc).
+ *
+ * return:
+ *   XRM_SUCCESS: reserve the cu resouce and associate it with the reserve pool id
+ *   Otherwise: failed to reserve the cu resource with specified reserve pool id
+ *
+ * Lock: should already in lock protection during the cu reservation
+ */
+int32_t xrm::system::resReserveDevice(uint64_t reservePoolId,
+                                      uint64_t deviceId,
+                                      uint64_t clientId,
+                                      pid_t clientProcessId) {
+    deviceData* dev;
+    int32_t devId = (int32_t)deviceId;
+    cuData* cu;
+    int32_t cuId;
+
+    if (reservePoolId == 0) {
+        logMsg(XRM_LOG_ERROR, "%s(), reserve pool is is 0\n", __func__);
+        return (XRM_ERROR_INVALID);
+    }
+
+    if (devId < 0 || devId > (XRM_MAX_XILINX_DEVICES - 1)) {
+        logMsg(XRM_LOG_ERROR, "%s(), device id %d is out of range\n", __func__, devId);
+        return (XRM_ERROR_INVALID);
+    }
+
+    dev = &m_devList[devId];
+    if (!dev->isLoaded) return (XRM_ERROR_NO_KERNEL);
+    /* Whether device is already in used */
+    if (isDeviceBusy(devId)) return (XRM_ERROR_NO_KERNEL);
+    /* reserve the all the cu on this device */
+    for (cuId = 0; cuId < dev->xclbinInfo.numCu; cuId++) {
+        cu = &dev->xclbinInfo.cuList[cuId];
+        cu->totalUsedLoadUnified = XRM_MAX_CU_LOAD_GRANULARITY_1000000;
+        cu->totalReservedLoadUnified = XRM_MAX_CU_LOAD_GRANULARITY_1000000;
+        cu->reserves[0].reserveLoadUnified = XRM_MAX_CU_LOAD_GRANULARITY_1000000;
+        cu->reserves[0].reserveUsedLoadUnified = 0;
+        cu->reserves[0].reservePoolId = reservePoolId;
+        cu->reserves[0].clientIsActive = true;
+        cu->reserves[0].clientId = clientId;
+        cu->reserves[0].clientProcessId = clientProcessId;
+        cu->numReserve = 1;
+    }
+    return (XRM_SUCCESS);
 }
 
 /*
@@ -4407,6 +5338,79 @@ uint64_t xrm::system::resReserveCuPool(cuPoolProperty* cuPoolProp) {
 }
 
 /*
+ * Reserve one cu pool based on the request property.
+ *
+ * Please be noted that the reservation will NOT record the client information
+ * (clientId etc).
+ *
+ *   reservePoolId: reserve cu pool successed
+ *   0: failed to reserve the cu pool resource
+ *
+ * Lock: should enter lock during the cu pool reservation process
+ */
+uint64_t xrm::system::resReserveCuPoolV2(cuPoolPropertyV2* cuPoolProp) {
+    int32_t ret;
+    uint64_t reservePoolId = 0;
+    cuListPropertyV2* cuListProp = NULL;
+    deviceIdListPropertyV2* deviceIdListProp = NULL;
+    int32_t reserveCuListNum = 0;
+    int32_t reserveXclbinNum = 0;
+
+    if (cuPoolProp == NULL) {
+        return (reservePoolId);
+    }
+    if (cuPoolProp->cuListNum < 0 || cuPoolProp->xclbinNum < 0 || cuPoolProp->deviceIdListProp.deviceNum < 0 ||
+        cuPoolProp->deviceIdListProp.deviceNum > XRM_MAX_XILINX_DEVICES) {
+        return (reservePoolId);
+    }
+    cuListProp = &(cuPoolProp->cuListProp);
+    if (cuListProp->cuNum < 0 || cuListProp->cuNum > XRM_MAX_LIST_CU_NUM_V2) {
+        return (reservePoolId);
+    }
+
+    ret = XRM_ERROR;
+    reservePoolId = getNextReservePoolId();
+    while (reserveCuListNum < cuPoolProp->cuListNum) {
+        /*
+         * To reserve the cu list
+         */
+        ret = resReserveCuListV2(reservePoolId, cuListProp);
+        if (ret != XRM_SUCCESS) {
+            resRelinquishCuListV2(reservePoolId);
+            return (0);
+        }
+        reserveCuListNum++;
+    }
+    while (reserveXclbinNum < cuPoolProp->xclbinNum) {
+        /*
+         * To reserve all the cu resources of one xclbin
+         */
+        ret = resReserveCuOfXclbin(reservePoolId, cuPoolProp->xclbinUuid, cuPoolProp->clientId,
+                                   cuPoolProp->clientProcessId);
+        if (ret != XRM_SUCCESS) {
+            resRelinquishCuListV2(reservePoolId);
+            return (0);
+        }
+        reserveXclbinNum++;
+    }
+    deviceIdListProp = &(cuPoolProp->deviceIdListProp);
+    for (int32_t i = 0; i < deviceIdListProp->deviceNum; i++) {
+        /*
+         * To reserve all the cu resources of one device
+         */
+        ret = resReserveDevice(reservePoolId, deviceIdListProp->deviceIds[i], cuPoolProp->clientId,
+                               cuPoolProp->clientProcessId);
+        if (ret != XRM_SUCCESS) {
+            resRelinquishCuListV2(reservePoolId);
+            return (0);
+        }
+    }
+
+    updateReservePoolId();
+    return (reservePoolId);
+}
+
+/*
  * the interface to relinquish cu list resource based on the reservation id
  *
  * lock: need to enter lock to protect the resource pool access during the relinquish process
@@ -4453,6 +5457,16 @@ int32_t xrm::system::resRelinquishCuPool(uint64_t reservePoolId) {
         }
     }
     return (XRM_SUCCESS);
+}
+
+/*
+ * the interface to relinquish cu list resource based on the reservation id
+ *
+ * lock: need to enter lock to protect the resource pool access during the relinquish process
+ */
+int32_t xrm::system::resRelinquishCuPoolV2(uint64_t reservePoolId) {
+    int32_t ret = resRelinquishCuPool(reservePoolId);
+    return (ret);
 }
 
 /*
@@ -4512,6 +5526,87 @@ int32_t xrm::system::resReservationQuery(uint64_t reservePoolId, cuPoolResource*
                     cuRes->deviceId = devId;
                     cuRes->cuId = cuId;
                     cuRes->poolId = reservePoolId;
+                    cuNum++;
+                }
+            }
+        }
+    }
+    cuPoolRes->cuNum = cuNum;
+    return (XRM_SUCCESS);
+}
+
+/*
+ * Query reserve cu resource from system based on the reserve pool id.
+ *
+ * XRM_SUCCESS: queried resouces are filled into cuPoolRes
+ * Otherwise: failed to query the reserve resource
+ *
+ * Lock: should enter lock during the resource allocation query
+ */
+int32_t xrm::system::resReservationQueryV2(reservationQueryInfoV2* reserveQueryInfo, cuPoolResourceV2* cuPoolRes) {
+    int32_t devId, cuId, reserveIdx;
+    deviceData* dev = NULL;
+    cuData* cu = NULL;
+    bool kernelNameEqual, kernelAliasEqual;
+    reserveData* reserve = NULL;
+    cuResource* cuRes = NULL;
+    int32_t cuNum;
+
+    if (reserveQueryInfo == NULL) {
+        return (XRM_ERROR_INVALID);
+    }
+    if (cuPoolRes == NULL) {
+        return (XRM_ERROR_INVALID);
+    }
+    if (reserveQueryInfo->poolId == 0) {
+        return (XRM_ERROR_INVALID);
+    }
+
+    cuNum = 0;
+    memset(cuPoolRes, 0, sizeof(cuPoolResource));
+    /* Check all the devices */
+    for (devId = 0; devId < m_numDevice; devId++) {
+        dev = &m_devList[devId];
+        /* Check all the cu on this device */
+        for (cuId = 0; cuId < dev->xclbinInfo.numCu; cuId++) {
+            cu = &dev->xclbinInfo.cuList[cuId];
+            /* kernel name is presented, compare it; otherwise no need to compare */
+            kernelNameEqual = true;
+            if (reserveQueryInfo->kernelName[0] != '\0') {
+                if (cu->kernelName.compare(reserveQueryInfo->kernelName)) kernelNameEqual = false;
+            }
+            /* kernel alias is presented, compare it; otherwise no need to compare */
+            kernelAliasEqual = true;
+            if (reserveQueryInfo->kernelAlias[0] != '\0') {
+                if (cu->kernelAlias.compare(reserveQueryInfo->kernelAlias)) kernelAliasEqual = false;
+            }
+            if (!(kernelNameEqual && kernelAliasEqual)) continue;
+            /* Check all the reservations on this cu */
+            for (reserveIdx = 0; reserveIdx < cu->numReserve; reserveIdx++) {
+                reserve = &cu->reserves[reserveIdx];
+                if (reserve->reservePoolId == reserveQueryInfo->poolId) {
+                    /* out of cu pool limitation */
+                    if (cuNum >= XRM_MAX_POOL_CU_NUM) {
+                        memset(cuPoolRes, 0, sizeof(cuPoolResource));
+                        return (XRM_ERROR);
+                    }
+                    cuRes = &cuPoolRes->cuResources[cuNum];
+                    strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
+                    strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
+                    strncpy(cuRes->kernelPluginFileName, cu->kernelPluginFileName.c_str(), XRM_MAX_NAME_LEN - 1);
+                    strncpy(cuRes->kernelName, cu->kernelName.c_str(), XRM_MAX_NAME_LEN - 1);
+                    strncpy(cuRes->instanceName, cu->instanceName.c_str(), XRM_MAX_NAME_LEN - 1);
+                    strncpy(cuRes->kernelAlias, cu->kernelAlias.c_str(), XRM_MAX_NAME_LEN - 1);
+                    strncpy(cuRes->cuName, cu->cuName.c_str(), XRM_MAX_NAME_LEN - 1);
+                    cuRes->cuType = cu->cuType;
+                    cuRes->baseAddr = cu->baseAddr;
+                    cuRes->membankId = cu->membankId;
+                    cuRes->membankType = cu->membankType;
+                    cuRes->membankSize = cu->membankSize;
+                    cuRes->membankBaseAddr = cu->membankBaseAddr;
+                    cuRes->deviceId = devId;
+                    cuRes->cuId = cuId;
+                    cuRes->poolId = reserveQueryInfo->poolId;
                     cuNum++;
                 }
             }

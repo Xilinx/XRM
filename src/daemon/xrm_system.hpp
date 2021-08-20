@@ -210,6 +210,192 @@ typedef struct allocationQueryInfo {
     uint8_t extData[64];                // for future extension
 } allocationQueryInfo;
 
+/* request compute unit resource property version 2 */
+typedef struct cuPropertyV2 {
+    char kernelName[XRM_MAX_NAME_LEN];  // unique kernel name, not instance name
+    char kernelAlias[XRM_MAX_NAME_LEN]; // unique alias of kernel name
+    char cuName[XRM_MAX_NAME_LEN];      // unique cu name (kernelName:instanceName)
+    bool devExcl;                       // request exclusive device usage for this client
+    uint64_t deviceInfo;                /* resource allocation device constaint information
+                                         * bit[63 - 40] reserved
+                                         * bit[39 - 32] constraintType
+                                         *              0 : no specified device constraint
+                                         *              1 : hardware device index. It's used to identify hardware
+                                         *                  device index is used as the constraint.
+                                         *              2 : virtual device index. it's used to descript multiple cu
+                                         *                  from same device if device index is same. It does not
+                                         *                  means from specified hardware device. This type is only
+                                         *                  valid in property of cu list. It's not valid for single cu.
+                                         *              others : reserved
+                                         * bit[31 -  0] deviceIndex
+                                         */
+    uint64_t memoryInfo;                /* resource allocation memory constaint information
+                                         * bit[63 - 40] reserved
+                                         * bit[39 - 32] constraintType
+                                         *              0 : no specified memory constraint
+                                         *              1 : hardware memory bank. It's used to identify hardware
+                                         *                  memory bank is used as the constraint.
+                                         *              others : reserved
+                                         * bit[31 -  0] memoryBankIndex
+                                         */
+    uint64_t policyInfo;                /* resource allocation policy information
+                                         * bit[63 -  8] reserved
+                                         * bit[ 7 -  0] policyType
+                                         *              0 : no specified policy
+                                         *              1 : most used first
+                                         *              2 : least used first
+                                         *              others : reserved
+                                         */
+    int32_t requestLoadUnified;         // request load, granularity of 1,000,000
+    int32_t requestLoadOriginal;        /* request load, only one type granularity at one time.
+                                         * bit[31 - 28] reserved
+                                         * bit[27 -  8] granularity of 1000000 (0 - 1000000)
+                                         * bit[ 7 -  0] granularity of 100 (0 - 100)
+                                         */
+    uint64_t clientId;
+    pid_t clientProcessId;
+    uint64_t poolId;     /* request to allocate resource from specified resource pool,
+                          * the system default resource pool id is 0.
+                          */
+    uint8_t extData[64]; // for future extension
+
+    template <class Archive>
+    void serialize(Archive& ar, const unsigned int version) {
+        std::ignore = version;
+        ar& kernelName& kernelAlias& cuName& deviceInfo& memoryInfo& policyInfo& devExcl& requestLoadUnified&
+            requestLoadOriginal& clientId& clientProcessId& poolId;
+    }
+} cuPropertyV2;
+
+/* item flags  */
+typedef struct itemFlag {
+    bool handled;   // the item is handled
+    bool allocated; // the item is allocated
+} itemFlag;
+
+/* list of request compute unit resource property version 2 */
+typedef struct cuListPropertyV2 {
+    cuPropertyV2 cuProps[XRM_MAX_LIST_CU_NUM_V2];
+    int32_t cuNum;
+    uint8_t extData[64]; // for future extension
+
+    template <class Archive>
+    void serialize(Archive& ar, const unsigned int version) {
+        std::ignore = version;
+        ar& cuProps& cuNum;
+    }
+} cuListPropertyV2;
+
+/* sub list of request compute unit resource property version 2 */
+typedef struct cuSubListPropertyV2 {
+    cuProperty cuProps[XRM_MAX_LIST_CU_NUM_V2];
+    int32_t indexInOriList[XRM_MAX_LIST_CU_NUM_V2];
+    int32_t cuNum;
+    uint8_t extData[64]; // for future extension
+
+    template <class Archive>
+    void serialize(Archive& ar, const unsigned int version) {
+        std::ignore = version;
+        ar& cuProps& indexInOriList& cuNum;
+    }
+} cuSubListPropertyV2;
+
+/* user defined compute unit resource group information version 2 */
+typedef struct udfCuGroupInformationV2 {
+    std::string udfCuGroupName; // name of user defined cu group
+    cuListPropertyV2 optionUdfCuListProps[XRM_MAX_UDF_CU_GROUP_OPTION_LIST_NUM_V2];
+    int32_t optionUdfCuListNum;
+    uint8_t extData[64]; // for future extension
+
+    template <class Archive>
+    void serialize(Archive& ar, const unsigned int version) {
+        std::ignore = version;
+        ar& udfCuGroupName& optionUdfCuListProps& optionUdfCuListNum;
+    }
+} udfCuGroupInformationV2;
+
+/* compute resource group property version 2 */
+typedef struct cuGroupPropertyV2 {
+    std::string udfCuGroupName; // name of user defined cu group
+    uint64_t clientId;
+    pid_t clientProcessId;
+    uint64_t poolId;     /* request to allocate resource from specified resource pool,
+                          * 0 means to allocate resource from system default resource pool.
+                          */
+    uint8_t extData[64]; // for future extension
+} cuGroupPropertyV2;
+
+/* device list */
+typedef struct deviceIdListPropertyV2 {
+    uint64_t deviceIds[XRM_MAX_XILINX_DEVICES]; // device id in list is unique
+    int32_t deviceNum;
+    uint8_t extData[64]; // for future extension
+} deviceIdListPropertyV2;
+
+/* pool of request compute unit resource property version 2 */
+typedef struct cuPoolPropertyV2 {
+    cuListPropertyV2 cuListProp;
+    int32_t cuListNum; // number of such cu list
+    uuid_t xclbinUuid;
+    int32_t xclbinNum; // number of such xclbin
+    deviceIdListPropertyV2 deviceIdListProp;
+    uint64_t clientId;     // client ID
+    pid_t clientProcessId; // client process ID
+    uint8_t extData[64];   // for future extension
+} cuPoolPropertyV2;
+
+/*
+ * allocated/released compute unit resource list version 2
+ */
+typedef struct cuListResourceV2 {
+    cuResource cuResources[XRM_MAX_LIST_CU_NUM_V2];
+    int32_t cuNum;
+    uint8_t extData[64]; // for future extension
+} cuListResourceV2;
+
+/*
+ * allocated/released sub compute unit resource list version 2
+ */
+typedef struct cuSubListResourceV2 {
+    cuResource cuResources[XRM_MAX_LIST_CU_NUM_V2];
+    int32_t cuNum;
+    uint8_t extData[64]; // for future extension
+} cuSubListResourceV2;
+
+/*
+ * allocated/released compute unit resource group version 2
+ */
+typedef struct cuGroupResourceV2 {
+    cuResource cuResources[XRM_MAX_GROUP_CU_NUM_V2];
+    int32_t cuNum;
+    uint8_t extData[64]; // for future extension
+} cuGroupResourceV2;
+
+/*
+ * allocated/released compute unit resource pool version 2
+ */
+typedef struct cuPoolResourceV2 {
+    cuResource cuResources[XRM_MAX_POOL_CU_NUM_V2];
+    int32_t cuNum;
+    uint8_t extData[64]; // for future extension
+} cuPoolResourceV2;
+
+/* Alloction information for querying version 2 */
+typedef struct allocationQueryInfoV2 {
+    uint64_t allocServiceId;            // the service id returned from allocation
+    char kernelName[XRM_MAX_NAME_LEN];  // kernel name, not instance name
+    char kernelAlias[XRM_MAX_NAME_LEN]; // unique alias of kernel name
+    uint8_t extData[64];                // for future extension
+} allocationQueryInfoV2;
+
+/* Reservation information for querying version 2 */
+typedef struct reservationQueryInfoV2 {
+    uint64_t poolId;                    // the pool id returned from reservation
+    char kernelName[XRM_MAX_NAME_LEN];  // kernel name, not instance name
+    char kernelAlias[XRM_MAX_NAME_LEN]; // unique alias of kernel name
+    uint8_t extData[64];                // for future extension
+} reservationQueryInfoV2;
+
 /* channel data */
 typedef struct channelData {
     int32_t channelId;
@@ -249,8 +435,8 @@ typedef struct reserveData {
 
 /* compute unit data */
 typedef struct cuData {
-    int32_t cuId; // index on one device, start from 0
-    int32_t ipLayoutIndex;    // static index of m_ip_data in xclbin file
+    int32_t cuId;          // index on one device, start from 0
+    int32_t ipLayoutIndex; // static index of m_ip_data in xclbin file
     cuTypes cuType;
     std::string kernelName;   // kernel name, not instance name
     std::string kernelAlias;  // alias of kernel name
@@ -516,6 +702,20 @@ class system {
     bool resIsCuGroupExisting(cuGroupProperty* cuGroupProp);
 
     /* following alloc and free function need to do lock protect */
+    int32_t resAllocCuV2(cuPropertyV2* cuPropV2, cuResource* cuRes, bool updateId);
+    int32_t resAllocCuSubListFromSameDevice(cuSubListPropertyV2* cuSubListPropV2,
+                                            deviceIdListPropertyV2* usedDevIdList,
+                                            cuSubListResourceV2* cuSubListResV2);
+    int32_t resReleaseCuSubList(cuSubListResourceV2* cuSubListResV2);
+    int32_t resAllocCuListV2(cuListPropertyV2* cuListPropV2, cuListResourceV2* cuListResV2);
+    int32_t resAllocationQueryV2(allocationQueryInfoV2* allocQueryV2, cuListResourceV2* cuListResV2);
+    int32_t resReleaseCuV2(cuResource* cuRes);
+    int32_t resReleaseCuListV2(cuListResourceV2* cuListResV2);
+    int32_t resUdfCuGroupDeclareV2(udfCuGroupInformationV2* udfCuGroupInfoV2);
+    int32_t resUdfCuGroupUndeclareV2(udfCuGroupInformationV2* udfCuGroupInfoV2);
+    int32_t resAllocCuGroupV2(cuGroupPropertyV2* cuGroupPropV2, cuGroupResourceV2* cuGroupResV2);
+    int32_t resReleaseCuGroupV2(cuGroupResourceV2* cuGroupResV2);
+    void flushUdfCuGroupInfoV2(uint32_t udfCuGroupIdx);
     int32_t resAllocCu(cuProperty* cuProp, cuResource* cuRes, bool updateId);
     int32_t resAllocCuFromDev(int32_t deviceId, cuProperty* cuProp, cuResource* cuRes, bool updateId);
     int32_t resAllocLeastUsedCuFromDev(int32_t deviceId, cuProperty* cuProp, cuResource* cuRes, bool updateId);
@@ -529,6 +729,21 @@ class system {
     int32_t resReleaseCuGroup(cuGroupResource* cuGroupRes);
     void flushUdfCuGroupInfo(uint32_t udfCuGroupIdx);
 
+    void cuPropertyCopyFromV2(cuProperty* desCuProp, cuPropertyV2* srcCuPropV2);
+    void cuResourceCopy(cuResource* desCuRes, cuResource* srcCuRes);
+    bool isInDeviceIdList(deviceIdListPropertyV2* devIdList, int32_t devId);
+    uint32_t insertDeviceIdList(deviceIdListPropertyV2* devIdList, int32_t devId);
+
+    int32_t resReserveCuSubListFromSameDevice(uint64_t reservePoolId,
+                                              cuSubListPropertyV2* cuSubListProp,
+                                              deviceIdListPropertyV2* usedDevIdList,
+                                              uint64_t* fromDevId);
+    int32_t resReserveCuListV2(uint64_t reservePoolId, cuListPropertyV2* cuListPropV2);
+    int32_t resReserveDevice(uint64_t reservePoolId, uint64_t deviceId, uint64_t clientId, pid_t clientProcessId);
+    int32_t resRelinquishCuListV2(uint64_t reservePoolId);
+    uint64_t resReserveCuPoolV2(cuPoolPropertyV2* cuPoolProp);
+    int32_t resRelinquishCuPoolV2(uint64_t reservePoolId);
+    int32_t resReservationQueryV2(reservationQueryInfoV2* reserveQueryInfo, cuPoolResourceV2* cuPoolRes);
     int32_t resReserveCu(uint64_t reservePoolId, cuProperty* cuProp);
     int32_t resReserveCuList(uint64_t reservePoolId, cuListProperty* cuListProp);
     int32_t resReserveCuOfXclbin(uint64_t reservePoolId, uuid_t uuid, uint64_t clientId, pid_t clientProcessId);
@@ -620,6 +835,8 @@ class system {
     uint32_t m_numXrmPlugin;
     udfCuGroupInformation m_udfCuGroups[XRM_MAX_UDF_CU_GROUP_NUM];
     uint32_t m_numUdfCuGroup;
+    udfCuGroupInformationV2 m_udfCuGroupsV2[XRM_MAX_UDF_CU_GROUP_NUM_V2];
+    uint32_t m_numUdfCuGroupV2;
     libVersionDepFunctionsData m_libVersionDepFuncs;
     std::string m_xrtVersionFileFullPathName;
     std::string m_libXrtCoreFileFullPathName;
@@ -633,8 +850,8 @@ class system {
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
-        ar& m_logLevel& m_clientId& m_numConcurrentClient& m_devList& m_numDevice& m_udfCuGroups& m_allocServiceId&
-            m_reservePoolId;
+        ar& m_logLevel& m_clientId& m_numConcurrentClient& m_devList& m_numDevice& m_udfCuGroups& m_udfCuGroupsV2&
+            m_numUdfCuGroup& m_numUdfCuGroupV2& m_allocServiceId& m_reservePoolId;
     }
 };
 } // namespace xrm

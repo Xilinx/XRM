@@ -218,7 +218,7 @@ class cuAllocWithLoadCommand : public command {
 };
 
 class cuAllocLeastUsedWithLoadCommand : public command {
-public:
+   public:
     cuAllocLeastUsedWithLoadCommand(xrm::system& sys) : command("cuAllocLeastUsedWithLoad", sys) {}
 
     void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
@@ -227,6 +227,118 @@ public:
 class loadAndAllCuAllocCommand : public command {
    public:
     loadAndAllCuAllocCommand(xrm::system& sys) : command("loadAndAllCuAlloc", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class cuAllocV2Command : public command {
+   public:
+    cuAllocV2Command(xrm::system& sys) : command("cuAllocV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class cuListAllocV2Command : public command {
+   public:
+    cuListAllocV2Command(xrm::system& sys) : command("cuListAllocV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class cuReleaseV2Command : public command {
+   public:
+    cuReleaseV2Command(xrm::system& sys) : command("cuReleaseV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class cuListReleaseV2Command : public command {
+   public:
+    cuListReleaseV2Command(xrm::system& sys) : command("cuListReleaseV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class udfCuGroupDeclareV2Command : public command {
+   public:
+    udfCuGroupDeclareV2Command(xrm::system& sys) : command("udfCuGroupDeclareV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class udfCuGroupUndeclareV2Command : public command {
+   public:
+    udfCuGroupUndeclareV2Command(xrm::system& sys) : command("udfCuGroupUndeclareV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class cuGroupAllocV2Command : public command {
+   public:
+    cuGroupAllocV2Command(xrm::system& sys) : command("cuGroupAllocV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class cuGroupReleaseV2Command : public command {
+   public:
+    cuGroupReleaseV2Command(xrm::system& sys) : command("cuGroupReleaseV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class allocationQueryV2Command : public command {
+   public:
+    allocationQueryV2Command(xrm::system& sys) : command("allocationQueryV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class checkCuAvailableNumV2Command : public command {
+   public:
+    checkCuAvailableNumV2Command(xrm::system& sys) : command("checkCuAvailableNumV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class checkCuListAvailableNumV2Command : public command {
+   public:
+    checkCuListAvailableNumV2Command(xrm::system& sys) : command("checkCuListAvailableNumV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class checkCuGroupAvailableNumV2Command : public command {
+   public:
+    checkCuGroupAvailableNumV2Command(xrm::system& sys) : command("checkCuGroupAvailableNumV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class checkCuPoolAvailableNumV2Command : public command {
+   public:
+    checkCuPoolAvailableNumV2Command(xrm::system& sys) : command("checkCuPoolAvailableNumV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class cuPoolReserveV2Command : public command {
+   public:
+    cuPoolReserveV2Command(xrm::system& sys) : command("cuPoolReserveV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class cuPoolRelinquishV2Command : public command {
+   public:
+    cuPoolRelinquishV2Command(xrm::system& sys) : command("cuPoolRelinquishV2", sys) {}
+
+    void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
+};
+
+class reservationQueryV2Command : public command {
+   public:
+    reservationQueryV2Command(xrm::system& sys) : command("reservationQueryV2", sys) {}
 
     void processCmd(pt::ptree& incmd, pt::ptree& outrsp);
 };

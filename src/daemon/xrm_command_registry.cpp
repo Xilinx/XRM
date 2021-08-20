@@ -88,7 +88,7 @@ void xrm::commandRegistry::registerAll(system& sys) {
 
     auto cuAllocFromDev = new xrm::cuAllocFromDevCommand(sys);
     registerCmd(*cuAllocFromDev);
-    
+
     auto cuAllocLeastUsedFromDev = new xrm::cuAllocLeastUsedFromDevCommand(sys);
     registerCmd(*cuAllocLeastUsedFromDev);
 
@@ -160,6 +160,54 @@ void xrm::commandRegistry::registerAll(system& sys) {
 
     auto loadAndAllCuAlloc = new xrm::loadAndAllCuAllocCommand(sys);
     registerCmd(*loadAndAllCuAlloc);
+
+    auto cuAllocV2 = new xrm::cuAllocV2Command(sys);
+    registerCmd(*cuAllocV2);
+
+    auto cuReleaseV2 = new xrm::cuReleaseV2Command(sys);
+    registerCmd(*cuReleaseV2);
+
+    auto cuListAllocV2 = new xrm::cuListAllocV2Command(sys);
+    registerCmd(*cuListAllocV2);
+
+    auto cuListReleaseV2 = new xrm::cuListReleaseV2Command(sys);
+    registerCmd(*cuListReleaseV2);
+
+    auto udfCuGroupDeclareV2 = new xrm::udfCuGroupDeclareV2Command(sys);
+    registerCmd(*udfCuGroupDeclareV2);
+
+    auto udfCuGroupUndeclareV2 = new xrm::udfCuGroupUndeclareV2Command(sys);
+    registerCmd(*udfCuGroupUndeclareV2);
+
+    auto cuGroupAllocV2 = new xrm::cuGroupAllocV2Command(sys);
+    registerCmd(*cuGroupAllocV2);
+
+    auto cuGroupReleaseV2 = new xrm::cuGroupReleaseV2Command(sys);
+    registerCmd(*cuGroupReleaseV2);
+
+    auto cuPoolReserveV2 = new xrm::cuPoolReserveV2Command(sys);
+    registerCmd(*cuPoolReserveV2);
+
+    auto cuPoolRelinquishV2 = new xrm::cuPoolRelinquishV2Command(sys);
+    registerCmd(*cuPoolRelinquishV2);
+
+    auto allocationQueryV2 = new xrm::allocationQueryV2Command(sys);
+    registerCmd(*allocationQueryV2);
+
+    auto reservationQueryV2 = new xrm::reservationQueryV2Command(sys);
+    registerCmd(*reservationQueryV2);
+
+    auto checkCuAvailableNumV2 = new xrm::checkCuAvailableNumV2Command(sys);
+    registerCmd(*checkCuAvailableNumV2);
+
+    auto checkCuListAvailableNumV2 = new xrm::checkCuListAvailableNumV2Command(sys);
+    registerCmd(*checkCuListAvailableNumV2);
+
+    auto checkCuGroupAvailableNumV2 = new xrm::checkCuGroupAvailableNumV2Command(sys);
+    registerCmd(*checkCuGroupAvailableNumV2);
+
+    auto checkCuPoolAvailableNumV2 = new xrm::checkCuPoolAvailableNumV2Command(sys);
+    registerCmd(*checkCuPoolAvailableNumV2);
 }
 
 void xrm::commandRegistry::registerCmd(xrm::command& cmd) {

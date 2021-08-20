@@ -186,6 +186,233 @@ typedef struct xrmAllocationQueryInfo {
     uint8_t extData[64];                // for future extension
 } xrmAllocationQueryInfo;
 
+/* request compute resource property version 2 */
+typedef struct xrmCuPropertyV2 {
+    char kernelName[XRM_MAX_NAME_LEN];  // unique kernel name, not instance name
+    char kernelAlias[XRM_MAX_NAME_LEN]; // unique alias of kernel name
+    bool devExcl;                       // request exclusive device usage for this client
+    uint64_t deviceInfo;                /* resource allocation device constaint information
+                                         * bit[63 - 40] reserved
+                                         * bit[39 - 32] constraintType
+                                         *              0 : no specified device constraint
+                                         *              1 : hardware device index. It's used to identify hardware
+                                         *                  device index is used as the constraint.
+                                         *              2 : virtual device index. it's used to descript multiple cu
+                                         *                  from same device if device index is same. It does not
+                                         *                  means from specified hardware device. This type is only
+                                         *                  valid in property of cu list. It's not valid for single cu.
+                                         *              others : reserved
+                                         * bit[31 -  0] deviceIndex
+                                         */
+    uint64_t memoryInfo;                /* resource allocation memory constaint information
+                                         * bit[63 - 40] reserved
+                                         * bit[39 - 32] constraintType
+                                         *              0 : no specified memory constraint
+                                         *              1 : hardware memory bank. It's used to identify hardware
+                                         *                  memory bank is used as the constraint.
+                                         *              others : reserved
+                                         * bit[31 -  0] memoryBankIndex
+                                         */
+    uint64_t policyInfo;                /* resource allocation policy information
+                                         * bit[63 -  8] reserved
+                                         * bit[ 7 -  0] policyType
+                                         *              0 : no specified policy
+                                         *              1 : most used first
+                                         *              2 : least used first
+                                         *              others : reserved
+                                         */
+    int32_t requestLoad;                /* request load of the CU, only one type granularity at one time.
+                                         * bit[31 - 28] reserved
+                                         * bit[27 -  8] granularity of 1000000 (0 - 1000000)
+                                         * bit[ 7 -  0] granularity of 100 (0 - 100)
+                                         */
+    uint64_t poolId;                    /* request to allocate resource from specified resource pool,
+                                         * 0 means to allocate resource from system default resource pool.
+                                         */
+    uint8_t extData[64];                // for future extension
+} xrmCuPropertyV2;
+
+/* device information */
+#define XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT 0
+#define XRM_DEVICE_INFO_DEVICE_INDEX_MASK 0xFFFFFFFF
+#define XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT 32
+#define XRM_DEVICE_INFO_CONSTRAINT_TYPE_MASK 0xFF
+
+#define XRM_DEVICE_INFO_CONSTRAINT_TYPE_NULL 0x0
+#define XRM_DEVICE_INFO_CONSTRAINT_TYPE_HARDWARE_DEVICE_INDEX 0x1
+#define XRM_DEVICE_INFO_CONSTRAINT_TYPE_VIRTUAL_DEVICE_INDEX 0x2
+
+/* memory information */
+#define XRM_MEMORY_INFO_MEMORY_INDEX_SHIFT 0
+#define XRM_MEMORY_INFO_MEMORY_INDEX_MASK 0xFFFFFFFF
+#define XRM_MEMORY_INFO_CONSTRAINT_TYPE_SHIFT 32
+#define XRM_MEMORY_INFO_CONSTRAINT_TYPE_MASK 0xFF
+
+#define XRM_MEMORY_INFO_CONSTRAINT_TYPE_NULL 0x0
+#define XRM_MEMORY_INFO_CONSTRAINT_TYPE_HARDWARE_MEMORY_INDEX 0x1
+
+/* policy information */
+#define XRM_POLICY_INFO_CONSTRAINT_TYPE_SHIFT 0
+#define XRM_POLICY_INFO_CONSTRAINT_TYPE_MASK 0xFF
+
+#define XRM_POLICY_INFO_CONSTRAINT_TYPE_NULL 0x0
+#define XRM_POLICY_INFO_CONSTRAINT_TYPE_MOST_USED_FIRST 0x1
+#define XRM_POLICY_INFO_CONSTRAINT_TYPE_LEAST_USED_FIRST 0x2
+
+/* load granularity information */
+#define XRM_LOAD_GRANULARIY_100_SHIFT 0
+#define XRM_LOAD_GRANULARIY_100_MASK 0xFF
+#define XRM_LOAD_GRANULARIY_1000000_SHIFT 8
+#define XRM_LOAD_GRANULARIY_1000000_MASK 0xFFFFF
+
+/* list of request compute resource property version 2 */
+typedef struct xrmCuListPropertyV2 {
+    xrmCuPropertyV2 cuProps[XRM_MAX_LIST_CU_NUM_V2];
+    int32_t cuNum;       // total number of requested cu in the list
+    uint8_t extData[64]; // for future extension
+} xrmCuListPropertyV2;
+
+/* list of device id version 2 */
+typedef struct xrmDeviceIdListPropertyV2 {
+    uint64_t deviceIds[XRM_MAX_XILINX_DEVICES];
+    int32_t deviceNum;   // total number of device in the list
+    uint8_t extData[64]; // for future extension
+} xrmDeviceIdListPropertyV2;
+
+/* compute unit resource pool property version 2 */
+typedef struct xrmCuPoolPropertyV2 {
+    xrmCuListPropertyV2 cuListProp;
+    int32_t cuListNum; // number of such cu list
+    uuid_t xclbinUuid;
+    int32_t xclbinNum;                          // number of such xclbin
+    xrmDeviceIdListPropertyV2 deviceIdListProp; // device id list
+    uint8_t extData[64];                        // for future extension
+} xrmCuPoolPropertyV2;
+
+/* user defined compute resource property version 2 */
+typedef struct xrmUdfCuPropertyV2 {
+    char cuName[XRM_MAX_NAME_LEN]; // unique cu name (kernelName:instanceName)
+    bool devExcl;                  // request exclusive device usage for this client
+    uint64_t deviceInfo;           /* resource allocation device constaint information
+                                    * bit[63 - 40] reserved
+                                    * bit[39 - 32] constraintType
+                                    *              0 : no specified device constraint
+                                    *              1 : hardware device index. It's used to identify hardware
+                                    *                  device index is used as the constraint.
+                                    *              others : reserved
+                                    * bit[31 -  0] deviceIndex
+                                    */
+    uint64_t memoryInfo;           /* memory constaint information
+                                    * bit[63 - 40] reserved
+                                    * bit[39 - 32] constraintType
+                                    *              0 : no specified memory constraint
+                                    *              1 : hardware memory bank. It's used to identify hardware
+                                    *                  memory bank is used as the constraint.
+                                    *              others : reserved
+                                    * bit[31 -  0] memoryBankIndex
+                                    */
+    int32_t requestLoad;           /* request load of the CU, only one type granularity at one time.
+                                    * bit[31 - 28] reserved
+                                    * bit[27 -  8] granularity of 1000000 (0 - 1000000)
+                                    * bit[ 7 -  0] granularity of 100 (0 - 100)
+                                    */
+    uint8_t extData[64];           // for future extension
+} xrmUdfCuPropertyV2;
+
+/* list of user defined compute resource property version 2 */
+typedef struct xrmUdfCuListPropertyV2 {
+    xrmUdfCuPropertyV2 udfCuProps[XRM_MAX_LIST_CU_NUM_V2];
+    int32_t cuNum;       // total number of user defined cu in the list
+    uint8_t extData[64]; // for future extension
+} xrmUdfCuListPropertyV2;
+
+/* user defined compute resource group property version 2 */
+typedef struct xrmUdfCuGroupPropertyV2 {
+    xrmUdfCuListPropertyV2 optionUdfCuListProps[XRM_MAX_UDF_CU_GROUP_OPTION_LIST_NUM_V2];
+    int32_t optionUdfCuListNum; // total number of option user defined cu list in the group
+    uint8_t extData[64];        // for future extension
+} xrmUdfCuGroupPropertyV2;
+
+/* compute resource group property version 2 */
+typedef struct xrmCuGroupPropertyV2 {
+    char udfCuGroupName[XRM_MAX_NAME_LEN]; // name of user defined cu group
+    uint64_t poolId;                       /* request to allocate resource from specified resource pool,
+                                            * 0 means to allocate resource from system default resource pool.
+                                            */
+    uint8_t extData[64];                   // for future extension
+} xrmCuGroupPropertyV2;
+
+/* allocated/released compute resource version 2 */
+typedef struct xrmCuResourceV2 {
+    char xclbinFileName[XRM_MAX_PATH_NAME_LEN];       // include path and name
+    char kernelPluginFileName[XRM_MAX_PATH_NAME_LEN]; // just the name
+    char kernelName[XRM_MAX_NAME_LEN];                // kernel name
+    char kernelAlias[XRM_MAX_NAME_LEN];               // unique alias of kernel name
+    char instanceName[XRM_MAX_NAME_LEN];              // instance name
+    char cuName[XRM_MAX_NAME_LEN];                    // cu name (kernelName:instanceName)
+    uuid_t uuid;
+    int32_t deviceId;
+    int32_t cuId;
+    int32_t channelId;
+    xrmCuType cuType;
+    uint64_t baseAddr;        // base address of the cu
+    uint32_t membankId;       // connected memory bank id
+    uint32_t membankType;     // connected memory bank type
+    uint64_t membankSize;     // connected memory bank size
+    uint64_t membankBaseAddr; // connected memory bank base address
+    uint64_t allocServiceId;  // unique service id of the allocation
+    int32_t channelLoad;      /* load of the CU for this channel, only one type granularity at one time.
+                               * bit[31 - 28] reserved
+                               * bit[27 -  8] granularity of 1000000 (0 - 1000000)
+                               * bit[ 7 -  0] granularity of 100 (0 - 100)
+                               */
+    uint64_t poolId;          // id of the cu pool this cu comes from, default pool id is 0
+    uint8_t extData[64];      // for future extension
+} xrmCuResourceV2;
+
+/*
+ * allocated/released compute resource list version 2
+ */
+typedef struct xrmCuListResourceV2 {
+    xrmCuResourceV2 cuResources[XRM_MAX_LIST_CU_NUM_V2];
+    int32_t cuNum;
+    uint8_t extData[64]; // for future extension
+} xrmCuListResourceV2;
+
+/*
+ * allocated/released compute resource group version 2
+ */
+typedef struct xrmCuGroupResourceV2 {
+    xrmCuResourceV2 cuResources[XRM_MAX_GROUP_CU_NUM_V2];
+    int32_t cuNum;
+    uint8_t extData[64]; // for future extension
+} xrmCuGroupResourceV2;
+
+/*
+ * reserved/relinquished compute resource pool version 2
+ */
+typedef struct xrmCuPoolResourceV2 {
+    xrmCuResourceV2 cuResources[XRM_MAX_POOL_CU_NUM_V2];
+    int32_t cuNum;
+    uint8_t extData[64]; // for future extension
+} xrmCuPoolResourceV2;
+
+/* Alloction information for querying version 2 */
+typedef struct xrmAllocationQueryInfoV2 {
+    uint64_t allocServiceId;            // the service id returned from allocation
+    char kernelName[XRM_MAX_NAME_LEN];  // kernel name, not instance name
+    char kernelAlias[XRM_MAX_NAME_LEN]; // unique alias of kernel name
+    uint8_t extData[64];                // for future extension
+} xrmAllocationQueryInfoV2;
+
+/* Reservation information for querying version 2 */
+typedef struct xrmReservationQueryInfoV2 {
+    uint64_t poolId;                    // the pool id returned from reservation
+    char kernelName[XRM_MAX_NAME_LEN];  // kernel name, not instance name
+    char kernelAlias[XRM_MAX_NAME_LEN]; // unique alias of kernel name
+    uint8_t extData[64];                // for future extension
+} xrmReservationQueryInfoV2;
+
 /*
  * plugin related data struct
  */
@@ -741,6 +968,288 @@ int32_t xrmCuGroupBlockingAlloc(xrmContext context,
                                 xrmCuGroupProperty* cuGroupProp,
                                 uint64_t interval,
                                 xrmCuGroupResource* cuGroupRes);
+
+/**
+ * \brief Allocates compute unit with a device, cu, and channel given a
+ * kernel name or alias or both and request load. This function also
+ * provides the xclbin and kernel plugin loaded on the device.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuProp the property of requested cu.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ *             devExcl: request exclusive device usage for this client.
+ *             deviceInfo: resource allocation device constaint information.
+ *                         bit[63 - 40] reserved
+ *                         bit[39 - 32] constraintType
+ *                                      0 : no specified device constraint
+ *                                      1 : hardware device index. It's used to identify hardware
+ *                                          device index is used as the constraint.
+ *                                      2 : virtual device index. it's used to descript multiple cu
+ *                                          from same device if device index is same. It does not
+ *                                          means from specified hardware device. This type is only
+ *                                          valid in property of cu list. It's not valid for single cu.
+ *                                      others : reserved
+ *                         bit[31 -  0] deviceIndex
+ *             memoryInfo: resource allocation memory constaint information.
+ *                         bit[63 - 40] reserved
+ *                         bit[39 - 32] constraintType
+ *                                      0 : no specified memory constraint
+ *                                      1 : hardware memory bank. It's used to identify hardware
+ *                                          memory bank is used as the constraint.
+ *                                      others : reserved
+ *                         bit[31 -  0] memoryBankIndex
+ *             policyInfo: resource allocation policy information.
+ *                         bit[63 -  8] reserved
+ *                         bit[ 7 -  0] policyType
+ *                                      0 : no specified policy
+ *                                      1 : most used first
+ *                                      2 : least used first
+ *                                      others : reserved
+ *             requestLoad: request load, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
+ *             poolId: request to allocate cu from specified resource pool.
+ * @param cuRes the cu resource.
+ *             xclbinFileName: xclbin (path and name) attached to this device.
+ *             kernelPluginFileName: kernel plugin (only name) attached to this device.
+ *             kernelName: the kernel name of allocated cu.
+ *             kernelAlias: the name alias of allocated cu.
+ *             instanceName: the instance name of allocated cu.
+ *             cuName: the name of allocated cu (kernelName:instanceName).
+ *             uuid: uuid of the loaded xclbin file.
+ *             deviceId: device id of this cu.
+ *             cuId: cu id of this cu.
+ *             channelId: channel id of this cu.
+ *             cuType: type of cu, hardware kernel or soft kernel.
+ *             allocServiceId: service id for this cu allocation.
+ *             channelLoad: allocated load of this cu, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
+ *             poolId: id of the cu pool this cu comes from, the system default pool id is 0.
+ * @return int32_t, 0 on success or appropriate error number
+ */
+int32_t xrmCuAllocV2(xrmContext context, xrmCuPropertyV2* cuProp, xrmCuResourceV2* cuRes);
+
+/**
+ * \brief Allocates a list of compute unit resource given a list of
+ * kernels's property with kernel name or alias or both and request load.
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param cuListProp the property of cu list.
+ *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole.
+ *             cuNum: request number of cu in this list.
+ *             sameDevice: request this list of cu from same device.
+ * @param cuListRes the cu list resource.
+ *             cuResources: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
+ *             cuNum: allocated cu number in this list.
+ * @return int32_t, 0 on success or appropriate error number.
+ */
+int32_t xrmCuListAllocV2(xrmContext context, xrmCuListPropertyV2* cuListProp, xrmCuListResourceV2* cuListRes);
+
+/**
+ * \brief Releases a previously allocated resource.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuRes the cu resource.
+ *             xclbinFileName: xclbin (path and name) attached to this device.
+ *             kernelPluginFileName: kernel plugin (only name) attached to this device.
+ *             kernelName: the kernel name of allocated cu.
+ *             kernelAlias: the name alias of allocated cu.
+ *             instanceName: the instance name of allocated cu.
+ *             cuName: the name of allocated cu (kernelName:instanceName).
+ *             uuid: uuid of the loaded xclbin file.
+ *             deviceId: device id of this cu.
+ *             cuId: cu id of this cu.
+ *             channelId: channel id of this cu.
+ *             cuType: type of cu, hardware kernel or soft kernel.
+ *             allocServiceId: service id for this cu allocation.
+ *             channelLoad: allocated load of this cu, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
+ *             poolId: id of the cu pool this cu comes from, the system default pool id is 0.
+ * @return bool, true on success or false on fail.
+ */
+bool xrmCuReleaseV2(xrmContext context, xrmCuResourceV2* cuRes);
+
+/**
+ * \brief Releases a previously allocated list of resources.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuListRes the cu list resource.
+ *             cuResources: cu resource list to be released, starting from cuResources[0], no hole.
+ *             cuNum: number of cu in this list.
+ * @return bool, true on success or false on fail.
+ */
+bool xrmCuListReleaseV2(xrmContext context, xrmCuListResourceV2* cuListRes);
+
+/**
+ * \brief Declares user defined cu group type given the specified
+ * kernels's property with cu name (kernelName:instanceName) and request load.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param udfCuGroupProp the property of user defined cu group.
+ *             optionUdfCuListProps[]: option cu list property array starting from optionCuListProps[0], no hole.
+ *             optionUdfCuListNum: number of option user defined cu list.
+ * @param udfCuGroupName unique user defined cu group name for the new group type declaration.
+ * @return int32_t, 0 on success or appropriate error number.
+ */
+int32_t xrmUdfCuGroupDeclareV2(xrmContext context, xrmUdfCuGroupPropertyV2* udfCuGroupProp, char* udfCuGroupName);
+
+/**
+ * \brief Undeclares user defined cu group type given the specified
+ * group name.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param udfCuGroupName user defined cu group name for the group type undeclaration.
+ * @return int32_t, 0 on success or appropriate error number.
+ */
+int32_t xrmUdfCuGroupUndeclareV2(xrmContext context, char* udfCuGroupName);
+
+/**
+ * \brief Allocates a group of compute unit resource given a user defined group of
+ * kernels's property with cu name (kernelName:instanceName) and request load.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuGroupProp the property of cu group.
+ *             udfCuGroupName: user defined cu group type name.
+ *             poolId: id of the cu pool this group CUs come from, the system default pool id is 0.
+ * @param cuGroupRes the cu group resource.
+ *             cuResources: cu resource group to fill the allocated cus infor, starting from cuResources[0], no hole.
+ *             cuNum: allocated cu number in this group.
+ * @return int32_t, 0 on success or appropriate error number.
+ */
+int32_t xrmCuGroupAllocV2(xrmContext context, xrmCuGroupPropertyV2* cuGroupProp, xrmCuGroupResourceV2* cuGroupRes);
+
+/**
+ * \brief Releases a previously allocated group of resources.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuGroupRes cu group resource.
+ *             cuResources: cu resource group to be released, starting from cuResources[0], no hole.
+ *             cuNum: number of cu in this group.
+ * @return bool, true on success or false on fail.
+ */
+bool xrmCuGroupReleaseV2(xrmContext context, xrmCuGroupResourceV2* cuGroupRes);
+
+/**
+ * \brief Querys the compute unit resource given the allocation service id.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param allocQuery the allocate query information.
+ *             allocServiceId: the service id returned from allocation.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ * @param cuListRes cu list resource.
+ *             cuListRes: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole.
+ *             cuNum: cu number in this list.
+ * @return int32_t, 0 on success or appropriate error number.
+ */
+int32_t xrmAllocationQueryV2(xrmContext context, xrmAllocationQueryInfoV2* allocQuery, xrmCuListResourceV2* cuListRes);
+
+/**
+ * \brief To check the available cu num on the system given
+ * the kernels's property with kernel name or alias or both and request
+ * load.
+ *
+ * @param context the context created through xrmCreateContext()
+ * @param cuProp the property of cu.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ *             devExcl: request exclusive device usage for this client.
+ *             requestLoad: request load, only one type granularity at one time.
+ *                          bit[31 - 28] reserved
+ *                          bit[27 -  8] granularity of 1000000 (0 - 1000000)
+ *                          bit[ 7 -  0] granularity of 100 (0 - 100)
+ *             poolId: request to allocate cu from specified resource pool.
+ * @return int32_t, available cu num (>= 0) on success or appropriate error number (< 0).
+ */
+int32_t xrmCheckCuAvailableNumV2(xrmContext context, xrmCuPropertyV2* cuProp);
+
+/**
+ * \brief To check the available cu list num on the system given
+ * a list of kernels's property with kernel name or alias or both and request
+ * load.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuListProp the property of cu list.
+ *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole
+ *             cuNum: request number of cu in this list.
+ *             sameDevice: request this list of cu from same device.
+ * @return int32_t, available cu list num (>= 0) on success or appropriate error number (< 0).
+ */
+int32_t xrmCheckCuListAvailableNumV2(xrmContext context, xrmCuListPropertyV2* cuListProp);
+
+/**
+ * \brief To check the available group number of compute unit resource given a user
+ * defined group of kernels's property with cu name (kernelName:instanceName) and request load.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuGroupProp the property of cu group.
+ *             udfCuGroupName: user defined cu group type name.
+ *             poolId: id of the cu pool this group CUs come from, the system default pool id is 0.
+ * @return int32_t, available cu group num (>= 0) on success or appropriate error number (< 0).
+ */
+int32_t xrmCheckCuGroupAvailableNumV2(xrmContext context, xrmCuGroupPropertyV2* cuGroupProp);
+
+/**
+ * \brief To check the available cu pool num on the system given
+ * a pool of kernels's property with kernel name or alias or both and request
+ * load.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuPoolProp the property of cu pool.
+ *             cuListProp: cu list property.
+ *             cuListNum: number of cu list in this pool.
+ *             xclbinUuid: uuid of xclbin.
+ *             xclbinNum: number of xclbin in this pool.
+ * @return int32_t, available cu pool num (>= 0) on success or appropriate error number (< 0).
+ */
+int32_t xrmCheckCuPoolAvailableNumV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp);
+
+/**
+ * \brief Reserves a pool of compute unit resource given a pool of
+ * kernels's property with kernel name or alias or both and request load.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param cuPoolProp the property of cu pool.
+ *             cuListProp: cu prop list to fill kernelName, devExcl and requestLoad etc. information.
+ *             cuListNum: request number of such cu list for this pool.
+ *             xclbinUuid: request all resource in the xclbin.
+ *             xclbinNum: request number of such xclbin for this pool.
+ * @return uint64_t, reserve pool id (> 0) or 0 on fail.
+ */
+uint64_t xrmCuPoolReserveV2(xrmContext context, xrmCuPoolPropertyV2* cuPoolProp);
+
+/**
+ * \brief Relinquishes a previously reserved pool of resources.
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param poolId the reserve pool id.
+ * @return bool, true on success or false on fail.
+ */
+bool xrmCuPoolRelinquishV2(xrmContext context, uint64_t poolId);
+
+/**
+ * \brief Querys the compute unit resource given the reservation id.
+ * NOTE: The allocServiceId, channelId and channelLoad are NOT valid in the cuPoolRes
+ *
+ * @param context the context created through xrmCreateContext().
+ * @param reserveQueryInfo the reservation query information.
+ *             poolId: reservation pool id.
+ *             kernelName: the kernel name requested.
+ *             kernelAlias: the alias of kernel name requested.
+ * @param cuPoolRes the cu pool resource.
+ *             cuPoolRes: cu resource pool to fill the allocated cus infor, starting from cuPoolRes[0], no hole.
+ *             cuNum: cu number in this pool.
+ * @return int32_t, 0 on success or appropriate error number.
+ */
+int32_t xrmReservationQueryV2(xrmContext context,
+                              xrmReservationQueryInfoV2* reserveQueryInfo,
+                              xrmCuPoolResourceV2* cuPoolRes);
 
 #ifdef __cplusplus
 }
