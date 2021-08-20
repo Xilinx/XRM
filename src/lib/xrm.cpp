@@ -4218,10 +4218,13 @@ int32_t xrmCheckCuPoolAvailableNumV2(xrmContext context, xrmCuPoolPropertyV2* cu
         xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s wrong xrm api version %d", __func__, ctx->xrmApiVersion);
         return (XRM_ERROR_INVALID);
     }
-    if ((cuPoolProp->cuListNum < 0) || (cuPoolProp->xclbinNum < 0) ||
-        ((cuPoolProp->cuListNum == 0) && (cuPoolProp->xclbinNum == 0))) {
-        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s(): invalid input: cuListNum is %d, xclbinNum is %d.\n", __func__,
-               cuPoolProp->cuListNum, cuPoolProp->xclbinNum);
+    if ((cuPoolProp->cuListNum < 0) || (cuPoolProp->xclbinNum < 0) || (cuPoolProp->deviceIdListProp.deviceNum < 0) ||
+        (cuPoolProp->deviceIdListProp.deviceNum > XRM_MAX_XILINX_DEVICES) ||
+        ((cuPoolProp->cuListNum == 0) && (cuPoolProp->xclbinNum == 0) &&
+         (cuPoolProp->deviceIdListProp.deviceNum == 0))) {
+        xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR,
+               "%s(): invalid input: cuListNum is %d, xclbinNum is %d, deviceNum is %d.\n", __func__,
+               cuPoolProp->cuListNum, cuPoolProp->xclbinNum, cuPoolProp->deviceIdListProp.deviceNum);
         return (XRM_ERROR_INVALID);
     }
     if ((cuPoolProp->cuListNum > 0) &&

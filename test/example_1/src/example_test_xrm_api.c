@@ -1123,6 +1123,9 @@ void xrmCuPoolReserveAllocReleaseRelinquishTest(xrmContext* ctx) {
     }
 
     // query the reserve result
+    if (scalerReservePoolId == 0) {
+        printf("NOTE: Following query and allocate test will be done in system default pool but not reserve pool\n");
+    }
     xrmCuPoolResource scalerCuPoolRes;
     memset(&scalerCuPoolRes, 0, sizeof(scalerCuPoolRes));
 
@@ -1313,18 +1316,15 @@ void xrmCuPoolReserveAllocReleaseRelinquishV2Test(xrmContext* ctx) {
     }
     scalerCuPoolProp->cuListNum = 1;
     char uuidStr[64];
-    strcpy(uuidStr, "d1e0415e27d349a29f0fdfa92e69f8ee");
+    strcpy(uuidStr, "fd0c27c02a83493880b711385fbd48d4"); // to reserve one device loaded with target uuid
     xrmTestHexstrToBin(uuidStr, 2 * sizeof(uuid_t), (char*)&scalerCuPoolProp->xclbinUuid);
     scalerCuPoolProp->xclbinNum = 1;
-
-#if 0
     ret = xrmCheckCuPoolAvailableNumV2(ctx, scalerCuPoolProp);
     if (ret < 0) {
         printf("xrmCheckCuPoolAvailableNumV2: fail to check scaler cu pool available num\n");
     } else {
         printf("xrmCheckCuPoolAvailableNumV2: scaler cu pool available num = %d\n", ret);
     }
-#endif
 
     scalerReservePoolId = xrmCuPoolReserveV2(ctx, scalerCuPoolProp);
     if (scalerReservePoolId == 0) {
@@ -1334,6 +1334,10 @@ void xrmCuPoolReserveAllocReleaseRelinquishV2Test(xrmContext* ctx) {
     }
 
     // query the reserve result
+    if (scalerReservePoolId == 0) {
+        printf("NOTE: Following query and allocate test will be done in system default pool but not reserve pool\n");
+    }
+
     xrmCuPoolResourceV2* scalerCuPoolRes;
     scalerCuPoolRes = (xrmCuPoolResourceV2*)malloc(sizeof(xrmCuPoolResourceV2));
     memset(scalerCuPoolRes, 0, sizeof(xrmCuPoolResourceV2));
@@ -1487,10 +1491,11 @@ void xrmCuPoolReserveAllocReleaseRelinquishV2Test(xrmContext* ctx) {
         printf("success to relinquish scaler cu pool\n");
     else
         printf("fail to relinquish encoder cu pool\n");
-    free(scalerCuPoolProp);
-    free(scalerCuPoolRes);
-    free(scalerCuListProp);
+
     free(scalerCuListRes);
+    free(scalerCuListProp);
+    free(scalerCuPoolRes);
+    free(scalerCuPoolProp);
 }
 
 void xrmLoadUnloadXclbinTest(xrmContext* ctx) {
@@ -3210,6 +3215,9 @@ void xrmCuPoolReserveAllocReleaseRelinquishGranularity1000000Test(xrmContext* ct
     }
 
     // query the reserve result
+    if (scalerReservePoolId == 0) {
+        printf("NOTE: Following query and allocate test will be done in system default pool but not reserve pool\n");
+    }
     xrmCuPoolResource scalerCuPoolRes;
     memset(&scalerCuPoolRes, 0, sizeof(scalerCuPoolRes));
 

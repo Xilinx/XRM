@@ -5244,7 +5244,7 @@ int32_t xrm::system::resReserveDevice(uint64_t reservePoolId,
                                       uint64_t clientId,
                                       pid_t clientProcessId) {
     deviceData* dev;
-    int32_t devId = (int32_t)deviceId;
+    int32_t devId = (int32_t)(deviceId & 0xFFFFFFFF);
     cuData* cu;
     int32_t cuId;
 
@@ -5506,8 +5506,11 @@ int32_t xrm::system::resReservationQuery(uint64_t reservePoolId, cuPoolResource*
                 if (reserve->reservePoolId == reservePoolId) {
                     /* out of cu pool limitation */
                     if (cuNum >= XRM_MAX_POOL_CU_NUM) {
-                        memset(cuPoolRes, 0, sizeof(cuPoolResource));
-                        return (XRM_ERROR);
+                        break;
+                        /* to just return max number of cu, instead of return error.
+                         * // memset(cuPoolRes, 0, sizeof(cuPoolResource));
+                         * // return (XRM_ERROR);
+                         */
                     }
                     cuRes = &cuPoolRes->cuResources[cuNum];
                     strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
@@ -5586,9 +5589,12 @@ int32_t xrm::system::resReservationQueryV2(reservationQueryInfoV2* reserveQueryI
                 reserve = &cu->reserves[reserveIdx];
                 if (reserve->reservePoolId == reserveQueryInfo->poolId) {
                     /* out of cu pool limitation */
-                    if (cuNum >= XRM_MAX_POOL_CU_NUM) {
-                        memset(cuPoolRes, 0, sizeof(cuPoolResource));
-                        return (XRM_ERROR);
+                    if (cuNum >= XRM_MAX_POOL_CU_NUM_V2) {
+                        break;
+                        /* to just return max number of cu, instead of return error.
+                         * // memset(cuPoolRes, 0, sizeof(cuPoolResource));
+                         * // return (XRM_ERROR);
+                         */
                     }
                     cuRes = &cuPoolRes->cuResources[cuNum];
                     strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);

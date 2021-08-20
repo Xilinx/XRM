@@ -1841,6 +1841,7 @@ void xrm::checkCuPoolAvailableNumV2Command::processCmd(pt::ptree& incmd, pt::ptr
     cuPoolProp = (cuPoolPropertyV2*)malloc(sizeof(cuPoolPropertyV2));
     memset(cuPoolProp, 0, sizeof(cuPoolPropertyV2));
     cuListProp = &(cuPoolProp->cuListProp);
+    deviceIdListProp = &(cuPoolProp->deviceIdListProp);
     auto cuListNum = incmd.get<int32_t>("request.parameters.cuListNum");
     cuPoolProp->cuListNum = cuListNum;
     auto cuNum = incmd.get<int32_t>("request.parameters.cuList.cuNum");
