@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
         // Create the system object
         sys = new xrm::system;
         sys->initLock();
-        if (!sys->restore()) sys->initSystem();
+        sys->initSystem();
 
         // Create the commands
         registry = new xrm::commandRegistry;

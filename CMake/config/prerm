@@ -54,8 +54,6 @@ if [ -f "$FILE" ]; then
     systemctl daemon-reload
 fi
 
-rm -f /dev/shm/xrm.data
-
 lsb_release -si | grep -Eq "^RedHat|^CentOS|^Amazon"
 if [ $? -eq 0 ]; then
     rm -f /usr/lib64/libxrm.so.1
