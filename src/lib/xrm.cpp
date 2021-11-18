@@ -21,8 +21,6 @@
 #include <mutex>
 #include <sstream>
 #include <boost/asio.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 #include "xrm.h"
 #include "experimental/xrm_experimental.h"

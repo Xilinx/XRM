@@ -29,6 +29,9 @@
 
 #include "xrm_limits.h"
 #include "xrm_error.h"
+#define BOOST_SPIRIT_THREADSAFE  // must before json_parser.h and ptree.hpp
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #ifdef __cplusplus
 extern "C" {

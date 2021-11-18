@@ -19,8 +19,8 @@
 #define _XRM_COMMAND_HPP_
 
 #include <map>
-#include <boost/property_tree/ptree.hpp>
 #include "xrm_system.hpp"
+#include "xrm.h"
 
 namespace pt = boost::property_tree;
 
