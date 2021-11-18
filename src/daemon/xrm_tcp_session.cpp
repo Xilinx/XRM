@@ -109,6 +109,10 @@ void xrm::session::handleCmd(std::size_t length) {
 
 end_of_cmd:
     boost::property_tree::write_json(outstr, outrsp);
-    std::strncpy(m_outdata, outstr.str().c_str(), max_length - 1);
-    doWrite(outstr.str().length());
+    *m_outdata = outstr.str().length() & 0xff;
+    *(m_outdata + 1) = (outstr.str().length() >> 8) & 0xff;
+    *(m_outdata + 2) = (outstr.str().length() >> 16) & 0xff;
+    *(m_outdata + 3) = (outstr.str().length() >> 24) & 0xff;
+    std::strncpy(m_outdata + sizeof(int), outstr.str().c_str(), max_length - 1 - sizeof(int));
+    doWrite(outstr.str().length() + sizeof(int));
 }

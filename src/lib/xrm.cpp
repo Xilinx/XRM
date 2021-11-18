@@ -279,13 +279,21 @@ static int32_t xrmJsonRequest(xrmContext context, const char* jsonReq, char* jso
         xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "Getting response");
 
         size_t replyLength = 0;
-        while (ec != boost::asio::error::eof) {
-            replyLength = ctx->socket->read_some(boost::asio::buffer(jsonRsp, maxLength), ec);
-            /*
-             * Be careful about this: need to make sure the jsonRsp[] is init to 0, otherwise
-             * the jsonRsp[reply_length] is not 0 even there is NO more data coming in.
-             */
-            if (jsonRsp[replyLength] == 0) break;
+        unsigned char tmp[4];
+        int32_t total_len = 0;
+        int32_t cur_len = 0;
+        cur_len = ctx->socket->read_some(boost::asio::buffer(tmp, 4), ec);
+        if (cur_len != 4 || ec ) return XRM_ERROR;
+        total_len = tmp[0] | (int32_t(tmp[1]) << 8) | (int32_t(tmp[2]) << 16) | (int32_t(tmp[3]) << 24);
+        cur_len = 0;
+        while (true) {
+            replyLength = ctx->socket->read_some(boost::asio::buffer(jsonRsp + cur_len, maxLength - cur_len), ec);
+            if (ec) {
+                xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s read error: %d\n", __func__, ec);
+                return XRM_ERROR;
+            }
+            cur_len += replyLength;
+            if (cur_len >= total_len) break;
         }
 
         xrmLog(ctx->xrmLogLevel, XRM_LOG_NOTICE, "%s\n", jsonRsp);
