@@ -16,7 +16,6 @@
  */
 
 #include "xrm_config.hpp"
-#include "xrm.h"
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>

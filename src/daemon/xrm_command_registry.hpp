@@ -20,7 +20,6 @@
 
 #include <map>
 #include "xrm_command.hpp"
-#include "xrm.h"
 
 namespace pt = boost::property_tree;
 

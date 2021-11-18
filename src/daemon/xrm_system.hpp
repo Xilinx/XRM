@@ -31,7 +31,9 @@
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
+#define BOOST_SPIRIT_THREADSAFE  // must before json_parser.h and ptree.hpp
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/map.hpp>

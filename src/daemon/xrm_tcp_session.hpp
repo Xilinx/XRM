@@ -24,7 +24,6 @@
 #include <memory>
 #include <utility>
 #include <boost/asio.hpp>
-#include <boost/property_tree/json_parser.hpp>
 #include "xrm_command.hpp"
 #include "xrm_command_registry.hpp"
 #include "xrm_system.hpp"
