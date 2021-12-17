@@ -305,7 +305,7 @@
             
             
               <div class="version">
-                2021.1
+                2021.2
               </div>
             
           
@@ -378,6 +378,22 @@
 <li class="toctree-l4"><a class="reference internal" href="#xrmcublockingalloc">xrmCuBlockingAlloc</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#xrmculistblockingalloc">xrmCuListBlockingAlloc</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#xrmcugroupblockingalloc">xrmCuGroupBlockingAlloc</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcuallocv2">xrmCuAllocV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmculistallocv2">xrmCuListAllocV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcureleasev2">xrmCuReleaseV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmculistreleasev2">xrmCuListReleaseV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmudfcugroupdeclarev2">xrmUdfCuGroupDeclareV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmudfcugroupundeclarev2">xrmUdfCuGroupUndeclareV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcugroupallocv2">xrmCuGroupAllocV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcugroupreleasev2">xrmCuGroupReleaseV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmallocationqueryv2">xrmAllocationQueryV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcheckcuavailablenumv2">xrmCheckCuAvailableNumV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcheckculistavailablenumv2">xrmCheckCuListAvailableNumV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcheckcugroupavailablenumv2">xrmCheckCuGroupAvailableNumV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcheckcupoolavailablenumv2">xrmCheckCuPoolAvailableNumV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcupoolreservev2">xrmCuPoolReserveV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmcupoolrelinquishv2">xrmCuPoolRelinquishV2</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#xrmreservationqueryv2">xrmReservationQueryV2</a></li>
 </ul>
 </li>
 </ul>
@@ -466,8 +482,8 @@
 </div>
 <div class="section" id="overview">
 <h3>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h3>
-<pre class="highlight overview-code-block literal-block" id="cid-xrm-api-version-1">
-<span id="doxid-xrm-8h-1a470706ff415772d8fab9a13d0048b1a8"></span><span id="cid-xrmcontext"></span><span id="doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"></span><span id="cid-xrmpluginfunctype"></span><span id="doxid-xrm-8h-1a2a037dc6bbd6d4d8ccce178770645712"></span><span id="cid-xrmapiversiontype"></span><span id="doxid-xrm-8h-1a05a2d607709cecb9dbb541945e06f939"></span><span id="cid-xrmpluginversiontype"></span><span id="doxid-xrm-8h-1a85746c0e6e58a0cdabf23a869781a199"></span><span></span><span class="c1">// typedefs</span>
+<pre class="highlight overview-code-block literal-block" id="cid-xrm-policy-info-constraint-type-shift">
+<span id="doxid-xrm-8h-1a0c866015de43c08d42adabc9e3abd0a3"></span><span id="cid-xrm-policy-info-constraint-type-null"></span><span id="doxid-xrm-8h-1a322197d1577718854e79629a2f52edab"></span><span id="cid-xrm-policy-info-constraint-type-most-used-first"></span><span id="doxid-xrm-8h-1a0b2db3f133b19a67b546b992f0be4e6c"></span><span id="cid-xrm-policy-info-constraint-type-mask"></span><span id="doxid-xrm-8h-1a3e5773b0b86b332d493e8b9f9b24069a"></span><span id="cid-xrm-policy-info-constraint-type-least-used-first"></span><span id="doxid-xrm-8h-1a0535595a737fdd657f0e0b1cae6a945e"></span><span id="cid-xrm-memory-info-memory-index-shift"></span><span id="doxid-xrm-8h-1afab22b87c6d7fda56784953b0b21cd7a"></span><span id="cid-xrm-memory-info-memory-index-mask"></span><span id="doxid-xrm-8h-1af38fb25db0b206c7da7ef1b5623af2bd"></span><span id="cid-xrm-memory-info-constraint-type-shift"></span><span id="doxid-xrm-8h-1af4fb279262b27758e008c89867c902b0"></span><span id="cid-xrm-memory-info-constraint-type-null"></span><span id="doxid-xrm-8h-1a91e7ba147baef72e26036957ba0647c6"></span><span id="cid-xrm-memory-info-constraint-type-mask"></span><span id="doxid-xrm-8h-1a38c0382af0ab25e4bcb17ad8d660066b"></span><span id="cid-xrm-memory-info-constraint-type-hardware-memory-index"></span><span id="doxid-xrm-8h-1ab7aad0cd3ddb4d33384197b729172a05"></span><span id="cid-xrm-load-granulariy-100-shift"></span><span id="doxid-xrm-8h-1aa0d5854aef231cbbfa27c797f6703afc"></span><span id="cid-xrm-load-granulariy-100-mask"></span><span id="doxid-xrm-8h-1ac5fddca20b64603bfc52cf713789bfbd"></span><span id="cid-xrm-load-granulariy-1000000-shift"></span><span id="doxid-xrm-8h-1a21b3d9cec71eb248f4e3c04ba6a519d6"></span><span id="cid-xrm-load-granulariy-1000000-mask"></span><span id="doxid-xrm-8h-1af05e1da9564b6c6a9e228c03511c44b0"></span><span id="cid-xrm-device-info-device-index-shift"></span><span id="doxid-xrm-8h-1a448658be49bc2bf8943de0c6697bae59"></span><span id="cid-xrm-device-info-device-index-mask"></span><span id="doxid-xrm-8h-1a9eb4176bf23acda434773175afb60a90"></span><span id="cid-xrm-device-info-constraint-type-virtual-device-index"></span><span id="doxid-xrm-8h-1a55223d27de9109266f8354c21d9d2101"></span><span id="cid-xrm-device-info-constraint-type-shift"></span><span id="doxid-xrm-8h-1a90fb1080c52b9e4199ea57d65f83ae58"></span><span id="cid-xrm-device-info-constraint-type-null"></span><span id="doxid-xrm-8h-1aa4c6e0f1aaa0b555c0169c89a9df902e"></span><span id="cid-xrm-device-info-constraint-type-mask"></span><span id="doxid-xrm-8h-1a1149a0433889f95b245c84e4e3c43e5d"></span><span id="cid-xrm-device-info-constraint-type-hardware-device-index"></span><span id="doxid-xrm-8h-1a21f283005207c1bb462a674e329a7c21"></span><span id="cid-xrm-api-version-1"></span><span id="doxid-xrm-8h-1a470706ff415772d8fab9a13d0048b1a8"></span><span id="cid-xrmcontext"></span><span id="doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"></span><span id="cid-xrmpluginfunctype"></span><span id="doxid-xrm-8h-1a2a037dc6bbd6d4d8ccce178770645712"></span><span id="cid-xrmapiversiontype"></span><span id="doxid-xrm-8h-1a05a2d607709cecb9dbb541945e06f939"></span><span id="cid-xrmpluginversiontype"></span><span id="doxid-xrm-8h-1a85746c0e6e58a0cdabf23a869781a199"></span><span></span><span class="c1">// typedefs</span>
 
 <span class="k">typedef</span> <span class="kt">int32_t</span> <span class="p">(</span><span class="o">*</span> <span class="n">xrmPluginVersionType</span><span class="p">)()</span>
 <span class="k">typedef</span> <span class="kt">int32_t</span> <span class="p">(</span><span class="o">*</span> <span class="n">xrmApiVersionType</span><span class="p">)()</span>
@@ -482,24 +498,64 @@
 <span class="c1">// structs</span>
 
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmAllocationQueryInfo.html#doxid-structxrm-allocation-query-info"><span class="std std-ref">xrmAllocationQueryInfo</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmAllocationQueryInfoV2.html#doxid-structxrm-allocation-query-info-v2"><span class="std std-ref">xrmAllocationQueryInfoV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuGroupProperty.html#doxid-structxrm-cu-group-property"><span class="std std-ref">xrmCuGroupProperty</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuGroupPropertyV2.html#doxid-structxrm-cu-group-property-v2"><span class="std std-ref">xrmCuGroupPropertyV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuGroupResource.html#doxid-structxrm-cu-group-resource"><span class="std std-ref">xrmCuGroupResource</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuGroupResourceV2.html#doxid-structxrm-cu-group-resource-v2"><span class="std std-ref">xrmCuGroupResourceV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuListProperty.html#doxid-structxrm-cu-list-property"><span class="std std-ref">xrmCuListProperty</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuListPropertyV2.html#doxid-structxrm-cu-list-property-v2"><span class="std std-ref">xrmCuListPropertyV2</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuListResInforV2.html#doxid-structxrm-cu-list-res-infor-v2"><span class="std std-ref">xrmCuListResInforV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuListResource.html#doxid-structxrm-cu-list-resource"><span class="std std-ref">xrmCuListResource</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuListResourceV2.html#doxid-structxrm-cu-list-resource-v2"><span class="std std-ref">xrmCuListResourceV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuPoolProperty.html#doxid-structxrm-cu-pool-property"><span class="std std-ref">xrmCuPoolProperty</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuPoolPropertyV2.html#doxid-structxrm-cu-pool-property-v2"><span class="std std-ref">xrmCuPoolPropertyV2</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuPoolResInforV2.html#doxid-structxrm-cu-pool-res-infor-v2"><span class="std std-ref">xrmCuPoolResInforV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuPoolResource.html#doxid-structxrm-cu-pool-resource"><span class="std std-ref">xrmCuPoolResource</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuPoolResourceV2.html#doxid-structxrm-cu-pool-resource-v2"><span class="std std-ref">xrmCuPoolResourceV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuProperty.html#doxid-structxrm-cu-property"><span class="std std-ref">xrmCuProperty</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuPropertyV2.html#doxid-structxrm-cu-property-v2"><span class="std std-ref">xrmCuPropertyV2</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuResInforV2.html#doxid-structxrm-cu-res-infor-v2"><span class="std std-ref">xrmCuResInforV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuResource.html#doxid-structxrm-cu-resource"><span class="std std-ref">xrmCuResource</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuResourceV2.html#doxid-structxrm-cu-resource-v2"><span class="std std-ref">xrmCuResourceV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmCuStat.html#doxid-structxrm-cu-stat"><span class="std std-ref">xrmCuStat</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmDeviceIdListPropertyV2.html#doxid-structxrm-device-id-list-property-v2"><span class="std std-ref">xrmDeviceIdListPropertyV2</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmDeviceListResInforV2.html#doxid-structxrm-device-list-res-infor-v2"><span class="std std-ref">xrmDeviceListResInforV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmPluginData.html#doxid-structxrm-plugin-data"><span class="std std-ref">xrmPluginData</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmPluginFuncParam.html#doxid-structxrm-plugin-func-param"><span class="std std-ref">xrmPluginFuncParam</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmReservationQueryInfoV2.html#doxid-structxrm-reservation-query-info-v2"><span class="std std-ref">xrmReservationQueryInfoV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmUdfCuGroupProperty.html#doxid-structxrm-udf-cu-group-property"><span class="std std-ref">xrmUdfCuGroupProperty</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmUdfCuGroupPropertyV2.html#doxid-structxrm-udf-cu-group-property-v2"><span class="std std-ref">xrmUdfCuGroupPropertyV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmUdfCuListProperty.html#doxid-structxrm-udf-cu-list-property"><span class="std std-ref">xrmUdfCuListProperty</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmUdfCuListPropertyV2.html#doxid-structxrm-udf-cu-list-property-v2"><span class="std std-ref">xrmUdfCuListPropertyV2</span></a><span></span>
 <span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmUdfCuProperty.html#doxid-structxrm-udf-cu-property"><span class="std std-ref">xrmUdfCuProperty</span></a><span></span>
+<span class="k">struct</span> <a class="reference internal" href="rst_libapi/struct_xrmUdfCuPropertyV2.html#doxid-structxrm-udf-cu-property-v2"><span class="std std-ref">xrmUdfCuPropertyV2</span></a><span></span>
 
 <span class="c1">// macros</span>
 
 <span class="cp">#define XRM_API_VERSION_1</span>
+<span class="cp">#define XRM_DEVICE_INFO_CONSTRAINT_TYPE_HARDWARE_DEVICE_INDEX</span>
+<span class="cp">#define XRM_DEVICE_INFO_CONSTRAINT_TYPE_MASK</span>
+<span class="cp">#define XRM_DEVICE_INFO_CONSTRAINT_TYPE_NULL</span>
+<span class="cp">#define XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT</span>
+<span class="cp">#define XRM_DEVICE_INFO_CONSTRAINT_TYPE_VIRTUAL_DEVICE_INDEX</span>
+<span class="cp">#define XRM_DEVICE_INFO_DEVICE_INDEX_MASK</span>
+<span class="cp">#define XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT</span>
+<span class="cp">#define XRM_LOAD_GRANULARIY_1000000_MASK</span>
+<span class="cp">#define XRM_LOAD_GRANULARIY_1000000_SHIFT</span>
+<span class="cp">#define XRM_LOAD_GRANULARIY_100_MASK</span>
+<span class="cp">#define XRM_LOAD_GRANULARIY_100_SHIFT</span>
+<span class="cp">#define XRM_MEMORY_INFO_CONSTRAINT_TYPE_HARDWARE_MEMORY_INDEX</span>
+<span class="cp">#define XRM_MEMORY_INFO_CONSTRAINT_TYPE_MASK</span>
+<span class="cp">#define XRM_MEMORY_INFO_CONSTRAINT_TYPE_NULL</span>
+<span class="cp">#define XRM_MEMORY_INFO_CONSTRAINT_TYPE_SHIFT</span>
+<span class="cp">#define XRM_MEMORY_INFO_MEMORY_INDEX_MASK</span>
+<span class="cp">#define XRM_MEMORY_INFO_MEMORY_INDEX_SHIFT</span>
+<span class="cp">#define XRM_POLICY_INFO_CONSTRAINT_TYPE_LEAST_USED_FIRST</span>
+<span class="cp">#define XRM_POLICY_INFO_CONSTRAINT_TYPE_MASK</span>
+<span class="cp">#define XRM_POLICY_INFO_CONSTRAINT_TYPE_MOST_USED_FIRST</span>
+<span class="cp">#define XRM_POLICY_INFO_CONSTRAINT_TYPE_NULL</span>
+<span class="cp">#define XRM_POLICY_INFO_CONSTRAINT_TYPE_SHIFT</span>
 </pre>
 </div>
 <div class="section" id="global-functions">
@@ -1606,6 +1662,514 @@
 </table>
 <p class="rubric">Returns:</p>
 <p>int32_t, 0 on success or appropriate error number</p>
+</div>
+<div class="section" id="xrmcuallocv2">
+<span id="cid-xrmcuallocv2"></span><span id="doxid-xrm-8h-1a8ff0db9ab2b3f02a0d088db614b2165b"></span><h4>xrmCuAllocV2<a class="headerlink" href="#xrmcuallocv2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmCuAllocV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuPropertyV2.html#doxid-structxrm-cu-property-v2"><span class="std std-ref">xrmCuPropertyV2</span></a><span></span><span class="o">*</span> <span class="n">cuProp</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuResourceV2.html#doxid-structxrm-cu-resource-v2"><span class="std std-ref">xrmCuResourceV2</span></a><span></span><span class="o">*</span> <span class="n">cuRes</span>
+    <span class="p">)</span>
+</pre>
+<p>Allocates compute unit with a device, cu, and channel given a kernel name or alias or both and request load. This function also provides the xclbin and kernel plugin loaded on the device.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>cuProp</td>
+<td>the property of requested cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. deviceInfo: resource allocation device constaint information. bit[63 - 40] reserved bit[39 - 32] constraintType 0 : no specified device constraint 1 : hardware device index. It’s used to identify hardware device index is used as the constraint. 2 : virtual device index. it’s used to descript multiple cu from same device if device index is same. It does not means from specified hardware device. This type is only valid in property of cu list. It’s not valid for single cu. others : reserved bit[31 - 0] deviceIndex memoryInfo: resource allocation memory constaint information. bit[63 - 40] reserved bit[39 - 32] constraintType 0 : no specified memory constraint 1 : hardware memory bank. It’s used to identify hardware memory bank is used as the constraint. others : reserved bit[31 - 0] memoryBankIndex policyInfo: resource allocation policy information. bit[63 - 8] reserved bit[ 7 - 0] policyType 0 : no specified policy 1 : most used first 2 : least used first others : reserved requestLoad: request load, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: request to allocate cu from specified resource pool.</td>
+</tr>
+<tr class="row-odd"><td>cuRes</td>
+<td>the cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: id of the cu pool this cu comes from, the system default pool id is 0.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, 0 on success or appropriate error number</p>
+</div>
+<div class="section" id="xrmculistallocv2">
+<span id="cid-xrmculistallocv2"></span><span id="doxid-xrm-8h-1a6fc5961de70b20cff64c1ee903c010cf"></span><h4>xrmCuListAllocV2<a class="headerlink" href="#xrmculistallocv2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmCuListAllocV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuListPropertyV2.html#doxid-structxrm-cu-list-property-v2"><span class="std std-ref">xrmCuListPropertyV2</span></a><span></span><span class="o">*</span> <span class="n">cuListProp</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuListResourceV2.html#doxid-structxrm-cu-list-resource-v2"><span class="std std-ref">xrmCuListResourceV2</span></a><span></span><span class="o">*</span> <span class="n">cuListRes</span>
+    <span class="p">)</span>
+</pre>
+<p>Allocates a list of compute unit resource given a list of kernels’s property with kernel name or alias or both and request load.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a></td>
+</tr>
+<tr class="row-even"><td>cuListProp</td>
+<td>the property of cu list. cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole. For each cu in the list: 1) if device constraint not set: allocate it from any device 2) if device constraint set with hw index: reserve it from target device 3) if device constraint set with virtual index: find all others with same virtual index, put them into one sub-list, and reserve requested CU from same device, the device id should be different from that for previous sub-lists request from virtual index. cuNum: request number of cu in this list.</td>
+</tr>
+<tr class="row-odd"><td>cuListRes</td>
+<td>the cu list resource. cuResources: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole. cuNum: allocated cu number in this list.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, 0 on success or appropriate error number.</p>
+</div>
+<div class="section" id="xrmcureleasev2">
+<span id="cid-xrmcureleasev2"></span><span id="doxid-xrm-8h-1a762ad75a09cd339afe93cfd6db8eadd1"></span><h4>xrmCuReleaseV2<a class="headerlink" href="#xrmcureleasev2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">bool</span> <span class="n">xrmCuReleaseV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuResourceV2.html#doxid-structxrm-cu-resource-v2"><span class="std std-ref">xrmCuResourceV2</span></a><span></span><span class="o">*</span> <span class="n">cuRes</span>
+    <span class="p">)</span>
+</pre>
+<p>Releases a previously allocated resource.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>cuRes</td>
+<td>the cu resource. xclbinFileName: xclbin (path and name) attached to this device. kernelPluginFileName: kernel plugin (only name) attached to this device. kernelName: the kernel name of allocated cu. kernelAlias: the name alias of allocated cu. instanceName: the instance name of allocated cu. cuName: the name of allocated cu (kernelName:instanceName). uuid: uuid of the loaded xclbin file. deviceId: device id of this cu. cuId: cu id of this cu. channelId: channel id of this cu. cuType: type of cu, hardware kernel or soft kernel. allocServiceId: service id for this cu allocation. channelLoad: allocated load of this cu, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: id of the cu pool this cu comes from, the system default pool id is 0.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>bool, true on success or false on fail.</p>
+</div>
+<div class="section" id="xrmculistreleasev2">
+<span id="cid-xrmculistreleasev2"></span><span id="doxid-xrm-8h-1a2a60b6efbaf2d7b48f7fb0865f2ee1f4"></span><h4>xrmCuListReleaseV2<a class="headerlink" href="#xrmculistreleasev2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">bool</span> <span class="n">xrmCuListReleaseV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuListResourceV2.html#doxid-structxrm-cu-list-resource-v2"><span class="std std-ref">xrmCuListResourceV2</span></a><span></span><span class="o">*</span> <span class="n">cuListRes</span>
+    <span class="p">)</span>
+</pre>
+<p>Releases a previously allocated list of resources.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>cuListRes</td>
+<td>the cu list resource. cuResources: cu resource list to be released, starting from cuResources[0], no hole. cuNum: number of cu in this list.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>bool, true on success or false on fail.</p>
+</div>
+<div class="section" id="xrmudfcugroupdeclarev2">
+<span id="cid-xrmudfcugroupdeclarev2"></span><span id="doxid-xrm-8h-1acba83764e5fbbc150f09011fc7bab946"></span><h4>xrmUdfCuGroupDeclareV2<a class="headerlink" href="#xrmudfcugroupdeclarev2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmUdfCuGroupDeclareV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmUdfCuGroupPropertyV2.html#doxid-structxrm-udf-cu-group-property-v2"><span class="std std-ref">xrmUdfCuGroupPropertyV2</span></a><span></span><span class="o">*</span> <span class="n">udfCuGroupProp</span><span class="p">,</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">udfCuGroupName</span>
+    <span class="p">)</span>
+</pre>
+<p>Declares user defined cu group type given the specified kernels’s property with cu name (kernelName:instanceName) and request load.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>udfCuGroupProp</td>
+<td>the property of user defined cu group. optionUdfCuListProps[]: option cu list property array starting from optionCuListProps[0], no hole. optionUdfCuListNum: number of option user defined cu list.</td>
+</tr>
+<tr class="row-odd"><td>udfCuGroupName</td>
+<td>unique user defined cu group name for the new group type declaration.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, 0 on success or appropriate error number.</p>
+</div>
+<div class="section" id="xrmudfcugroupundeclarev2">
+<span id="cid-xrmudfcugroupundeclarev2"></span><span id="doxid-xrm-8h-1a7a8d58f057cd8fafaab085236d8e4851"></span><h4>xrmUdfCuGroupUndeclareV2<a class="headerlink" href="#xrmudfcugroupundeclarev2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmUdfCuGroupUndeclareV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">udfCuGroupName</span>
+    <span class="p">)</span>
+</pre>
+<p>Undeclares user defined cu group type given the specified group name.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>udfCuGroupName</td>
+<td>user defined cu group name for the group type undeclaration.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, 0 on success or appropriate error number.</p>
+</div>
+<div class="section" id="xrmcugroupallocv2">
+<span id="cid-xrmcugroupallocv2"></span><span id="doxid-xrm-8h-1aee27ab214d6e645b0aa1e17a36cd2173"></span><h4>xrmCuGroupAllocV2<a class="headerlink" href="#xrmcugroupallocv2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmCuGroupAllocV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuGroupPropertyV2.html#doxid-structxrm-cu-group-property-v2"><span class="std std-ref">xrmCuGroupPropertyV2</span></a><span></span><span class="o">*</span> <span class="n">cuGroupProp</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuGroupResourceV2.html#doxid-structxrm-cu-group-resource-v2"><span class="std std-ref">xrmCuGroupResourceV2</span></a><span></span><span class="o">*</span> <span class="n">cuGroupRes</span>
+    <span class="p">)</span>
+</pre>
+<p>Allocates a group of compute unit resource given a user defined group of kernels’s property with cu name (kernelName:instanceName) and request load.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>cuGroupProp</td>
+<td>the property of cu group. udfCuGroupName: user defined cu group type name. poolId: id of the cu pool this group CUs come from, the system default pool id is 0.</td>
+</tr>
+<tr class="row-odd"><td>cuGroupRes</td>
+<td>the cu group resource. cuResources: cu resource group to fill the allocated cus infor, starting from cuResources[0], no hole. cuNum: allocated cu number in this group.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, 0 on success or appropriate error number.</p>
+</div>
+<div class="section" id="xrmcugroupreleasev2">
+<span id="cid-xrmcugroupreleasev2"></span><span id="doxid-xrm-8h-1aea343fd56e90ca50b91b33b28928bd96"></span><h4>xrmCuGroupReleaseV2<a class="headerlink" href="#xrmcugroupreleasev2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">bool</span> <span class="n">xrmCuGroupReleaseV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuGroupResourceV2.html#doxid-structxrm-cu-group-resource-v2"><span class="std std-ref">xrmCuGroupResourceV2</span></a><span></span><span class="o">*</span> <span class="n">cuGroupRes</span>
+    <span class="p">)</span>
+</pre>
+<p>Releases a previously allocated group of resources.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>cuGroupRes</td>
+<td>cu group resource. cuResources: cu resource group to be released, starting from cuResources[0], no hole. cuNum: number of cu in this group.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>bool, true on success or false on fail.</p>
+</div>
+<div class="section" id="xrmallocationqueryv2">
+<span id="cid-xrmallocationqueryv2"></span><span id="doxid-xrm-8h-1aabf9047148e3ad160af5fc9f87c4477c"></span><h4>xrmAllocationQueryV2<a class="headerlink" href="#xrmallocationqueryv2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmAllocationQueryV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmAllocationQueryInfoV2.html#doxid-structxrm-allocation-query-info-v2"><span class="std std-ref">xrmAllocationQueryInfoV2</span></a><span></span><span class="o">*</span> <span class="n">allocQuery</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuListResourceV2.html#doxid-structxrm-cu-list-resource-v2"><span class="std std-ref">xrmCuListResourceV2</span></a><span></span><span class="o">*</span> <span class="n">cuListRes</span>
+    <span class="p">)</span>
+</pre>
+<p>Querys the compute unit resource given the allocation service id.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>allocQuery</td>
+<td>the allocate query information. allocServiceId: the service id returned from allocation. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested.</td>
+</tr>
+<tr class="row-odd"><td>cuListRes</td>
+<td>cu list resource. cuListRes: cu resource list to fill the allocated cus infor, starting from cuResources[0], no hole. cuNum: cu number in this list.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, 0 on success or appropriate error number.</p>
+</div>
+<div class="section" id="xrmcheckcuavailablenumv2">
+<span id="cid-xrmcheckcuavailablenumv2"></span><span id="doxid-xrm-8h-1adc3a75618b086b5f27f571a8010edc1b"></span><h4>xrmCheckCuAvailableNumV2<a class="headerlink" href="#xrmcheckcuavailablenumv2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmCheckCuAvailableNumV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuPropertyV2.html#doxid-structxrm-cu-property-v2"><span class="std std-ref">xrmCuPropertyV2</span></a><span></span><span class="o">*</span> <span class="n">cuProp</span>
+    <span class="p">)</span>
+</pre>
+<p>To check the available cu num on the system given the kernels’s property with kernel name or alias or both and request load.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a></td>
+</tr>
+<tr class="row-even"><td>cuProp</td>
+<td>the property of cu. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested. devExcl: request exclusive device usage for this client. requestLoad: request load, only one type granularity at one time. bit[31 - 28] reserved bit[27 - 8] granularity of 1000000 (0 - 1000000) bit[ 7 - 0] granularity of 100 (0 - 100) poolId: request to allocate cu from specified resource pool.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, available cu num (&gt;= 0) on success or appropriate error number (&lt; 0).</p>
+</div>
+<div class="section" id="xrmcheckculistavailablenumv2">
+<span id="cid-xrmcheckculistavailablenumv2"></span><span id="doxid-xrm-8h-1a5adecd1cae781ae6697599da02e76007"></span><h4>xrmCheckCuListAvailableNumV2<a class="headerlink" href="#xrmcheckculistavailablenumv2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmCheckCuListAvailableNumV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuListPropertyV2.html#doxid-structxrm-cu-list-property-v2"><span class="std std-ref">xrmCuListPropertyV2</span></a><span></span><span class="o">*</span> <span class="n">cuListProp</span>
+    <span class="p">)</span>
+</pre>
+<p>To check the available cu list num on the system given a list of kernels’s property with kernel name or alias or both and request load.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>cuListProp</td>
+<td>the property of cu list. cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole For each cu in the list: 1) if device constraint not set: allocate it from any device 2) if device constraint set with hw index: reserve it from target device 3) if device constraint set with virtual index: find all others with same virtual index, put them into one sub-list, and reserve requested CU from same device, the device id should be different from that for previous sub-lists request from virtual index. cuNum: request number of cu in this list.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, available cu list num (&gt;= 0) on success or appropriate error number (&lt; 0).</p>
+</div>
+<div class="section" id="xrmcheckcugroupavailablenumv2">
+<span id="cid-xrmcheckcugroupavailablenumv2"></span><span id="doxid-xrm-8h-1a9f1eedffaeb4885e89bce0d15e5ed774"></span><h4>xrmCheckCuGroupAvailableNumV2<a class="headerlink" href="#xrmcheckcugroupavailablenumv2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmCheckCuGroupAvailableNumV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuGroupPropertyV2.html#doxid-structxrm-cu-group-property-v2"><span class="std std-ref">xrmCuGroupPropertyV2</span></a><span></span><span class="o">*</span> <span class="n">cuGroupProp</span>
+    <span class="p">)</span>
+</pre>
+<p>To check the available group number of compute unit resource given a user defined group of kernels’s property with cu name (kernelName:instanceName) and request load.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>cuGroupProp</td>
+<td>the property of cu group. udfCuGroupName: user defined cu group type name. poolId: id of the cu pool this group CUs come from, the system default pool id is 0.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, available cu group num (&gt;= 0) on success or appropriate error number (&lt; 0).</p>
+</div>
+<div class="section" id="xrmcheckcupoolavailablenumv2">
+<span id="cid-xrmcheckcupoolavailablenumv2"></span><span id="doxid-xrm-8h-1a675a9a39e38e46ee6251676bcef87cd1"></span><h4>xrmCheckCuPoolAvailableNumV2<a class="headerlink" href="#xrmcheckcupoolavailablenumv2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmCheckCuPoolAvailableNumV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuPoolPropertyV2.html#doxid-structxrm-cu-pool-property-v2"><span class="std std-ref">xrmCuPoolPropertyV2</span></a><span></span><span class="o">*</span> <span class="n">cuPoolProp</span>
+    <span class="p">)</span>
+</pre>
+<p>To check the available cu pool num on the system given a pool of kernels’s property with kernel name or alias or both and request load.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>cuPoolProp</td>
+<td>the property of cu pool. cuListProp: cu list property. cuListNum: number of cu list in this pool. xclbinUuid: uuid of xclbin. xclbinNum: number of xclbin in this pool.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, available cu pool num (&gt;= 0) on success or appropriate error number (&lt; 0).</p>
+</div>
+<div class="section" id="xrmcupoolreservev2">
+<span id="cid-xrmcupoolreservev2"></span><span id="doxid-xrm-8h-1a3753c2ec39ae8cc5fbeba2710354d779"></span><h4>xrmCuPoolReserveV2<a class="headerlink" href="#xrmcupoolreservev2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">uint64_t</span> <span class="n">xrmCuPoolReserveV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuPoolPropertyV2.html#doxid-structxrm-cu-pool-property-v2"><span class="std std-ref">xrmCuPoolPropertyV2</span></a><span></span><span class="o">*</span> <span class="n">cuPoolProp</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuPoolResInforV2.html#doxid-structxrm-cu-pool-res-infor-v2"><span class="std std-ref">xrmCuPoolResInforV2</span></a><span></span><span class="o">*</span> <span class="n">cuPoolResInfor</span>
+    <span class="p">)</span>
+</pre>
+<p>Reserves a pool of compute unit resource given a pool of kernels’s property with kernel name or alias or both and request load.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>cuPoolProp</td>
+<td>the property of cu pool. cuListProp: cu prop list to fill kernelName, devExcl and requestLoad etc. information. For each cu in the list: 1) if device constraint not set: reserve it from any device 2) if device constraint set with hw index: reserve it from target device 3) if device constraint set with virtual index: find all others with same virtual index, put them into one sub-list, and reserve requested CU from same device, the device id should be different from that for previous sub-lists request from virtual index. cuListNum: request number of such cu list for this pool. xclbinUuid: request all resource in the xclbin. xclbinNum: request number of such xclbin for this pool. deviceIdListProp: device id list</td>
+</tr>
+<tr class="row-odd"><td>cuPoolResInfor</td>
+<td>the return information of cu pool. cuListResInfor: cu list resource information. cuListNum: number of cu list for this pool. xclbinResInfor: resource information of the xclbin. xclbinNum: number of xclbin for this pool.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>uint64_t, reserve pool id (&gt; 0) or 0 on fail.</p>
+</div>
+<div class="section" id="xrmcupoolrelinquishv2">
+<span id="cid-xrmcupoolrelinquishv2"></span><span id="doxid-xrm-8h-1a549094ee5f5a3e3f14e7d3666c421621"></span><h4>xrmCuPoolRelinquishV2<a class="headerlink" href="#xrmcupoolrelinquishv2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">bool</span> <span class="n">xrmCuPoolRelinquishV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <span class="kt">uint64_t</span> <span class="n">poolId</span>
+    <span class="p">)</span>
+</pre>
+<p>Relinquishes a previously reserved pool of resources.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>poolId</td>
+<td>the reserve pool id.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>bool, true on success or false on fail.</p>
+</div>
+<div class="section" id="xrmreservationqueryv2">
+<span id="cid-xrmreservationqueryv2"></span><span id="doxid-xrm-8h-1a7d1c0f44c70367ea215dd5ac727dcf75"></span><h4>xrmReservationQueryV2<a class="headerlink" href="#xrmreservationqueryv2" title="Permalink to this headline">¶</a></h4>
+<pre class="highlight literal-block">
+<span></span><span class="cp">#include</span> <span class="cpf">&quot;lib/xrm.h&quot;</span>
+</pre>
+<pre class="highlight title-code-block literal-block">
+<span></span><span class="kt">int32_t</span> <span class="n">xrmReservationQueryV2</span> <span class="p">(</span>
+    <a class="reference internal" href="#doxid-xrm-8h-1abb5fd567f2f4cbeac938e77a6fa78b59"><span class="std std-ref">xrmContext</span></a><span></span> <span class="n">context</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmReservationQueryInfoV2.html#doxid-structxrm-reservation-query-info-v2"><span class="std std-ref">xrmReservationQueryInfoV2</span></a><span></span><span class="o">*</span> <span class="n">reserveQueryInfo</span><span class="p">,</span>
+    <a class="reference internal" href="rst_libapi/struct_xrmCuPoolResourceV2.html#doxid-structxrm-cu-pool-resource-v2"><span class="std std-ref">xrmCuPoolResourceV2</span></a><span></span><span class="o">*</span> <span class="n">cuPoolRes</span>
+    <span class="p">)</span>
+</pre>
+<p>Querys the compute unit resource given the reservation id. NOTE: The allocServiceId, channelId and channelLoad are NOT valid in the cuPoolRes.</p>
+<p class="rubric">Parameters:</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>context</td>
+<td>the context created through <a class="reference internal" href="#doxid-xrm-8h-1a9f8c5e2c4afd7a0eac964929e7ae08aa"><span class="std std-ref">xrmCreateContext()</span></a> .</td>
+</tr>
+<tr class="row-even"><td>reserveQueryInfo</td>
+<td>the reservation query information. poolId: reservation pool id. kernelName: the kernel name requested. kernelAlias: the alias of kernel name requested.</td>
+</tr>
+<tr class="row-odd"><td>cuPoolRes</td>
+<td>the cu pool resource. cuPoolRes: cu resource pool to fill the allocated cus infor, starting from cuPoolRes[0], no hole. cuNum: cu number in this pool.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Returns:</p>
+<p>int32_t, 0 on success or appropriate error number.</p>
 </div>
 </div>
 </div>
