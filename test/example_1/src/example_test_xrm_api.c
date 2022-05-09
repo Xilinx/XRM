@@ -4168,6 +4168,158 @@ void xrmConcurrentContextTest(int32_t numContext) {
     printf("<<<<<<<==  End the xrm context test ===>>>>>>>>\n\n");
 }
 
+void xrmCuAllocReleaseV2ByPolicyMostUsedFirstTest(xrmContext* ctx, int policyId) {
+    int32_t ret;
+    printf("<<<<<<<==  start the xrm allocation V2 by policy :%d --- most used first test: %s ===>>>>>>>>\n", policyId,
+           policyId == 1 ? "by cu load" : policyId == 3 ? "by dev load" : "other");
+    if (ctx == NULL) {
+        printf("ctx is null, fail to do cu alloc test\n");
+        return;
+    }
+
+    // alloc scaler cu
+#define REQUEST_COUNT 5
+    xrmCuPropertyV2 scalerCuProp;
+    xrmCuResourceV2 scalerCuResArray[REQUEST_COUNT];
+    int loadArray[] = {30, 40, 30, 30, 20, 30};
+    xrmCuResourceV2* scalerCuRes;
+    memset(scalerCuResArray, 0, sizeof(scalerCuResArray));
+    uint64_t deviceInfoContraintType = XRM_DEVICE_INFO_CONSTRAINT_TYPE_NULL;
+    uint64_t deviceInfoDeviceIndex = 0;
+    scalerCuProp.deviceInfo = (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+                              (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+    scalerCuProp.requestLoad = 30; // default load
+    scalerCuProp.poolId = 0;
+    scalerCuProp.policyInfo = policyId; // 1 -- most used first
+    strcpy(scalerCuProp.kernelName, "lookahead");
+    strcpy(scalerCuProp.kernelAlias, "");
+    scalerCuProp.devExcl = false;
+
+    printf("Test V2-10-1: check cu available number\n");
+    printf("    scaler cu prop: kernelName is %s\n", scalerCuProp.kernelName);
+    printf("    scaler cu prop: kernelAlias is %s\n", scalerCuProp.kernelAlias);
+
+    ret = xrmCheckCuAvailableNumV2(ctx, &scalerCuProp);
+    if (ret < 0) {
+        printf("xrmCheckCuAvailableNumV2: fail to check cu available number\n");
+    } else {
+        printf("xrmCheckCuAvailableNumV2: cu available number = %d\n", ret);
+    }
+    printf("Test V2-10-2: Alloc cu by policy --- most used first\n");
+    for (int i = 0; i < REQUEST_COUNT; i++) {
+        scalerCuRes = &scalerCuResArray[i];
+        if (i < sizeof(loadArray) / sizeof(loadArray[0])) scalerCuProp.requestLoad = loadArray[i];
+        ret = xrmCuAllocV2(ctx, &scalerCuProp, scalerCuRes);
+        if (ret != 0) {
+            printf("xrmCuAllocV2: fail to alloc cu\n");
+        } else {
+            printf("Allocated cu: %d, policyInfo: %ld \n", i, scalerCuProp.policyInfo);
+            printf("   xclbinFileName is:  %s\n", scalerCuRes->xclbinFileName);
+            printf("   kernelPluginFileName is:  %s\n", scalerCuRes->kernelPluginFileName);
+            printf("   kernelName is:  %s\n", scalerCuRes->kernelName);
+            printf("   instanceName is:  %s\n", scalerCuRes->instanceName);
+            printf("   cuName is:  %s\n", scalerCuRes->cuName);
+            printf("   kernelAlias is:  %s\n", scalerCuRes->kernelAlias);
+            printf("   deviceId is:  %d\n", scalerCuRes->deviceId);
+            printf("   cuId is:  %d\n", scalerCuRes->cuId);
+            printf("   channelId is:  %d\n", scalerCuRes->channelId);
+            printf("   cuType is:  %d\n", scalerCuRes->cuType);
+            printf("   baseAddr is:  0x%lx\n", scalerCuRes->baseAddr);
+            printf("   membankId is:  %d\n", scalerCuRes->membankId);
+            printf("   membankType is:  %d\n", scalerCuRes->membankType);
+            printf("   membankSize is:  0x%lx\n", scalerCuRes->membankSize);
+            printf("   membankBaseAddr is:  0x%lx\n", scalerCuRes->membankBaseAddr);
+            printf("   allocServiceId is:  %lu\n", scalerCuRes->allocServiceId);
+            printf("   poolId is:  %lu\n", scalerCuRes->poolId);
+            printf("   channelLoad is:  %d\n", scalerCuRes->channelLoad);
+        }
+    }
+    printf("Test V2-10-3:  release cu\n");
+    for (int i = 0; i < REQUEST_COUNT; i++) {
+        if (xrmCuReleaseV2(ctx, &scalerCuResArray[i]))
+            printf("success to  release cu\n");
+        else
+            printf("fail to release cu\n");
+    }
+    printf("<<<<<<<==  end the xrm allocation test ===>>>>>>>>\n");
+}
+
+void xrmCuAllocReleaseV2ByPolicyLeastUsedFirstTest(xrmContext* ctx, int policyId) {
+    int32_t ret;
+    printf("<<<<<<<==  start the xrm allocation V2 by policy --- least used first : %s test ===>>>>>>>>\n",
+           policyId == 2 ? "by cu load" : policyId == 4 ? "by dev load" : "other");
+    if (ctx == NULL) {
+        printf("ctx is null, fail to do cu alloc test\n");
+        return;
+    }
+
+    // alloc scaler cu
+#define REQUEST_COUNT 5
+    xrmCuPropertyV2 scalerCuProp;
+    xrmCuResourceV2 scalerCuResArray[REQUEST_COUNT];
+    int loadArray[] = {30, 40, 10, 30, 20, 30};
+    xrmCuResourceV2* scalerCuRes;
+    memset(scalerCuResArray, 0, sizeof(scalerCuResArray));
+    uint64_t deviceInfoContraintType = XRM_DEVICE_INFO_CONSTRAINT_TYPE_NULL;
+    uint64_t deviceInfoDeviceIndex = 0;
+    scalerCuProp.deviceInfo = (deviceInfoDeviceIndex << XRM_DEVICE_INFO_DEVICE_INDEX_SHIFT) |
+                              (deviceInfoContraintType << XRM_DEVICE_INFO_CONSTRAINT_TYPE_SHIFT);
+    scalerCuProp.requestLoad = 30; // default load
+    scalerCuProp.poolId = 0;
+    scalerCuProp.policyInfo = policyId; // least used first
+    strcpy(scalerCuProp.kernelName, "lookahead");
+    strcpy(scalerCuProp.kernelAlias, "");
+    scalerCuProp.devExcl = false;
+
+    printf("Test V2-11-1: check cu available number\n");
+    printf("    cu prop: kernelName is %s\n", scalerCuProp.kernelName);
+    printf("    cu prop: kernelAlias is %s\n", scalerCuProp.kernelAlias);
+
+    ret = xrmCheckCuAvailableNumV2(ctx, &scalerCuProp);
+    if (ret < 0) {
+        printf("xrmCheckCuAvailableNumV2: fail to check cu available number\n");
+    } else {
+        printf("xrmCheckCuAvailableNumV2: cu available number = %d\n", ret);
+    }
+    printf("Test V2-11-2: Alloc cu by policy\n");
+    for (int i = 0; i < REQUEST_COUNT; i++) {
+        scalerCuRes = &scalerCuResArray[i];
+        if (i < sizeof(loadArray) / sizeof(loadArray[0])) scalerCuProp.requestLoad = loadArray[i];
+        ret = xrmCuAllocV2(ctx, &scalerCuProp, scalerCuRes);
+        if (ret != 0) {
+            printf("xrmCuAllocV2: fail to alloc cu\n");
+        } else {
+            printf("Allocated cu: %d, policyInfo: %ld \n", i, scalerCuProp.policyInfo);
+            printf("   xclbinFileName is:  %s\n", scalerCuRes->xclbinFileName);
+            printf("   kernelPluginFileName is:  %s\n", scalerCuRes->kernelPluginFileName);
+            printf("   kernelName is:  %s\n", scalerCuRes->kernelName);
+            printf("   instanceName is:  %s\n", scalerCuRes->instanceName);
+            printf("   cuName is:  %s\n", scalerCuRes->cuName);
+            printf("   kernelAlias is:  %s\n", scalerCuRes->kernelAlias);
+            printf("   deviceId is:  %d\n", scalerCuRes->deviceId);
+            printf("   cuId is:  %d\n", scalerCuRes->cuId);
+            printf("   channelId is:  %d\n", scalerCuRes->channelId);
+            printf("   cuType is:  %d\n", scalerCuRes->cuType);
+            printf("   baseAddr is:  0x%lx\n", scalerCuRes->baseAddr);
+            printf("   membankId is:  %d\n", scalerCuRes->membankId);
+            printf("   membankType is:  %d\n", scalerCuRes->membankType);
+            printf("   membankSize is:  0x%lx\n", scalerCuRes->membankSize);
+            printf("   membankBaseAddr is:  0x%lx\n", scalerCuRes->membankBaseAddr);
+            printf("   allocServiceId is:  %lu\n", scalerCuRes->allocServiceId);
+            printf("   poolId is:  %lu\n", scalerCuRes->poolId);
+            printf("   channelLoad is:  %d\n", scalerCuRes->channelLoad);
+        }
+    }
+    printf("Test V2-11-3:  release cu\n");
+    for (int i = 0; i < REQUEST_COUNT; i++) {
+        if (xrmCuReleaseV2(ctx, &scalerCuResArray[i]))
+            printf("success to  release cu\n");
+        else
+            printf("fail to release cu\n");
+    }
+    printf("<<<<<<<==  end the xrm allocation test ===>>>>>>>>\n");
+}
+
 void testXrmFunctions(void) {
     printf("<<<<<<<==  Start the xrm function test ===>>>>>>>>\n\n");
     xrmContext* ctx = (xrmContext*)xrmCreateContext(XRM_API_VERSION_1);
@@ -4188,6 +4340,21 @@ void testXrmFunctions(void) {
     xrmCuAllocQueryReleaseUsingAliasTest(ctx);
     xrmCheckCuListAvailableNumUsingAliasTest(ctx);
     xrmCuPoolReserveAllocReleaseRelinquishTest(ctx);
+
+    xrmCuAllocReleaseV2ByPolicyLeastUsedFirstTest(ctx, 2); // least used by cu load
+    // printf("press any char to continue\n");
+    // getchar();
+    xrmCuAllocReleaseV2ByPolicyLeastUsedFirstTest(ctx, 4); // least used by dev load
+    // printf("press any char to continue\n");
+    // getchar();
+
+    xrmCuAllocReleaseV2ByPolicyMostUsedFirstTest(ctx, 1); // most used by cu load
+    // printf("press any char to continue\n");
+    // getchar();
+    xrmCuAllocReleaseV2ByPolicyMostUsedFirstTest(ctx, 3); // most used by dev load
+    // printf("press any char to continue\n");
+    // getchar();
+
     xrmLoadUnloadXclbinTest(ctx);
     xrmCheckDaemonTest(ctx);
     xrmPluginTest(ctx);
@@ -4216,6 +4383,7 @@ void testXrmFunctions(void) {
 
     xrmCuAllocReleaseV2Test(ctx);
     xrmCuListAllocReleaseV2Test(ctx);
+
     xrmCuPoolReserveAllocReleaseRelinquishV2Test(ctx);
 
     printf("Test 0-2: destroy context\n");

@@ -281,7 +281,7 @@ static int32_t xrmJsonRequest(xrmContext context, const char* jsonReq, char* jso
         int32_t total_len = 0;
         int32_t cur_len = 0;
         cur_len = ctx->socket->read_some(boost::asio::buffer(tmp, 4), ec);
-        if (cur_len != 4 || ec ) return XRM_ERROR;
+        if (cur_len != 4 || ec) return XRM_ERROR;
         total_len = tmp[0] | (int32_t(tmp[1]) << 8) | (int32_t(tmp[2]) << 16) | (int32_t(tmp[3]) << 24);
         cur_len = 0;
         while (true) {
@@ -3181,8 +3181,13 @@ int32_t xrmCuGroupBlockingAlloc(xrmContext context,
  *                         bit[63 -  8] reserved
  *                         bit[ 7 -  0] policyType
  *                                      0 : no specified policy
- *                                      1 : most used first
- *                                      2 : least used first
+ *                                      1 : cu most used first, only apply to cu allocation not cu list/group allocation
+ *                                      2 : cu least used first, only apply to cu allocation not cu list/group
+ *                                          allocation
+ *                                      3 : device most used first, only apply to cu allocation not cu list/group
+ *                                          allocation
+ *                                      4 : device least used first, only apply to cu allocation not cu list/group
+ *                                          allocation
  *                                      others : reserved
  *             requestLoad: request load, only one type granularity at one time.
  *                          bit[31 - 28] reserved
@@ -3301,6 +3306,11 @@ int32_t xrmCuAllocV2(xrmContext context, xrmCuPropertyV2* cuProp, xrmCuResourceV
 /**
  * \brief Allocates a list of compute unit resource given a list of
  * kernels's property with kernel name or alias or both and request load.
+ * policyInfo set with any of (XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_MOST_USED_FIRST
+                               XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_Least_USED_FIRST
+                               XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_MOST_USED_FIRST
+                               XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_LEAST_USED_FIRST)
+   will be cleaned and treated as no flag
  *
  * @param context the context created through xrmCreateContext()
  * @param cuListProp the property of cu list.
@@ -3373,6 +3383,10 @@ int32_t xrmCuListAllocV2(xrmContext context, xrmCuListPropertyV2* cuListProp, xr
             cuListAllocTree.put("request.parameters.devExcl" + std::to_string(i), 1);
         cuListAllocTree.put("request.parameters.deviceInfo" + std::to_string(i), cuProp->deviceInfo);
         cuListAllocTree.put("request.parameters.memoryInfo" + std::to_string(i), cuProp->memoryInfo);
+        if (cuProp->policyInfo) {
+            // as cu/dev most/least used policy will not work for cu list allocation, so force it to 0
+            cuProp->policyInfo = 0;
+        }
         cuListAllocTree.put("request.parameters.policyInfo" + std::to_string(i), cuProp->policyInfo);
         cuListAllocTree.put("request.parameters.requestLoadUnified" + std::to_string(i), unifiedLoad);
         cuListAllocTree.put("request.parameters.requestLoadOriginal" + std::to_string(i), cuProp->requestLoad);

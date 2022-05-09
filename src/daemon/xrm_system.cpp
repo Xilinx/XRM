@@ -222,6 +222,7 @@ void xrm::system::initDevices() {
         flushDevData(devId);
         m_devList[devId].devId = devId;
         m_devList[devId].isDisabled = false;
+        m_devList[devId].devLoadInfo.init(devId);
         openDevice(devId);
     }
 }
@@ -767,11 +768,12 @@ void xrm::system::flushDevData(int32_t devId) {
             cu->numChanInuse = 0;
             memset(cu->clients, 0, sizeof(uint64_t) * XRM_MAX_KERNEL_CHANNELS);
             cu->numClient = 0;
-            cu->totalUsedLoadUnified = 0;
+            cu->totalUsedLoadUnified = 0; // will set dev load when numCu is set
             cu->totalReservedLoadUnified = 0;
             cu->totalReservedUsedLoadUnified = 0;
             memset(cu->reserves, 0, sizeof(reserveData) * XRM_MAX_KERNEL_RESERVES);
             cu->numReserve = 0;
+            cu->deviceId = devId;
         }
     }
 }
@@ -946,14 +948,14 @@ int32_t xrm::system::xclbinGetLayout(int32_t devId, std::string& errmsg) {
             cu->baseAddr = ipl->m_ip_data[i].m_base_address;
             cuInitChannels(cu);
             cu->numClient = 0;
-            cu->totalUsedLoadUnified = 0;
+            cu->totalUsedLoadUnified = 0; // update dev load at end of loop
             cu->totalReservedLoadUnified = 0;
             cu->totalReservedUsedLoadUnified = 0;
             memset(cu->reserves, 0, sizeof(reserveData) * XRM_MAX_KERNEL_RESERVES);
             cu->numReserve = 0;
+            cu->deviceId = devId;
             hardwareKernelExisting = true;
         } // end of hardware kernel handling
-
         /*
          * After all hardware kernel handled, it's assuming that all the previous cuId
          * is in range from 0 - current (xclbinInfo->numCu - 1).
@@ -990,10 +992,11 @@ int32_t xrm::system::xclbinGetLayout(int32_t devId, std::string& errmsg) {
                 cu->totalReservedUsedLoadUnified = 0;
                 memset(cu->reserves, 0, sizeof(reserveData) * XRM_MAX_KERNEL_RESERVES);
                 cu->numReserve = 0;
+                cu->deviceId = devId;
             }
         } // end of soft kernel handling
     }
-
+    updateDeviceLoad(devId, 0, 0);
     /* the xclbin should contain at least one hardware kernel */
     if (hardwareKernelExisting) {
         return (XRM_SUCCESS);
@@ -1988,10 +1991,17 @@ int32_t xrm::system::resAllocCuV2(cuPropertyV2* cuPropV2, cuResource* cuRes, boo
     cuProp.poolId = cuPropV2->poolId;
     switch (deviceInfoConstraintType) {
         case XRM_DEVICE_INFO_CONSTRAINT_TYPE_NULL: {
+            if (cuPropV2->policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_MOST_USED_FIRST ||
+                cuPropV2->policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_LEAST_USED_FIRST)
+                return (resAllocCuByDevLoad(cuPropV2, cuRes, updateId));
+            if (cuPropV2->policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_MOST_USED_FIRST ||
+                cuPropV2->policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_LEAST_USED_FIRST)
+                return (resAllocCuByCuLoad(cuPropV2, cuRes, updateId));
+
             return (resAllocCu(&cuProp, cuRes, updateId));
         }
         case XRM_DEVICE_INFO_CONSTRAINT_TYPE_HARDWARE_DEVICE_INDEX: {
-            return (resAllocCuFromDev((uint32_t)deviceInfoDeviceIndex, &cuProp, cuRes, updateId));
+            return (resAllocCuFromDevByCuLoad((uint32_t)deviceInfoDeviceIndex, cuPropV2, cuRes, updateId));
         }
         default: {
             logMsg(XRM_LOG_ERROR, "invalid device info constraint type\n");
@@ -3184,7 +3194,7 @@ int32_t xrm::system::resLoadAndAllocAllCu(std::string xclbin,
         channel->clientId = clientId;
         channel->clientProcessId = clientProcessId;
     }
-
+    updateDeviceLoad(devId, 0, XRM_MAX_CU_LOAD_GRANULARITY_1000000 * cuListRes->cuNum);
     updateAllocServiceId();
     return (XRM_SUCCESS);
 }
@@ -3590,14 +3600,17 @@ int32_t xrm::system::resReleaseCu(cuResource* cuRes) {
                 } else {
                     /* From reserve pool, reserve client is NOT active, return resource to default pool */
                     cu->totalUsedLoadUnified -= cu->channels[i].channelLoadUnified;
+                    updateDeviceLoad(cu->deviceId, -cu->channels[i].channelLoadUnified, -1);
                 }
             } else {
                 /* From reserve pool, reserve client is NOT active, return resource to default pool */
                 cu->totalUsedLoadUnified -= cu->channels[i].channelLoadUnified;
+                updateDeviceLoad(cu->deviceId, -cu->channels[i].channelLoadUnified, -1);
             }
         } else {
             /* return the resource into default pool */
             cu->totalUsedLoadUnified -= cu->channels[i].channelLoadUnified;
+            updateDeviceLoad(cu->deviceId, -cu->channels[i].channelLoadUnified, -1);
         }
         cu->numChanInuse--;
         cu->channels[i].allocServiceId = 0;
@@ -3943,9 +3956,12 @@ cu_alloc_again:
  *
  * Alloc channel from cu, update cu resource pool.
  * if reservation id is set, then allocate the resource from reserve pool.
+ * if the policyInfo is set, current cu load is better than precu load, it
+ * will update precu to current cu and return XRM_FURTHER_CHECK
  *
  */
-int32_t xrm::system::allocChanClientFromCu(cuData* cu, cuProperty* cuProp, cuResource* cuRes) {
+int32_t xrm::system::allocChanClientFromCu(
+    cuData* cu, cuProperty* cuProp, cuResource* cuRes, uint64_t policyInfo, cuData** preCu) {
     uint64_t clientId = cuProp->clientId;
     pid_t clientProcessId = cuProp->clientProcessId;
     int32_t requestLoadUnified = cuProp->requestLoadUnified;
@@ -3970,9 +3986,45 @@ int32_t xrm::system::allocChanClientFromCu(cuData* cu, cuProperty* cuProp, cuRes
             cu->reserves[reserveIdx].reserveLoadUnified) {
             return (XRM_ERROR_NO_KERNEL);
         }
+
+        if ((policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_MOST_USED_FIRST ||
+             policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_MOST_USED_FIRST) &&
+            cu->reserves[reserveIdx].reserveUsedLoadUnified + requestLoadUnified !=
+                cu->reserves[reserveIdx].reserveLoadUnified) { // most used case
+            if (*preCu == NULL || (cu->reserves[reserveIdx].reserveUsedLoadUnified + requestLoadUnified) >
+                                      (*preCu)->reserves[reserveIdx].reserveUsedLoadUnified) {
+                *preCu = cu;
+            }
+            return XRM_FURTHER_CHECK;
+        }
+        if ((policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_LEAST_USED_FIRST ||
+             policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_LEAST_USED_FIRST) &&
+            cu->reserves[reserveIdx].reserveUsedLoadUnified != 0) { // least used case
+            if (*preCu == NULL || (cu->reserves[reserveIdx].reserveUsedLoadUnified + requestLoadUnified) <
+                                      (*preCu)->reserves[reserveIdx].reserveUsedLoadUnified) {
+                *preCu = cu;
+            }
+            return XRM_FURTHER_CHECK;
+        }
     } else {
         if (cu->totalUsedLoadUnified + requestLoadUnified > XRM_MAX_CHAN_LOAD_GRANULARITY_1000000) {
             return (XRM_ERROR_NO_KERNEL);
+        }
+        if ((policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_MOST_USED_FIRST ||
+             policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_MOST_USED_FIRST) &&
+            cu->totalUsedLoadUnified + requestLoadUnified != XRM_MAX_CHAN_LOAD_GRANULARITY_1000000) {
+            if (*preCu == NULL || (cu->totalUsedLoadUnified > (*preCu)->totalUsedLoadUnified)) {
+                *preCu = cu;
+            }
+            return XRM_FURTHER_CHECK;
+        }
+        if ((policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_LEAST_USED_FIRST ||
+             policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_LEAST_USED_FIRST) &&
+            cu->totalUsedLoadUnified != 0) {
+            if (*preCu == NULL || (cu->totalUsedLoadUnified < (*preCu)->totalUsedLoadUnified)) {
+                *preCu = cu;
+            }
+            return XRM_FURTHER_CHECK;
         }
     }
     if (cu->numChanInuse == 0) { /* unused kernel */
@@ -3986,8 +4038,10 @@ int32_t xrm::system::allocChanClientFromCu(cuData* cu, cuProperty* cuProp, cuRes
         cu->channels[chanId].poolId = reservePoolId;
         if (reservePoolId)
             cu->reserves[reserveIdx].reserveUsedLoadUnified += requestLoadUnified;
-        else
+        else {
             cu->totalUsedLoadUnified += requestLoadUnified;
+            updateDeviceLoad(cu->deviceId, requestLoadUnified, -1);
+        }
         cu->numChanInuse++;
         /* Update cu->clients[], no empty slot in it */
         addClientToCu(cu, clientId);
@@ -4181,6 +4235,7 @@ void xrm::system::releaseAllCuChanClientOnDev(deviceData* dev, uint64_t clientId
             if (cu->channels[j].poolId == 0) {
                 /* Not allocated from reserve pool, then return to Big pool */
                 cu->totalUsedLoadUnified -= cu->channels[j].channelLoadUnified;
+                updateDeviceLoad(cu->deviceId, -cu->channels[j].channelLoadUnified, -1);
                 cu->numChanInuse--;
                 cu->channels[j].clientId = 0;
                 cu->channels[j].clientProcessId = 0;
@@ -4212,6 +4267,7 @@ void xrm::system::releaseAllCuChanClientOnDev(deviceData* dev, uint64_t clientId
                 } else {
                     /* from reserve pool, reserve pool is in-active, return to Big pool */
                     cu->totalUsedLoadUnified -= cu->channels[j].channelLoadUnified;
+                    updateDeviceLoad(cu->deviceId, -cu->channels[j].channelLoadUnified, -1);
                     cu->numChanInuse--;
                     cu->channels[j].clientId = 0;
                     cu->channels[j].clientProcessId = 0;
@@ -4522,6 +4578,7 @@ void xrm::system::recycleResource(uint64_t clientId) {
     deviceData* dev = NULL;
     cuData* cu = NULL;
     int32_t devId;
+    int64_t tmp_sum = 0;
 
     /* Check all the devices */
     for (devId = 0; devId < m_numDevice; devId++) {
@@ -4541,8 +4598,10 @@ void xrm::system::recycleResource(uint64_t clientId) {
             for (int32_t reserveIdx = 0; reserveIdx < cu->numReserve; reserveIdx++) {
                 if (!cu->reserves[reserveIdx].clientIsActive) continue;
                 if (cu->reserves[reserveIdx].clientId == clientId) {
-                    cu->totalUsedLoadUnified -=
-                        (cu->reserves[reserveIdx].reserveLoadUnified - cu->reserves[reserveIdx].reserveUsedLoadUnified);
+                    int64_t tmp =
+                        cu->reserves[reserveIdx].reserveLoadUnified - cu->reserves[reserveIdx].reserveUsedLoadUnified;
+                    cu->totalUsedLoadUnified -= tmp;
+                    tmp_sum -= tmp;
                     cu->totalReservedLoadUnified -= cu->reserves[reserveIdx].reserveLoadUnified;
                     /*
                      * To de-active the client and remove reserve pool.
@@ -4576,6 +4635,7 @@ void xrm::system::recycleResource(uint64_t clientId) {
             }
         } // endif relinquish
 
+        updateDeviceLoad(devId, tmp_sum, 0);
         /* release all allocated resource from the client */
         /*
          * for each CU:
@@ -4679,12 +4739,14 @@ int32_t xrm::system::reserveLoadFromCu(uint64_t reservePoolId, cuData* cu, cuPro
         if (reserveIdx != -1) {
             /* in use, update the existing reserve slot to record the information */
             cu->totalUsedLoadUnified += requestLoadUnified;
+            updateDeviceLoad(cu->deviceId, requestLoadUnified, -1);
             cu->totalReservedLoadUnified += requestLoadUnified;
             cu->reserves[reserveIdx].reserveLoadUnified += requestLoadUnified;
             return (XRM_SUCCESS);
         } else if (cu->numReserve < XRM_MAX_KERNEL_RESERVES) {
             /* not in use, get a new reserve slot to record the information */
             cu->totalUsedLoadUnified += requestLoadUnified;
+            updateDeviceLoad(cu->deviceId, requestLoadUnified, -1);
             cu->totalReservedLoadUnified += requestLoadUnified;
             cu->reserves[cu->numReserve].reserveLoadUnified = requestLoadUnified;
             cu->reserves[cu->numReserve].reservePoolId = reservePoolId;
@@ -5195,6 +5257,7 @@ int32_t xrm::system::relinquishCuFromDev(uint64_t reservePoolId, int32_t devId, 
                     continue;
                 }
                 cu->totalUsedLoadUnified -= cu->reserves[i].reserveLoadUnified;
+                updateDeviceLoad(devId, -cu->reserves[i].reserveLoadUnified, -1);
                 cu->totalReservedLoadUnified -= cu->reserves[i].reserveLoadUnified;
                 /* switch the slot until the last one */
                 for (; i < cu->numReserve - 1; i++) {
@@ -5246,6 +5309,7 @@ int32_t xrm::system::resRelinquishCuList(uint64_t reservePoolId) {
                         return (XRM_ERROR);
                     }
                     cu->totalUsedLoadUnified -= cu->reserves[i].reserveLoadUnified;
+                    updateDeviceLoad(devId, -cu->reserves[i].reserveLoadUnified, -1);
                     cu->totalReservedLoadUnified -= cu->reserves[i].reserveLoadUnified;
                     /* switch the slot until the last one */
                     for (; i < cu->numReserve - 1; i++) {
@@ -5316,7 +5380,7 @@ int32_t xrm::system::resReserveCuOfXclbin(
         /* reserve the all the cu on this device */
         for (cuId = 0; cuId < dev->xclbinInfo.numCu; cuId++) {
             cu = &dev->xclbinInfo.cuList[cuId];
-            cu->totalUsedLoadUnified = XRM_MAX_CU_LOAD_GRANULARITY_1000000;
+            cu->totalUsedLoadUnified = XRM_MAX_CU_LOAD_GRANULARITY_1000000; // will update dev load at end of loop
             cu->totalReservedLoadUnified = XRM_MAX_CU_LOAD_GRANULARITY_1000000;
             cu->reserves[0].reserveLoadUnified = XRM_MAX_CU_LOAD_GRANULARITY_1000000;
             cu->reserves[0].reserveUsedLoadUnified = 0;
@@ -5326,6 +5390,7 @@ int32_t xrm::system::resReserveCuOfXclbin(
             cu->reserves[0].clientProcessId = clientProcessId;
             cu->numReserve = 1;
         }
+        updateDeviceLoad(devId, 0, dev->xclbinInfo.numCu * XRM_MAX_CU_LOAD_GRANULARITY_1000000);
         *fromDevId = devId;
         return (XRM_SUCCESS);
     }
@@ -5371,7 +5436,7 @@ int32_t xrm::system::resReserveDevice(uint64_t reservePoolId,
     /* reserve the all the cu on this device */
     for (cuId = 0; cuId < dev->xclbinInfo.numCu; cuId++) {
         cu = &dev->xclbinInfo.cuList[cuId];
-        cu->totalUsedLoadUnified = XRM_MAX_CU_LOAD_GRANULARITY_1000000;
+        cu->totalUsedLoadUnified = XRM_MAX_CU_LOAD_GRANULARITY_1000000; // end of loop for dev load
         cu->totalReservedLoadUnified = XRM_MAX_CU_LOAD_GRANULARITY_1000000;
         cu->reserves[0].reserveLoadUnified = XRM_MAX_CU_LOAD_GRANULARITY_1000000;
         cu->reserves[0].reserveUsedLoadUnified = 0;
@@ -5381,6 +5446,7 @@ int32_t xrm::system::resReserveDevice(uint64_t reservePoolId,
         cu->reserves[0].clientProcessId = clientProcessId;
         cu->numReserve = 1;
     }
+    updateDeviceLoad(devId, 0, dev->xclbinInfo.numCu * XRM_MAX_CU_LOAD_GRANULARITY_1000000);
     return (XRM_SUCCESS);
 }
 
@@ -5557,6 +5623,7 @@ int32_t xrm::system::resRelinquishCuPool(uint64_t reservePoolId) {
                         return (XRM_ERROR);
                     }
                     cu->totalUsedLoadUnified -= cu->reserves[i].reserveLoadUnified;
+                    updateDeviceLoad(devId, -cu->reserves[i].reserveLoadUnified, -1);
                     cu->totalReservedLoadUnified -= cu->reserves[i].reserveLoadUnified;
                     /* switch the slot until the last one */
                     for (; i < cu->numReserve - 1; i++) {
@@ -6066,5 +6133,338 @@ int32_t xrm::system::wrapUnlockDevice(xclDeviceHandle handle) {
     } else {
         // newer version, not support this API
         return (0);
+    }
+}
+
+/*
+ * Alloc one cu (compute unit) based on the request property version 2.
+ * e.g for dev most used first policy, it tries to find cu by the order
+ * of most used dev load id to least used dev load id
+ * XRM_SUCCESS: allocated resouce is recorded by cuRes
+ * Otherwise: failed to allocate the cu resource
+ *
+ * Lock: should enter lock during the cu allocation
+ */
+int32_t xrm::system::resAllocCuByDevLoad(cuPropertyV2* cuPropV2, cuResource* cuRes, bool updateId) {
+    deviceData* dev;
+    cuData* cu;
+    cuData* preCu = NULL;
+    int32_t ret = 0;
+    bool kernelNameEqual, kernelAliasEqual, cuNameEqual;
+    uint64_t clientId = cuPropV2->clientId;
+    int32_t devId, cuId;
+    int32_t preDevId = -1, preCuId = -1;
+    bool cuAcquired = false;
+    /* First pass will look for kernels already in-use by proc */
+    cuProperty tmpProp;
+    cuProperty* cuProp = &tmpProp;
+    // no need to check cuPropV2 or cuRes as it should be checked already
+    cuPropertyCopyFromV2(cuProp, cuPropV2);
+    std::vector<xrm::deviceLoadInfo> devLoadArray(m_numDevice);
+    for (int i = 0; i < m_numDevice; i++) {
+        devLoadArray[i] = m_devList[i].devLoadInfo;
+    }
+    std::sort(devLoadArray.begin(), devLoadArray.end());
+
+    for (int i = m_numDevice - 1; i >= 0 && !cuAcquired; i--) {
+        devId = devLoadArray[i].deviceId;
+        if (cuPropV2->policyInfo == XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_LEAST_USED_FIRST)
+            devId = devLoadArray[m_numDevice - 1 - i].deviceId;
+        ret = allocClientFromDev(devId, cuProp);
+        if (ret < 0) {
+            continue;
+        }
+        dev = &m_devList[devId];
+
+        /*
+         * Now check whether matching cu is on allocated device
+         * if not, free device, increment dev count, re-loop
+         */
+        for (cuId = 0; cuId < XRM_MAX_XILINX_KERNELS && cuId < dev->xclbinInfo.numCu && !cuAcquired; cuId++) {
+            cu = &dev->xclbinInfo.cuList[cuId];
+
+            kernelNameEqual = true;
+            if (cuProp->kernelName[0] != '\0') {
+                if (cu->kernelName.compare(cuProp->kernelName)) kernelNameEqual = false;
+            }
+            /* kernel alias is presented, compare it; otherwise no need to compare */
+            kernelAliasEqual = true;
+            if (cuProp->kernelAlias[0] != '\0') {
+                if (cu->kernelAlias.compare(cuProp->kernelAlias)) kernelAliasEqual = false;
+            }
+            /* cu name is presented, compare it; otherwise no need to compare */
+            cuNameEqual = true;
+            if (cuProp->cuName[0] != '\0') {
+                if (cu->cuName.compare(cuProp->cuName)) cuNameEqual = false;
+            }
+            if (!(kernelNameEqual && kernelAliasEqual && cuNameEqual)) continue;
+            cuData* tmpCu = preCu;
+            /* alloc channel and register client id */
+            ret = allocChanClientFromCu(cu, cuProp, cuRes, cuPropV2->policyInfo, &preCu);
+            if (ret != XRM_SUCCESS) {
+                if (tmpCu != preCu) {
+                    preDevId = devId;
+                    preCuId = cuId;
+                }
+                continue;
+            }
+
+            preCu = NULL;
+            cuRes->deviceId = devId;
+            cuRes->cuId = cuId;
+            strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
+            strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
+            cuAcquired = true;
+        } // cu loop
+
+        if (preCu) {
+            dev = &m_devList[preDevId];
+            cu = &dev->xclbinInfo.cuList[preCuId];
+            ret = allocChanClientFromCu(cu, cuProp, cuRes);
+            cuRes->deviceId = preDevId;
+            cuRes->cuId = preCuId;
+            strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
+            strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
+            cuAcquired = true;
+        }
+        if (cuAcquired) {
+            if (updateId) updateAllocServiceId();
+            return (XRM_SUCCESS);
+        }
+
+        if (!cuAcquired) {
+            releaseClientOnDev(devId, clientId);
+        }
+    }
+    return (XRM_ERROR_NO_KERNEL);
+}
+
+/*
+ * Alloc one cu (compute unit) based on the request property version 2.
+ * e.g for cu load most used first policy, it tries to find cu by the order
+ * of most used cu load to least used cu load
+ * XRM_SUCCESS: allocated resouce is recorded by cuRes
+ * Otherwise: failed to allocate the cu resource
+ *
+ * Lock: should enter lock during the cu allocation
+ */
+
+int32_t xrm::system::resAllocCuByCuLoad(cuPropertyV2* cuPropV2, cuResource* cuRes, bool updateId) {
+    deviceData* dev;
+    cuData* cu;
+    cuData* preCu = NULL;
+    int32_t ret = 0;
+    bool kernelNameEqual, kernelAliasEqual, cuNameEqual;
+    uint64_t clientId = cuPropV2->clientId;
+    int32_t devId, cuId;
+    int32_t preDevId = -1, preCuId = -1;
+    bool cuAcquired = false;
+    /* First pass will look for kernels already in-use by proc */
+    bool cuAffinityPass = true;
+    cuProperty tmpProp;
+    cuProperty* cuProp = &tmpProp;
+    // no need to check cuPropV2 or cuRes as it should be checked already
+    cuPropertyCopyFromV2(cuProp, cuPropV2);
+cu_alloc_loop:
+    for (devId = -1; !cuAcquired && (devId < m_numDevice);) {
+        devId = allocDevForClient(&devId, cuProp);
+        if (devId < 0) {
+            break;
+        }
+
+        ret = allocClientFromDev(devId, cuProp);
+        if (ret < 0) {
+            continue;
+        }
+        dev = &m_devList[devId];
+        /*
+         * Now check whether matching cu is on allocated device
+         * if not, free device, increment dev count, re-loop
+         */
+        for (cuId = 0; cuId < XRM_MAX_XILINX_KERNELS && cuId < dev->xclbinInfo.numCu && !cuAcquired; cuId++) {
+            cu = &dev->xclbinInfo.cuList[cuId];
+
+            /* first attempt to re-use existing kernels; else, use a new kernel */
+            if ((cuAffinityPass && cu->numClient == 0) || (!cuAffinityPass && cu->numClient > 0)) continue;
+            /*
+             * compare, 0: equal
+             *
+             * kernel name is presented, compare it; otherwise no need to compare
+             */
+            kernelNameEqual = true;
+            if (cuProp->kernelName[0] != '\0') {
+                if (cu->kernelName.compare(cuProp->kernelName)) kernelNameEqual = false;
+            }
+            /* kernel alias is presented, compare it; otherwise no need to compare */
+            kernelAliasEqual = true;
+            if (cuProp->kernelAlias[0] != '\0') {
+                if (cu->kernelAlias.compare(cuProp->kernelAlias)) kernelAliasEqual = false;
+            }
+            /* cu name is presented, compare it; otherwise no need to compare */
+            cuNameEqual = true;
+            if (cuProp->cuName[0] != '\0') {
+                if (cu->cuName.compare(cuProp->cuName)) cuNameEqual = false;
+            }
+            if (!(kernelNameEqual && kernelAliasEqual && cuNameEqual)) continue;
+            cuData* tmpCu = preCu;
+            /* alloc channel and register client id */
+            ret = allocChanClientFromCu(cu, cuProp, cuRes, cuPropV2->policyInfo, &preCu);
+            if (ret != XRM_SUCCESS) {
+                if (tmpCu != preCu) {
+                    preDevId = devId;
+                    preCuId = cuId;
+                }
+                continue;
+            }
+
+            preCu = NULL;
+            cuRes->deviceId = devId;
+            cuRes->cuId = cuId;
+            strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
+            strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
+            cuAcquired = true;
+        }
+
+        if (!cuAcquired) {
+            releaseClientOnDev(devId, clientId);
+        }
+    }
+
+    if (!cuAcquired && cuAffinityPass) {
+        cuAffinityPass = false; /* open up search to all kernels */
+        goto cu_alloc_loop;
+    }
+    if (preCu) {
+        dev = &m_devList[preDevId];
+        cu = &dev->xclbinInfo.cuList[preCuId];
+        ret = allocChanClientFromCu(cu, cuProp, cuRes);
+        cuRes->deviceId = preDevId;
+        cuRes->cuId = preCuId;
+        strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
+        strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
+        cuAcquired = true;
+    }
+    if (cuAcquired) {
+        if (updateId) updateAllocServiceId();
+        return (XRM_SUCCESS);
+    }
+
+    return (XRM_ERROR_NO_KERNEL);
+}
+
+int32_t xrm::system::resAllocCuFromDevByCuLoad(int32_t deviceId,
+                                               cuPropertyV2* cuPropV2,
+                                               cuResource* cuRes,
+                                               bool updateId) {
+    deviceData* dev;
+    cuData* cu;
+    cuData* preCu = NULL;
+    int32_t ret = 0;
+    bool kernelNameEqual, kernelAliasEqual, cuNameEqual;
+    uint64_t clientId = cuPropV2->clientId;
+    int32_t cuId;
+    int32_t preCuId = -1;
+    bool cuAcquired = false;
+    // * First pass will look for kernels already in-use by proc
+    bool cuAffinityPass = true;
+    cuProperty tmpProp;
+    cuProperty* cuProp = &tmpProp;
+    // no need to check cuPropV2 or cuRes as it should be checked already
+    cuPropertyCopyFromV2(cuProp, cuPropV2);
+
+    if ((deviceId < 0) || (deviceId > (m_numDevice - 1))) {
+        logMsg(XRM_LOG_ERROR, "deviceId (%d) is out of range\n", deviceId);
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuProp == NULL) || (cuRes == NULL)) {
+        logMsg(XRM_LOG_ERROR, "cuProp or cuRes is NULL\n");
+        return (XRM_ERROR_INVALID);
+    }
+    if ((cuProp->kernelName[0] == '\0') && (cuProp->kernelAlias[0] == '\0') && (cuProp->cuName[0] == '\0')) {
+        logMsg(XRM_LOG_ERROR, "None of kernel name, kernel alias and cu name are presented\n");
+        return (XRM_ERROR_INVALID);
+    }
+
+    dev = &m_devList[deviceId];
+    if (!dev->isLoaded) {
+        return (XRM_ERROR_NO_DEV);
+    }
+    if ((dev->isExcl) && (dev->clientProcs[0].clientId != clientId)) {
+        //* the device is used by other client exclusively
+        return (XRM_ERROR_NO_DEV);
+    }
+    ret = allocClientFromDev(deviceId, cuProp);
+    if (ret < 0) {
+        return (XRM_ERROR_NO_DEV);
+    }
+
+cu_alloc_from_dev_loop:
+    //*
+    // * Now check whether matching cu is on allocated device
+    // * and try to allocate requested cu.
+    //
+    for (cuId = 0; cuId < XRM_MAX_XILINX_KERNELS && cuId < dev->xclbinInfo.numCu && !cuAcquired; cuId++) {
+        cu = &dev->xclbinInfo.cuList[cuId];
+
+        /* first attempt to re-use existing kernels; else, use a new kernel */
+        if ((cuAffinityPass && cu->numClient == 0) || (!cuAffinityPass && cu->numClient > 0)) continue;
+        /*
+         * compare, 0: equal
+         *
+         * kernel name is presented, compare it; otherwise no need to compare
+         */
+        kernelNameEqual = true;
+        if (cuProp->kernelName[0] != '\0') {
+            if (cu->kernelName.compare(cuProp->kernelName)) kernelNameEqual = false;
+        }
+        /* kernel alias is presented, compare it; otherwise no need to compare */
+        kernelAliasEqual = true;
+        if (cuProp->kernelAlias[0] != '\0') {
+            if (cu->kernelAlias.compare(cuProp->kernelAlias)) kernelAliasEqual = false;
+        }
+        /* cu name is presented, compare it; otherwise no need to compare */
+        cuNameEqual = true;
+        if (cuProp->cuName[0] != '\0') {
+            if (cu->cuName.compare(cuProp->cuName)) cuNameEqual = false;
+        }
+        if (!(kernelNameEqual && kernelAliasEqual && cuNameEqual)) continue;
+        cuData* tmpCu = preCu;
+        /* alloc channel and register client id */
+        ret = allocChanClientFromCu(cu, cuProp, cuRes, cuPropV2->policyInfo, &preCu);
+        if (ret != XRM_SUCCESS) {
+            if (tmpCu != preCu) {
+                preCuId = cuId;
+            }
+            continue;
+        }
+
+        preCu = NULL;
+        cuRes->deviceId = deviceId;
+        cuRes->cuId = cuId;
+        strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
+        strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
+        cuAcquired = true;
+    }
+
+    if (!cuAcquired && cuAffinityPass) {
+        cuAffinityPass = false; /* open up search to all kernels */
+        goto cu_alloc_from_dev_loop;
+    }
+    if (preCu) {
+        cu = &dev->xclbinInfo.cuList[preCuId];
+        ret = allocChanClientFromCu(cu, cuProp, cuRes);
+        cuRes->deviceId = deviceId;
+        cuRes->cuId = preCuId;
+        strncpy(cuRes->xclbinFileName, dev->xclbinName.c_str(), XRM_MAX_NAME_LEN - 1);
+        strncpy(cuRes->uuidStr, dev->xclbinInfo.uuidStr.c_str(), XRM_MAX_NAME_LEN - 1);
+        cuAcquired = true;
+    }
+
+    if (cuAcquired) {
+        if (updateId) updateAllocServiceId();
+        return (XRM_SUCCESS);
+    } else {
+        releaseClientOnDev(deviceId, clientId);
+        return (XRM_ERROR_NO_KERNEL);
     }
 }

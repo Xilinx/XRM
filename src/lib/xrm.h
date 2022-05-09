@@ -217,8 +217,10 @@ typedef struct xrmCuPropertyV2 {
                                          * bit[63 -  8] reserved
                                          * bit[ 7 -  0] policyType
                                          *              0 : no specified policy
-                                         *              1 : most used first
-                                         *              2 : least used first
+                                         *              1 : cu most used first
+                                         *              2 : cu least used first
+                                         *              3 : dev most used first
+                                         *              4 : dev least used first
                                          *              others : reserved
                                          */
     int32_t requestLoad;                /* request load of the CU, only one type granularity at one time.
@@ -256,8 +258,10 @@ typedef struct xrmCuPropertyV2 {
 #define XRM_POLICY_INFO_CONSTRAINT_TYPE_MASK 0xFF
 
 #define XRM_POLICY_INFO_CONSTRAINT_TYPE_NULL 0x0
-#define XRM_POLICY_INFO_CONSTRAINT_TYPE_MOST_USED_FIRST 0x1
-#define XRM_POLICY_INFO_CONSTRAINT_TYPE_LEAST_USED_FIRST 0x2
+#define XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_MOST_USED_FIRST 0x1
+#define XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_LEAST_USED_FIRST 0x2
+#define XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_MOST_USED_FIRST 0x3
+#define XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_LEAST_USED_FIRST 0x4
 
 /* load granularity information */
 #define XRM_LOAD_GRANULARIY_100_SHIFT 0
@@ -1035,8 +1039,13 @@ int32_t xrmCuGroupBlockingAlloc(xrmContext context,
  *                         bit[63 -  8] reserved
  *                         bit[ 7 -  0] policyType
  *                                      0 : no specified policy
- *                                      1 : most used first
- *                                      2 : least used first
+ *                                      1 : cu most used first, only apply to cu allocation not cu list/group allocation
+ *                                      2 : cu least used first, only apply to cu allocation not cu list/group
+ *                                          allocation
+ *                                      3 : device most used first, only apply to cu allocation not cu list/group
+ *                                          allocation
+ *                                      4 : device least used first, only apply to cu allocation not cu list/group
+ *                                          allocation
  *                                      others : reserved
  *             requestLoad: request load, only one type granularity at one time.
  *                          bit[31 - 28] reserved
@@ -1068,7 +1077,11 @@ int32_t xrmCuAllocV2(xrmContext context, xrmCuPropertyV2* cuProp, xrmCuResourceV
 /**
  * \brief Allocates a list of compute unit resource given a list of
  * kernels's property with kernel name or alias or both and request load.
- *
+ * policyInfo set with any of (XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_MOST_USED_FIRST
+                               XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_Least_USED_FIRST
+                               XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_MOST_USED_FIRST
+                               XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_LEAST_USED_FIRST)
+ * will be cleaned and treated as no flag
  * @param context the context created through xrmCreateContext()
  * @param cuListProp the property of cu list.
  *             cuProps: cu prop list to fill kernelName, devExcl and requestLoad, starting from cuProps[0], no hole.

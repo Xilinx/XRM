@@ -31,7 +31,7 @@
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
-#define BOOST_SPIRIT_THREADSAFE  // must before json_parser.h and ptree.hpp
+#define BOOST_SPIRIT_THREADSAFE // must before json_parser.h and ptree.hpp
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/serialization/serialization.hpp>
@@ -48,6 +48,8 @@
 #include "xrm.h"
 
 namespace pt = boost::property_tree;
+// XRM_FURTHER_CHECK is used when it can't decide if current cu is best candidate.
+#define XRM_FURTHER_CHECK (-1)
 
 namespace xrm {
 
@@ -459,6 +461,21 @@ typedef struct reserveData {
     }
 } reserveData;
 
+struct deviceData;
+typedef struct deviceLoadInfo {
+    int32_t devLoadRate; // devCurrentLoad * 1000/ totalLoad
+    int32_t deviceId;
+    int64_t devCurrentLoad; // current device load = sum of all cu load
+    deviceData* devData;
+    void init(int32_t devId) {
+        deviceId = devId;
+        devLoadRate = 0;
+        devCurrentLoad = 0;
+    }
+    deviceLoadInfo() {}
+    bool operator<(const deviceLoadInfo& b) { return devLoadRate < b.devLoadRate || deviceId < b.deviceId; }
+} deviceLoadInfo;
+
 /* compute unit data */
 typedef struct cuData {
     int32_t cuId;          // index on one device, start from 0
@@ -484,6 +501,8 @@ typedef struct cuData {
     int32_t totalUsedLoadUnified;         // granularity of 1,000,000, allocated load in default pool + reserved load
     int32_t totalReservedLoadUnified;     // granularity of 1,000,000, reserved load
     int32_t totalReservedUsedLoadUnified; // granularity of 1,000,000, used load in reserved load
+
+    int32_t deviceId;
 
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
@@ -567,6 +586,18 @@ typedef struct deviceData {
     xclDeviceInfo2 deviceInfo;
     xclbinInformation xclbinInfo;
     clientData clientProcs[XRM_MAX_DEV_CLIENTS]; // processes using device (allocation but NOT reservation)
+
+    deviceLoadInfo devLoadInfo;
+    void updateDeviceLoad(int64_t loadChangeVal, int64_t setCurLoadVal) {
+        if (setCurLoadVal >= 0) {
+            devLoadInfo.devCurrentLoad = setCurLoadVal;
+        } else {
+            devLoadInfo.devCurrentLoad += loadChangeVal;
+        }
+        devLoadInfo.devLoadRate =
+            devLoadInfo.devCurrentLoad * 1000 / (xclbinInfo.numCu * XRM_MAX_CHAN_LOAD_GRANULARITY_1000000);
+        return;
+    }
 
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
@@ -677,6 +708,12 @@ struct Version {
     }
 };
 
+struct DevLoad {
+    uint32_t loadRate;
+    int32_t devId;
+    uint64_t curDevLoad;
+};
+
 class system {
    public:
     system() {}
@@ -729,6 +766,8 @@ class system {
 
     /* following alloc and free function need to do lock protect */
     int32_t resAllocCuV2(cuPropertyV2* cuPropV2, cuResource* cuRes, bool updateId);
+    int32_t resAllocCuByDevLoad(cuPropertyV2* cuPropV2, cuResource* cuRes, bool updateId);
+    int32_t resAllocCuByCuLoad(cuPropertyV2* cuPropV2, cuResource* cuRes, bool updateId);
     int32_t resAllocCuSubListFromSameDevice(cuSubListPropertyV2* cuSubListPropV2,
                                             deviceIdListPropertyV2* usedDevIdList,
                                             cuSubListResourceV2* cuSubListResV2);
@@ -744,6 +783,7 @@ class system {
     void flushUdfCuGroupInfoV2(uint32_t udfCuGroupIdx);
     int32_t resAllocCu(cuProperty* cuProp, cuResource* cuRes, bool updateId);
     int32_t resAllocCuFromDev(int32_t deviceId, cuProperty* cuProp, cuResource* cuRes, bool updateId);
+    int32_t resAllocCuFromDevByCuLoad(int32_t deviceId, cuPropertyV2* cuProp, cuResource* cuRes, bool updateId);
     int32_t resAllocLeastUsedCuFromDev(int32_t deviceId, cuProperty* cuProp, cuResource* cuRes, bool updateId);
     int32_t resAllocCuList(cuListProperty* cuListProp, cuListResource* cuListRes);
     int32_t resAllocationQuery(allocationQueryInfo* allocQuery, cuListResource* cuListRes);
@@ -803,6 +843,9 @@ class system {
     int32_t wrapIPName2Index(xclDeviceHandle handle, const char* ipName);
     int32_t wrapLockDevice(xclDeviceHandle handle);
     int32_t wrapUnlockDevice(xclDeviceHandle handle);
+    void updateDeviceLoad(int32_t devId, int64_t loadIncreased, int64_t setLoadVal) {
+        m_devList[devId].updateDeviceLoad(loadIncreased, setLoadVal);
+    }
 
    private:
     int32_t xclbinLoadToDevice(int32_t devId, std::string& errmsg);
@@ -837,7 +880,10 @@ class system {
     int32_t verifyProcess(pid_t pid);
     int32_t allocClientFromDev(int32_t devId, cuProperty* cuProp);
     int32_t allocCuFromDev(int32_t devId, cuProperty* cuProp, cuResource* cuRes);
-    int32_t allocChanClientFromCu(cuData* cu, cuProperty* cuProp, cuResource* cuRes);
+    // allocChanClientFromCu is compatible with previous version (no policy support for allocating cu) if default last
+    // two parameters
+    int32_t allocChanClientFromCu(
+        cuData* cu, cuProperty* cuProp, cuResource* cuRes, uint64_t policyVal = 0, cuData** preCu = NULL);
     void addClientToCu(cuData* cu, uint64_t clientId);
     int isClientUsingCu(cuData* cu, uint64_t clientId);
 
