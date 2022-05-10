@@ -44,15 +44,16 @@ fi
 
 # Disable XRM daemon
 echo "Running prerm ..."
+
 echo "Disabling starting XRM daemon on boot"
 systemctl disable xrmd > /dev/null 2>&1
-FILE=/etc/systemd/system/xrm.service
-if [ -f "$FILE" ]; then
-    echo "$FILE exist ... Stopping xrmd service"
+echo "Stopping xrmd service"
+xrmd_active=`systemctl is-active xrmd`
+if [ "$xrmd_active" = "active" ]; then
+    echo "Stopping existing XRM daemon"
     systemctl stop xrmd > /dev/null 2>&1
-    systemctl disable xrmd > /dev/null 2>&1
-    systemctl daemon-reload
 fi
+systemctl daemon-reload
 
 lsb_release -si | grep -Eq "^RedHat|^CentOS|^Amazon"
 if [ $? -eq 0 ]; then
