@@ -1078,7 +1078,7 @@ int32_t xrmCuAllocV2(xrmContext context, xrmCuPropertyV2* cuProp, xrmCuResourceV
  * \brief Allocates a list of compute unit resource given a list of
  * kernels's property with kernel name or alias or both and request load.
  * policyInfo set with any of (XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_MOST_USED_FIRST
-                               XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_Least_USED_FIRST
+                               XRM_POLICY_INFO_CONSTRAINT_TYPE_CU_LEAST_USED_FIRST
                                XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_MOST_USED_FIRST
                                XRM_POLICY_INFO_CONSTRAINT_TYPE_DEV_LEAST_USED_FIRST)
  * will be cleaned and treated as no flag
