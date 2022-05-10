@@ -20,6 +20,7 @@
 #include <memory>
 #include <utility>
 #include <boost/asio.hpp>
+#include <boost/thread.hpp>
 #include "xrm_version.h"
 #include "xrm_command_registry.hpp"
 #include "xrm_tcp_server.hpp"
@@ -36,26 +37,39 @@ xrm::commandRegistry* registry = NULL;
 boost::asio::io_service* ioService = NULL;
 xrm::server* serv = NULL;
 const uint16_t xrmPort = 9763;
-
+uint32_t isExit = 0;
+volatile uint32_t resetEvent = 0;
 /*
  * need to be protected by lock
  */
 void static sigbusHandler(int signNum, siginfo_t *siginfo, void *ptr) {
     std::ignore = siginfo;
     std::ignore = ptr;
-    int32_t status;
-    /* handle the SIGBUS signal */
-    sys->enterLock();
     if (signNum == SIGBUS) {
-        int32_t numDevice = sys->getDeviceNumber();
-        for (int32_t devId = 0; devId < numDevice; devId++) {
-            status = sys->isDeviceOffline(devId);
-            if (status == 1) {
-                sys->resetDevice(devId);
-            }
-        }
+	resetEvent = 1;    
     }
-    sys->exitLock();
+
+}
+
+void resetEventFunc()
+{
+    boost::posix_time::seconds workTime(1);
+    int32_t status;
+    //  handle the reset devices 
+    while (!isExit) {
+        if (__sync_val_compare_and_swap(&resetEvent, 1, 0)) {
+            sys->enterLock();
+            int32_t numDevice = sys->getDeviceNumber();
+            for (int32_t devId = 0; devId < numDevice; devId++) {
+                status = sys->isDeviceOffline(devId);
+                if (status == 1) {
+                    sys->resetDevice(devId);
+                }  
+            }
+            sys->exitLock();
+        }
+        boost::this_thread::sleep(workTime);
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -63,6 +77,7 @@ int main(int argc, char* argv[]) {
     std::ignore = argv;
     struct sigaction act;
 
+    boost::thread workerThread(resetEventFunc); 
     try {
         setlogmask(LOG_UPTO(LOG_DEBUG));
         openlog("xrmd", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
@@ -97,11 +112,11 @@ int main(int argc, char* argv[]) {
     } catch (std::exception& e) {
         syslog(LOG_NOTICE, "Exception: %s", e.what());
     }
-
+    isExit = 1;
+    workerThread.join();
     if (serv != NULL) delete (serv);
     if (ioService != NULL) delete (ioService);
     if (registry != NULL) delete (registry);
     if (sys != NULL) delete (sys);
-
     return 0;
 }
