@@ -33,13 +33,41 @@ void xrm::unloadCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     }
     std::string errmsg;
     m_system->enterLock();
+    int32_t ret;
     for (auto it : (pt::ptree&)(*unloadTree)) {
-        uint32_t devId = it.second.get_value<uint32_t>();
-        if (m_system->unloadOneDevice(devId, errmsg) != XRM_SUCCESS) {
-            outrsp.put("response.status", "failed");
-            outrsp.put("response.data.failed", errmsg);
+        auto devId = it.second.get_value<int32_t>();
+        /*
+         * devId: -2: unload all devices.
+         *        0 - (m_numDevice -1): unload specified device.
+         *        other: invalid device id.
+         */
+        if (devId == -2) {
+            int32_t numDev = m_system->getDeviceNumber();
+            for (int32_t i = 0; i < numDev; i++) {
+                // to unload all devices
+                ret = m_system->unloadOneDevice(i, errmsg);
+                if (ret != XRM_SUCCESS) {
+                    // one device unload fail, stop here
+                    break;
+                }
+            }
+            if (ret != XRM_SUCCESS) {
+                outrsp.put("response.status", "failed");
+                outrsp.put("response.data.failed", errmsg);
+            } else {
+                outrsp.put("response.status", "ok");
+                outrsp.put("response.data.ok", "unload completed");
+            }
             m_system->exitLock();
             return;
+        } else {
+            ret = m_system->unloadOneDevice(devId, errmsg);
+            if (ret != XRM_SUCCESS) {
+                outrsp.put("response.status", "failed");
+                outrsp.put("response.data.failed", errmsg);
+                m_system->exitLock();
+                return;
+            }
         }
     }
     m_system->exitLock();

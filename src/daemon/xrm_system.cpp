@@ -1586,8 +1586,12 @@ int32_t xrm::system::unloadOneDevice(const int32_t& devId, std::string& errmsg) 
         deviceData* dev = &m_devList[devId];
 
         if (!dev->isLoaded) {
-            errmsg = "Device " + std::to_string(devId) + " is not loaded with xclbin";
-            return (XRM_ERROR_DEVICE_IS_NOT_LOADED);
+            /*
+             * if device is not loaded with xclbin, then the device will
+             * still keep unload state.
+             */
+            deviceClearInfo(devId);
+            return (XRM_SUCCESS);
         }
 
         // device is busy
