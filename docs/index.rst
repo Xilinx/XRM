@@ -46,6 +46,7 @@ XRM Architecture
    Prerequisites.rst
    Build.rst
    Test.rst
+   download.rst
    rel.rst
 
 
