@@ -280,13 +280,28 @@ static int32_t xrmJsonRequest(xrmContext context, const char* jsonReq, char* jso
         unsigned char tmp[4];
         int32_t total_len = 0;
         int32_t cur_len = 0;
-        cur_len = ctx->socket->read_some(boost::asio::buffer(tmp, 4), ec);
-        if (cur_len != 4 || ec) return XRM_ERROR;
+        while (true)
+        {
+            cur_len = ctx->socket->read_some(boost::asio::buffer(tmp, 4), ec);
+            // Continue reading until read is not interrupted or failed
+            if (ec == boost::asio::error::interrupted)
+                continue;
+            if (ec) {
+                xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s length reading error: %d\n", __func__, ec);
+                return XRM_ERROR;
+            }
+            break;
+        }
+        if (cur_len != 4) {
+            xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s unexpected read length: %d\n", __func__, cur_len);
+            return XRM_ERROR;
+        }
         total_len = tmp[0] | (int32_t(tmp[1]) << 8) | (int32_t(tmp[2]) << 16) | (int32_t(tmp[3]) << 24);
         cur_len = 0;
         while (true) {
             replyLength = ctx->socket->read_some(boost::asio::buffer(jsonRsp + cur_len, maxLength - cur_len), ec);
-            if (ec) {
+            // If the call was interrupted continue reading, exit on any other error
+            if (ec && ec != boost::asio::error::interrupted) {
                 xrmLog(ctx->xrmLogLevel, XRM_LOG_ERROR, "%s read error: %d\n", __func__, ec);
                 return XRM_ERROR;
             }
