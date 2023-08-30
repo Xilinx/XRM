@@ -1,5 +1,8 @@
 /*
  * Copyright (C) 2019-2020, Xilinx Inc - All rights reserved
+ *
+ * Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+ *
  * Xilinx Resouce Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may
@@ -22,7 +25,7 @@ int32_t wrapperXrmCuAlloc(xrmContext* context, xrmCuProperty* cuProp, xrmCuResou
     int64_t i = 0;
     if (blockAlloc) {
         ret = xrmCuAlloc(context, cuProp, cuRes);
-        while (ret != XRM_SUCCESS) {
+        while ((ret != XRM_SUCCESS) && (ret != XRM_ERROR_CONNECT_FAIL)) {
             sleep(XRM_WAIT_SECONDS); // wait 10 seconds
             i++;
             printf("try to alloc cu list again: %lu\n", i);
@@ -43,7 +46,7 @@ int32_t wrapperXrmCuListAlloc(xrmContext* context,
     int64_t i = 0;
     if (blockAlloc) {
         ret = xrmCuListAlloc(context, cuListProp, cuListRes);
-        while (ret != XRM_SUCCESS) {
+        while ((ret != XRM_SUCCESS) && (ret != XRM_ERROR_CONNECT_FAIL)) {
             sleep(XRM_WAIT_SECONDS); // wait 10 seconds
             i++;
             printf("try to alloc cu list again: %lu\n", i);

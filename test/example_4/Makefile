@@ -1,3 +1,6 @@
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
 # target and command definitions
 CXX = gcc
 RM = rm -f

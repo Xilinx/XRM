@@ -1,3 +1,7 @@
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
+
 # Packaging section
 
 # Custom variables imported by this CMake stub which should be defined by parent CMake:

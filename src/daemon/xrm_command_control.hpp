@@ -1,5 +1,8 @@
 /*
  * Copyright (C) 2019-2021, Xilinx Inc - All rights reserved
+ *
+ * Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+ *
  * Xilinx Resouce Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may

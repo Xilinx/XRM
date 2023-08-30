@@ -1,4 +1,7 @@
-package main
+/*
+ * Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+ */
+ package main
 
 //#cgo CFLAGS: -I/opt/xilinx/xrm/include
 //#cgo LDFLAGS: -L/opt/xilinx/xrm/lib -lxrm

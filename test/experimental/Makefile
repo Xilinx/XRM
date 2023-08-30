@@ -1,3 +1,6 @@
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
 CC = gcc
 CFLAGS = $(shell pkg-config --cflags libxrm)
 CFLAGS += -Wall -O2 -g -I./src

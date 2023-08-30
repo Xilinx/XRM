@@ -1,4 +1,9 @@
 #!/bin/bash
+
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
+
 # Script to setup environment for XRM
 
 # Check OS version requirement

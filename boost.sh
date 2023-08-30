@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
+
 usage()
 {
     echo "Usage: boost.sh [options] [<version>]"
