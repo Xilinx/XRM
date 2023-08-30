@@ -62,7 +62,7 @@ rh_package_list()
         RH_LIST+=(\
         system-lsb-core \
         )
-    else
+    elif [ $MAJOR -le 8 ]; then
         RH_LIST+=(\
         redhat-lsb \
         )
@@ -205,6 +205,19 @@ prep_rhel8()
     subscription-manager repos --enable "codeready-builder-for-rhel-8-x86_64-rpms"
 }
 
+prep_rhel9()
+{
+    echo "Enabling EPEL repository..."
+    rpm -q --quiet epel-release
+    if [ $? != 0 ]; then
+        yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+        yum check-update
+    fi
+
+    echo "Enabling CodeReady-Builder repository..."
+    subscription-manager repos --enable "codeready-builder-for-rhel-9-x86_64-rpms"
+}
+
 prep_centos()
 {
     if [ $MAJOR == 8 ]; then
@@ -216,14 +229,17 @@ prep_centos()
 
 prep_rhel()
 {
-    if [ $MAJOR == 8 ]; then
-        prep_rhel8
+    if [ $MAJOR -ge 9 ]; then
+        prep_rhel9
     else
-        prep_rhel7
+        if [ $MAJOR == 8 ]; then
+             prep_rhel8
+        else
+             prep_rhel7
+        fi
+        echo "Installing cmake3 from EPEL repository..."
+        yum install -y cmake3
     fi
-
-    echo "Installing cmake3 from EPEL repository..."
-    yum install -y cmake3
 }
 
 prep_amzn()
@@ -255,10 +271,11 @@ install()
     if [ $FLAVOR == "rhel" ] || [ $FLAVOR == "centos" ] || [ $FLAVOR == "amzn" ]; then
         echo "Installing RHEL/CentOS/Amazon packages..."
         yum install -y "${RH_LIST[@]}"
-        if [ $FLAVOR == "rhel" ] || [ $FLAVOR == "centos" ]; then
-            if [ $VERSION -lt "8" ]; then
-                yum install -y devtoolset-6
-            fi
+        if [ $MAJOR -lt "8" ]  && [ $FLAVOR != "amzn" ]; then
+                if [ $FLAVOR == "centos" ]; then
+                    yum install -y centos-release-scl-rh
+                fi
+                yum install -y devtoolset-9
         fi
     fi
 

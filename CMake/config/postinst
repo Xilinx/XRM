@@ -27,7 +27,7 @@
 xrmd_active=`systemctl is-active xrmd`
 echo "Running postinst ..."
 
-lsb_release -si | grep -Eq "^RedHat|^CentOS|^Amazon"
+awk -F= '$1=="ID" {print $2}' /etc/os-release | tr -d '"' | awk '{print tolower($1)}' | grep -Eq "^rhel|^centos|^amzn"
 if [ $? -eq 0 ]; then
     rm -f /usr/lib64/libxrm.so
     rm -f /usr/lib64/libxrm.so.1
@@ -35,7 +35,7 @@ if [ $? -eq 0 ]; then
     ln -s /usr/lib64/libxrm.so.1 /usr/lib64/libxrm.so
 fi
 
-lsb_release -si | grep -Eq "^Ubuntu|^Debian"
+awk -F= '$1=="ID" {print $2}' /etc/os-release | tr -d '"' | awk '{print tolower($1)}' | grep -Eq "^ubuntu|^debian"
 if [ $? -eq 0 ]; then
     rm -f /usr/lib/libxrm.so
     rm -f /usr/lib/libxrm.so.1
