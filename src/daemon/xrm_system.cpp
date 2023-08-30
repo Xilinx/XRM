@@ -4086,8 +4086,10 @@ int32_t xrm::system::allocChanClientFromCu(
         cu->channels[chanId].poolId = reservePoolId;
         if (reservePoolId)
             cu->reserves[reserveIdx].reserveUsedLoadUnified += requestLoadUnified;
-        else
+        else {
             cu->totalUsedLoadUnified += requestLoadUnified;
+            updateDeviceLoad(cu->deviceId, requestLoadUnified, -1);
+        }
         cu->numChanInuse++;
         /* Update cu->clients[], no empty slot in it */
         addClientToCu(cu, clientId);
