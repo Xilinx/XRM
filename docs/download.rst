@@ -60,14 +60,16 @@ supplied with the materials.
 
 PACKAGES
 --------
-Ubuntu 18.04: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202220.1.5.212_18.04-x86_64.deb>`_
+Ubuntu 18.04: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202310.1.6.50044_ubuntu18.04-x86_64.deb>`_
 
-Ubuntu 20.04: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202220.1.5.212_20.04-x86_64.deb>`_
+Ubuntu 20.04: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202310.1.6.50044_ubuntu20.04-x86_64.deb>`_
 
-Ubuntu 22.04: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202220.1.5.212_22.04-x86_64.deb>`_
+Ubuntu 22.04: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202310.1.6.50044_ubuntu22.04-x86_64.deb>`_
 
-Amazon Linux 2: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202220.1.5.212_2-x86_64.rpm>`_
+Amazon Linux 2: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202310.1.6.50044_amzn2-x86_64.rpm>`_
 
-RHEL/CentOS 7: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202220.1.5.212_7.8.2003-x86_64.rpm>`_
+RHEL/CentOS 7: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202310.1.6.50044_centos7.8.2003-x86_64.rpm>`_
 
-RHEL/CentOS 8: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202220.1.5.212_8.1.1911-x86_64.rpm>`_
+RHEL/CentOS 8: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202310.1.6.50044_centos8.1.1911-x86_64.rpm>`_
+
+RHEL 9: `XRM Package <https://www.xilinx.com/bin/public/openDownload?filename=xrm_202310.1.6.50044_rhel9.1-x86_64.rpm>`_
