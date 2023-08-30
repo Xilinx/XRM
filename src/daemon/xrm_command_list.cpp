@@ -78,13 +78,16 @@ void xrm::listCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
                 std::string cuNode = "response.data.device_" + std::to_string(devId) + ".cu_" + std::to_string(cuId);
                 outrsp.add(cuNode + ".cuId         ", cuData->cuId);
                 switch (cuData->cuType) {
-                    case CU_NULL:
+                    case XRM_CU_NULL:
                         outrsp.add(cuNode + ".cuType       ", "Empty Kernel");
                         break;
-                    case CU_IPKERNEL:
+                    case XRM_CU_IPKERNEL:
                         outrsp.add(cuNode + ".cuType       ", "IP Kernel");
                         break;
-                    case CU_SOFTKERNEL:
+                    case XRM_CU_IPPSKERNEL:
+                        outrsp.add(cuNode + ".cuType       ", "IP PS Kernel");
+                        break;
+                    case XRM_CU_SOFTKERNEL:
                         outrsp.add(cuNode + ".cuType       ", "Soft Kernel");
                         break;
                     default:

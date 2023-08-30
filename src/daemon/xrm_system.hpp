@@ -142,13 +142,6 @@ typedef struct cuPoolProperty {
     uint8_t extData[64];   // for future extension
 } cuPoolProperty;
 
-/* cu type */
-typedef enum cuTypes {
-    CU_NULL = 0,
-    CU_IPKERNEL = 1,   // IP kernel
-    CU_SOFTKERNEL = 2, // soft kernel
-} cuTypes;
-
 /* allocated/released compute unit resource */
 typedef struct cuResource {
     char xclbinFileName[XRM_MAX_PATH_NAME_LEN];       // include path and name
@@ -161,7 +154,7 @@ typedef struct cuResource {
     int32_t deviceId;
     int32_t cuId;
     int32_t channelId;
-    cuTypes cuType;
+    xrmCuType cuType;
     uint64_t baseAddr;        // base address of the CU
     uint32_t membankId;       // connected memory bank id
     uint32_t membankType;     // connected memory bank type
@@ -480,7 +473,7 @@ typedef struct deviceLoadInfo {
 typedef struct cuData {
     int32_t cuId;          // index on one device, start from 0
     int32_t ipLayoutIndex; // static index of m_ip_data in xclbin file
-    cuTypes cuType;
+    xrmCuType cuType;
     std::string kernelName;   // kernel name, not instance name
     std::string kernelAlias;  // alias of kernel name
     std::string cuName;       // kernel_name:instance_name (for IP kernel)
@@ -547,6 +540,7 @@ typedef struct xclbinInformation {
     std::string uuidStr;
     int32_t numCu;
     int32_t numHardwareCu;
+    int32_t numIPPSCu;
     int32_t numSoftwareCu;
     cuData cuList[XRM_MAX_XILINX_KERNELS];
     int32_t numMemBank;
@@ -557,7 +551,7 @@ typedef struct xclbinInformation {
     template <class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         std::ignore = version;
-        ar& uuid& uuidStr& numCu& numHardwareCu& numSoftwareCu& cuList& numMemBank& numConnect& memTopologyList&
+        ar& uuid& uuidStr& numCu& numHardwareCu& numIPPSCu& numSoftwareCu& cuList& numMemBank& numConnect& memTopologyList&
             connectList;
     }
 } xclbinInformation;
