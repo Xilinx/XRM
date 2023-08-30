@@ -742,6 +742,7 @@ void xrm::system::flushDevData(int32_t devId) {
         xclbinInfo->uuidStr = "";
         xclbinInfo->numCu = 0;
         xclbinInfo->numHardwareCu = 0;
+        xclbinInfo->numIPPSCu = 0;
         xclbinInfo->numSoftwareCu = 0;
         xclbinInfo->numMemBank = 0;
         xclbinInfo->numConnect = 0;
@@ -751,7 +752,7 @@ void xrm::system::flushDevData(int32_t devId) {
         // fresh the cuList
         for (i = 0; i < XRM_MAX_XILINX_KERNELS; i++) {
             cu = &xclbinInfo->cuList[i];
-            cu->cuType = CU_NULL;
+            cu->cuType = XRM_CU_NULL;
             cu->ipLayoutIndex = 0;
             cu->kernelName = "";
             cu->kernelAlias = "";
@@ -936,7 +937,7 @@ int32_t xrm::system::xclbinGetLayout(int32_t devId, std::string& errmsg) {
             }
             cu->ipLayoutIndex = xclbinInfo->numCu - 1; // the static index will be index of m_ip_data in xclbin file
 
-            cu->cuType = CU_IPKERNEL;
+            cu->cuType = XRM_CU_IPKERNEL;
             // cuName (m_name in m_ip_data) is "kerenlName:instanceName"
             cu->cuName = cuName;
             std::vector<std::string> results;
@@ -961,6 +962,75 @@ int32_t xrm::system::xclbinGetLayout(int32_t devId, std::string& errmsg) {
          * is in range from 0 - current (xclbinInfo->numCu - 1).
          */
 
+        /*
+         * Handle the IP PS Kernel
+         *
+         * IP PS Kernel is almost same as soft kernel, the difference is the IP PS
+         * Kernel is also in iplayout session, and the instance name is usually set.
+         * The cu index of IP PS kernel will in PS domain (other than that of IP kernel domain),
+         * so it will start from 0 to (number of IP PS kernel - 1). 
+         */
+        for (int32_t i = 0; i < ipl->m_count; i++) {
+            if (ipl->m_ip_data[i].m_type != IP_PS_KERNEL) continue;
+            xclbinInfo->numCu++;
+            xclbinInfo->numIPPSCu++;
+            if (xclbinInfo->numCu > XRM_MAX_XILINX_KERNELS) {
+                errmsg = "cu number in xclbin is out range of " + std::to_string(XRM_MAX_XILINX_KERNELS);
+                return (XRM_ERROR);
+            }
+            /* For IP PS kernel, here should use the XRT interface to retrive cuId. */
+            cuName = std::string((char*)ipl->m_ip_data[i].m_name);
+            logMsg(XRM_LOG_NOTICE, "%s : cuName is %s\n", __func__, cuName.c_str());
+
+            int32_t cuId = wrapIPName2Index(dev->deviceHandle, cuName.c_str());
+            cuData* cu;
+            if (cuId < 0) {
+                if (cuId == XRM_ERROR_INVALID) {
+                    // the function in XRT lib is NOT implemented, handle the cuId by XRM itself
+                    cu = &xclbinInfo->cuList[xclbinInfo->numCu - 1];
+                    cu->cuId = xclbinInfo->numCu - 1;
+                } else {
+                    // the function in XRT lib is implemented, return result is error
+                    logMsg(XRM_LOG_ERROR, "%s : failed to get cu id of %s, ret = %d\n", __func__, cuName.c_str(), cuId);
+                    return (XRM_ERROR);
+                }
+            } else {
+                // the function in XRT lib is implemented, return result is good
+                logMsg(XRM_LOG_NOTICE, "%s : cu id of %s is %d in IP PS kernel domain\n", __func__, cuName.c_str(), cuId);
+                /*
+                 * Since IP PS kernel index will in different domain other than IP kernel, so here
+                 * need to handle it.
+                 */
+                cu = &xclbinInfo->cuList[cuId + xclbinInfo->numHardwareCu];
+                cu->cuId = cuId + xclbinInfo->numHardwareCu;
+            }
+            cu->ipLayoutIndex = xclbinInfo->numCu - 1; // the static index will be index of m_ip_data in xclbin file
+
+            cu->cuType = XRM_CU_IPPSKERNEL;
+            // cuName (m_name in m_ip_data) is "kerenlName:instanceName"
+            cu->cuName = cuName;
+            std::vector<std::string> results;
+            // retrieve the kernelName
+            boost::split(results, cu->cuName, [](char c) { return c == ':'; });
+            cu->kernelName = results[0];
+            instanceName = cuName.erase(0, cu->kernelName.length() + 1);
+            cu->instanceName = instanceName;
+            cu->baseAddr = ipl->m_ip_data[i].m_base_address;
+            cuInitChannels(cu);
+            cu->numClient = 0;
+            cu->totalUsedLoadUnified = 0; // update dev load at end of loop
+            cu->totalReservedLoadUnified = 0;
+            cu->totalReservedUsedLoadUnified = 0;
+            memset(cu->reserves, 0, sizeof(reserveData) * XRM_MAX_KERNEL_RESERVES);
+            cu->numReserve = 0;
+            cu->deviceId = devId;
+            hardwareKernelExisting = true;
+        } // end of IP PS kernel handling
+        /*
+         * After all hardware kernel and IP PS kernel handled, it's assuming that all the previous cuId
+         * is in range from 0 - current (xclbinInfo->numCu - 1).
+         */
+
         /* Handle the Soft Kernel */
         for (const axlf_section_header* softKernelHdr = xclbin::get_axlf_section(xclbin, SOFT_KERNEL);
              softKernelHdr != NULL; softKernelHdr = xclbin::get_axlf_section_next(xclbin, softKernelHdr, SOFT_KERNEL)) {
@@ -977,7 +1047,7 @@ int32_t xrm::system::xclbinGetLayout(int32_t devId, std::string& errmsg) {
                 cuData* cu = &xclbinInfo->cuList[xclbinInfo->numCu - 1];
                 cu->cuId = xclbinInfo->numCu - 1;
                 cu->ipLayoutIndex = xclbinInfo->numCu - 1; // the static index will be index of m_ip_data in xclbin file
-                cu->cuType = CU_SOFTKERNEL;
+                cu->cuType = XRM_CU_SOFTKERNEL;
                 /*
                  * mpo_name in soft_kernel is just "kernelName", but not "kernelName:instanceName"
                  * since instanceName of soft kernel is not descripted in xclbin, so cuName is same as kernelName.
@@ -1315,6 +1385,7 @@ void xrm::system::deviceDumpResource(int32_t devId) {
 #endif
     logMsg(XRM_LOG_NOTICE, "%s(): numCu : %d", __func__, xclbinInfo->numCu);
     logMsg(XRM_LOG_NOTICE, "%s(): numHardwareCu : %d", __func__, xclbinInfo->numHardwareCu);
+    logMsg(XRM_LOG_NOTICE, "%s(): numIPPSCu : %d", __func__, xclbinInfo->numIPPSCu);
     logMsg(XRM_LOG_NOTICE, "%s(): numSoftwareCu : %d", __func__, xclbinInfo->numSoftwareCu);
     for (i = 0; i < xclbinInfo->numCu; i++) {
         cuData* cu = &xclbinInfo->cuList[i];

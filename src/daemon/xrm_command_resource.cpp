@@ -363,7 +363,7 @@ void xrm::cuReleaseCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuRes.deviceId = deviceId;
     cuRes.cuId = cuId;
     cuRes.channelId = channelId;
-    cuRes.cuType = (cuTypes)cuType;
+    cuRes.cuType = (xrmCuType)cuType;
     cuRes.allocServiceId = allocServiceId;
     cuRes.clientId = clientId;
     cuRes.channelLoadUnified = channelLoadUnified;
@@ -397,7 +397,7 @@ void xrm::cuListReleaseCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
         cuListRes.cuResources[i].deviceId = deviceId;
         cuListRes.cuResources[i].cuId = cuId;
         cuListRes.cuResources[i].channelId = channelId;
-        cuListRes.cuResources[i].cuType = (cuTypes)cuType;
+        cuListRes.cuResources[i].cuType = (xrmCuType)cuType;
         cuListRes.cuResources[i].allocServiceId = allocServiceId;
         cuListRes.cuResources[i].clientId = clientId;
         cuListRes.cuResources[i].channelLoadUnified = channelLoadUnified;
@@ -432,7 +432,7 @@ void xrm::cuGroupReleaseCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp)
         cuGroupRes.cuResources[i].deviceId = deviceId;
         cuGroupRes.cuResources[i].cuId = cuId;
         cuGroupRes.cuResources[i].channelId = channelId;
-        cuGroupRes.cuResources[i].cuType = (cuTypes)cuType;
+        cuGroupRes.cuResources[i].cuType = (xrmCuType)cuType;
         cuGroupRes.cuResources[i].allocServiceId = allocServiceId;
         cuGroupRes.cuResources[i].clientId = clientId;
         cuGroupRes.cuResources[i].channelLoadUnified = channelLoadUnified;
@@ -537,7 +537,7 @@ void xrm::cuCheckStatusCommand::processCmd(pt::ptree& incmd, pt::ptree& outrsp) 
     cuRes.deviceId = deviceId;
     cuRes.cuId = cuId;
     cuRes.channelId = channelId;
-    cuRes.cuType = (cuTypes)cuType;
+    cuRes.cuType = (xrmCuType)cuType;
     cuRes.allocServiceId = allocServiceId;
 
     m_system->enterLock();
@@ -1415,7 +1415,7 @@ void xrm::cuReleaseV2Command::processCmd(pt::ptree& incmd, pt::ptree& outrsp) {
     cuRes.deviceId = deviceId;
     cuRes.cuId = cuId;
     cuRes.channelId = channelId;
-    cuRes.cuType = (cuTypes)cuType;
+    cuRes.cuType = (xrmCuType)cuType;
     cuRes.allocServiceId = allocServiceId;
     cuRes.clientId = clientId;
     cuRes.channelLoadUnified = channelLoadUnified;
@@ -1450,7 +1450,7 @@ void xrm::cuListReleaseV2Command::processCmd(pt::ptree& incmd, pt::ptree& outrsp
         cuListRes->cuResources[i].deviceId = deviceId;
         cuListRes->cuResources[i].cuId = cuId;
         cuListRes->cuResources[i].channelId = channelId;
-        cuListRes->cuResources[i].cuType = (cuTypes)cuType;
+        cuListRes->cuResources[i].cuType = (xrmCuType)cuType;
         cuListRes->cuResources[i].allocServiceId = allocServiceId;
         cuListRes->cuResources[i].clientId = clientId;
         cuListRes->cuResources[i].channelLoadUnified = channelLoadUnified;
@@ -1487,7 +1487,7 @@ void xrm::cuGroupReleaseV2Command::processCmd(pt::ptree& incmd, pt::ptree& outrs
         cuGroupRes->cuResources[i].deviceId = deviceId;
         cuGroupRes->cuResources[i].cuId = cuId;
         cuGroupRes->cuResources[i].channelId = channelId;
-        cuGroupRes->cuResources[i].cuType = (cuTypes)cuType;
+        cuGroupRes->cuResources[i].cuType = (xrmCuType)cuType;
         cuGroupRes->cuResources[i].allocServiceId = allocServiceId;
         cuGroupRes->cuResources[i].clientId = clientId;
         cuGroupRes->cuResources[i].channelLoadUnified = channelLoadUnified;

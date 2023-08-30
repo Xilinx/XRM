@@ -121,6 +121,7 @@ typedef enum xrmCuType {
     XRM_CU_NULL = 0,
     XRM_CU_IPKERNEL = 1,   // IP kernel
     XRM_CU_SOFTKERNEL = 2, // soft kernel
+    XRM_CU_IPPSKERNEL = 3, // IP PS kernel
 } xrmCuType;
 
 /* allocated/released compute resource */
