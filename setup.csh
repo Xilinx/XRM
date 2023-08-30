@@ -1,5 +1,9 @@
 #!/bin/csh -f
 
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
+
 #set called=($_)
 #set script_path=""
 set xrm_dir="/opt/xilinx/xrm"

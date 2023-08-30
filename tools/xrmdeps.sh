@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
+
 FLAVOR=`grep '^ID=' /etc/os-release | awk -F= '{print $2}' | tr -d '"'`
 VERSION=`grep '^VERSION_ID=' /etc/os-release | awk -F= '{print $2}' | tr -d '"'`
 MAJOR=${VERSION%.*}

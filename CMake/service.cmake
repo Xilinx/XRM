@@ -1,3 +1,7 @@
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
+
 configure_file(
     ${CMAKE_SOURCE_DIR}/CMake/config/xrmd.service.in
     ${CMAKE_SOURCE_DIR}/CMake/config/xrmd.service)

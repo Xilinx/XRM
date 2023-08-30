@@ -1,3 +1,6 @@
+..
+   Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+
 Test Instructions
 -----------------
 Once XRM package is installed, the related files will be installed under

@@ -1,4 +1,5 @@
-.. _build.rst:
+..
+   Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
 
 Building and Installing XRM
 ---------------------------
@@ -21,7 +22,7 @@ C++14 capable GCC.
 
 ::
 
-   scl enable devtoolset-6 bash
+   scl enable devtoolset-9 bash
 
 Build XRM
 .........

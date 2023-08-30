@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
+
 set -e
 
 OSDIST=`awk -F= '$1=="ID" {print $2}' /etc/os-release | tr -d '"' | awk '{print tolower($1)}'`

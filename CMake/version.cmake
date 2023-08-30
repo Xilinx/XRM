@@ -1,3 +1,7 @@
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
     execute_process(
         COMMAND git rev-parse --abbrev-ref HEAD

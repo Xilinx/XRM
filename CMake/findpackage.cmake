@@ -1,3 +1,7 @@
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
+
 # Provides write_basic_package_version_file
 include(CMakePackageConfigHelpers)
 

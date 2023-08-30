@@ -1,3 +1,7 @@
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
+
 if(DEFINED ENV{CONDA_DEFAULT_ENV})
   set(XRM_PKG_CONFIG_DIR "lib/pkgconfig")
 elseif (${LINUX_FLAVOR} MATCHES "^(ubuntu)")

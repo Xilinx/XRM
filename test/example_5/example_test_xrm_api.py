@@ -1,6 +1,9 @@
 #
 # Copyright (C) 2019-2020, Xilinx Inc - All rig#ts reserved
-# Xilinx Resouce Managemen#
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
+# Xilinx Resouce Management
 #
 # Licensed under the Apache License, Version 2.0 (the "License'). You may
 # not use this file except in compliance with the License. A copy of the

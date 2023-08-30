@@ -1,6 +1,8 @@
-.. 
+..
    Copyright (C) 2019-2022, Xilinx Inc - All rights reserved
-  
+
+   Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -32,6 +34,8 @@ Licensed using the `Apache 2.0 license <https://www.apache.org/licenses/LICENSE-
 
     Copyright (C) 2019-2022, Xilinx Inc - All rights reserved
     
+    Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
+#
+
 XCLBINUTIL=/opt/xilinx/xrt/bin/xclbinutil
 $XCLBINUTIL -i test_orig.xclbin --key-value=USER:krnl_ngcodec_pistachio_enc:'{"alias" : "ENCODER_VP9_NGCodec", "plugin": "libngcvp9.so", "maxCapacity": "124416000"}' -o test_1.xclbin
 
