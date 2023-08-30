@@ -1,11 +1,6 @@
 # Packaging section
 
 # Custom variables imported by this CMake stub which should be defined by parent CMake:
-# XRM_VERSION_RELEASE
-# XRM_VERSION_MAJOR
-# XRM_VERSION_MINOR
-# XRM_VERSION_PATCH
-
 set(CPACK_PACKAGE_VERSION_RELEASE "${XRM_VERSION_RELEASE}")
 set(CPACK_PACKAGE_VERSION_MAJOR "${XRM_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${XRM_VERSION_MINOR}")
@@ -14,21 +9,31 @@ set(CPACK_PACKAGE_NAME "xrm")
 
 set(CPACK_PACKAGE_VERSION "${XRM_VERSION_STRING}")
 
-# --- LSB Release ---
-find_program(LSB_RELEASE lsb_release)
 find_program(UNAME uname)
 
 execute_process(
-    COMMAND ${LSB_RELEASE} -is
+    COMMAND awk -F= "$1==\"ID\" {print $2}" /etc/os-release
+    COMMAND tr -d "\""
+    COMMAND awk "{print tolower($1)}"
     OUTPUT_VARIABLE LINUX_FLAVOR
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-execute_process(
-    COMMAND ${LSB_RELEASE} -rs
-    OUTPUT_VARIABLE CPACK_REL_VER
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+if (${LINUX_FLAVOR} MATCHES "^centos")
+    execute_process(
+        COMMAND awk "{print $4}" /etc/redhat-release
+        COMMAND tr -d "\""
+        OUTPUT_VARIABLE CPACK_REL_VER
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+else()
+    execute_process(
+        COMMAND awk -F= "$1==\"VERSION_ID\" {print $2}" /etc/os-release
+        COMMAND tr -d "\""
+        OUTPUT_VARIABLE CPACK_REL_VER
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+endif()
 
 execute_process(
     COMMAND ${UNAME} -r
@@ -42,14 +47,14 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-if (${LINUX_FLAVOR} MATCHES "^(Ubuntu|Debian)")
+if (${LINUX_FLAVOR} MATCHES "^(ubuntu|debian)")
     set(CPACK_GENERATOR "DEB")
     set(PACKAGE_KIND "DEB")
     # Modify the package name for the xrm component
     # Syntax is set(CPACK_<GENERATOR>_<COMPONENT>_PACKAGE_NAME "<name">)
     set(CPACK_DEBIAN_XRM_PACKAGE_NAME "xrm")
 
-elseif (${LINUX_FLAVOR} MATCHES "^(RedHat|CentOS|Amazon)")
+elseif (${LINUX_FLAVOR} MATCHES "^(rhel|centos|amzn|fedora|sles)")
     set(CPACK_GENERATOR "RPM")
     set(PACKAGE_KIND "RPM")
     # Modify the package name for the xrm component
