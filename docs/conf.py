@@ -43,11 +43,13 @@ sys.path.insert(1, os.path.join(tools_dir, 'share/doxyrest_b/sphinx'))
 project = 'Xilinx FPGA Resource Manager (XRM)'
 copyright = 'Copyright (C) 2019-2022, Xilinx Inc - All rights reserved'
 author = 'Xilinx'
+copyright = 'Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.'
+author = 'AMD'
 
 # The short X.Y version
-version = '2023.1'
+version = '2023.2'
 # The full version, including alpha/beta/rc tags
-release = '202301'
+release = '202302'
 
 
 # -- General configuration ---------------------------------------------------
