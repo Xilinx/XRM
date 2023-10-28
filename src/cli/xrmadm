@@ -10,6 +10,14 @@ import socket
 import json
 from collections import OrderedDict
 
+if len(sys.argv) > 1:
+    if not sys.argv[1].endswith('.json'):
+        print('xrmadm requires a .json file as an argument. Please provide the path to a .json file')
+        exit(1)
+else:
+    print('xrmadm requires a .json file as an argument. Please provide the path to a .json file')
+    exit(1)
+
 class XRMClient:
     def __init__(self, host, port):
         self.sock = socket.socket()

@@ -81,7 +81,7 @@ fi
 if [[ $debug == 1 ]]; then
     mkdir -p $debug_dir
     cd $debug_dir
-    $CMAKE -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/opt/xilinx ..;
+    $CMAKE -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/opt/xilinx -Wno-dev ..;
     echo "make -j $jcore $verbose DESTDIR=$PWD install"
     time make -j $jcore $verbose DESTDIR=$PWD install
     cd $BUILDDIR
@@ -90,7 +90,7 @@ fi
 if [[ $release == 1 ]]; then
     mkdir -p $release_dir
     cd $release_dir
-    $CMAKE -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/xilinx ..;
+    $CMAKE -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/xilinx -Wno-dev ..;
     echo "make -j $jcore $verbose DESTDIR=$PWD install"
     time make -j $jcore $verbose DESTDIR=$PWD install
     time make package
