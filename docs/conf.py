@@ -47,9 +47,9 @@ copyright = 'Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserve
 author = 'AMD'
 
 # The short X.Y version
-version = '2023.2'
+version = '2024.1'
 # The full version, including alpha/beta/rc tags
-release = '202302'
+release = '202401'
 
 
 # -- General configuration ---------------------------------------------------
